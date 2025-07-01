@@ -7,6 +7,8 @@ import { ArrowPathIcon, ChevronDownIcon } from "@heroicons/react/20/solid";
 import RootContext from './config/rootcontext';
 import { contextObject } from './config/contextobject';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
 
 export default function MenuHeader() {
     const [menuShow, setMenuShow] = useState(false);
@@ -31,12 +33,12 @@ export default function MenuHeader() {
     ]
 
     const profileMenu = [
-         {
+        {
             "name": "Home",
             "text": "home",
             "items": []
         },
-         {
+        {
             "name": "About Us",
             "text": "aboutus",
             "items": []
@@ -90,12 +92,11 @@ export default function MenuHeader() {
             </div>
             <div
                 className={`${menuShow ? "h-auto absolute bg-white dark:bg-white shadow-md left-0 right-0 top-10 z-10 flex items-center justify-between text-sm flex-1 md:h-16 max-w-lg:h-[auto]" : "hidden h-auto bg-white dark:bg-white shadow-md sticky left-0 right-0 top-0 z-10 md:flex items-center justify-between text-sm flex-1 md:h-16 w-full max-w-lg:h-[auto]"}`}>
-               <a href='/'>
-                   <div>
-                     <img height={10} width={120} src='	https://realestatejobs.co.in/images/logo.png'>
-                    </img>
-                   </div>
-                </a>
+                <Link href='/'>
+                    <div>
+                        <Image alt={"image"} height={10} width={120} src='https://realestatejobs.co.in/images/logo.png' />
+                    </div>
+                </Link>
                 <div className='flex'>
                     {!menuShow && <Recursivemenu
                         data={profileMenu}

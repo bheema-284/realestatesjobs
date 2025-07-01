@@ -17,6 +17,7 @@ import { ArrowDownIcon, CalendarIcon, ChevronDownIcon, EyeIcon, PlusIcon, UserIc
 import RootContext from "./config/rootcontext";
 import { contextObject } from "./config/contextobject";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 const Dashboard = () => {
 
     const { rootContext, setRootContext } = useContext(RootContext);
@@ -168,8 +169,7 @@ const Dashboard = () => {
     const Topbar = () => (
         <div className="flex justify-between items-center px-6 py-2 bg-white shadow ml-2 group-hover:ml-64 transition-all duration-300">
             <div>
-                <img width={100} height={10} src="	https://realestatejobs.co.in/images/logo.png">
-                </img>
+                <Image alt={"image"} width={100} height={10} src="https://realestatejobs.co.in/images/logo.png" />
             </div>
 
             <button className="bg-indigo-900 text-white px-4 py-2 rounded">POST NEW JOB</button>
@@ -182,7 +182,7 @@ const Dashboard = () => {
                 <FaBell className="text-gray-600" />
                 {/* Profile */}
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => setShowDropdown(!showDropdown)}>
-                   <UserIcon className="w-4 h-4 text-gray-400" />
+                    <UserIcon className="w-4 h-4 text-gray-400" />
                     <div className="text-sm flex items-center gap-1">
                         <div>
                             <p className="font-semibold">{rootContext.user.name}</p>
