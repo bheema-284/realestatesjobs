@@ -13,7 +13,10 @@ import { FaChartBar, FaUsers, FaTasks, FaCalendarAlt, FaCog, FaSuitcase, FaBell 
 import { ChevronDownIcon, UserIcon } from "@heroicons/react/24/solid";
 import { Inter } from 'next/font/google';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 
 const sidebarItems = [
