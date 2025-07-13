@@ -8,8 +8,6 @@ import { contextObject } from "../config/contextobject";
 import { useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import { users } from '../config/data'
-import Image from "next/image";
-import Link from "next/link";
 const SignIn = () => {
   const { rootContext, setRootContext } = useContext(RootContext);
   const router = useRouter();
@@ -124,11 +122,7 @@ const SignIn = () => {
           message: "Welcome back!",
         },
       });
-
-      if (formData.remember) {
-        localStorage.setItem("user_details", JSON.stringify(resp.user));
-      }
-
+      localStorage.setItem("user_details", JSON.stringify(resp.user));
       // Optional: Navigate to dashboard
       // router.push("/dashboard");
     }
@@ -139,9 +133,9 @@ const SignIn = () => {
   return (
     <section className="bg-gray-50 dark:bg-gray-900">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-        <Link href="#" className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
-          <Image alt={"image"} width={100} height={10} src="https://realestatejobs.co.in/images/logo.png" />
-        </Link>
+        <a href="#" className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
+          <img width={100} height={10} src="	https://realestatejobs.co.in/images/logo.png" />
+        </a>
         <form onSubmit={onSave} className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
             <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
@@ -207,9 +201,9 @@ const SignIn = () => {
                     </label>
                   </div>
                 </div>
-                <Link href="#" className="text-sm text-purple font-medium text-purple-500 hover:underline dark:text-primary-500">
+                <a href="#" className="text-sm text-purple font-medium text-purple-500 hover:underline dark:text-primary-500">
                   Forgot password?
-                </Link>
+                </a>
               </div>
               <div className="flex items-center justify-center">
                 <Button disabled={formData.email === "" && formData.password === ""} type={"submit"} btnType={"save"} title={"Sign In"} />

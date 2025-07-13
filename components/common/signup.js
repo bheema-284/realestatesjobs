@@ -7,8 +7,6 @@ import Button from "./button";
 import { useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import { users } from '../config/data'
-import Image from "next/image";
-import Link from "next/link";
 const RegisterForm = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -88,7 +86,12 @@ const RegisterForm = () => {
   return (
     <section className="bg-gray-50 dark:bg-gray-900 mt-5">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-        <Image alt={"image"} width={100} height={10} src="https://realestatejobs.co.in/images/logo.png" />
+        <a
+          href="#"
+          className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white"
+        >
+          <img width={100} height={10} src="	https://realestatejobs.co.in/images/logo.png" />
+        </a>
         <div className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
             <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
@@ -174,12 +177,12 @@ const RegisterForm = () => {
               <Button type={"button"} onClick={handleSubmit} title={"Register"} />
               <p className="text-sm font-light text-gray-500 dark:text-gray-400 flex gap-2">
                 Already have an account?{" "}
-                <Link
+                <a
                   href="/"
                   className="font-medium text-violet-600 hover:underline dark:text-voilet-500"
                 >
                   Login Now
-                </Link>
+                </a>
               </p>
             </div>
           </div>
