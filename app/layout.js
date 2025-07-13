@@ -28,37 +28,43 @@ const sidebarItems = [
 
 const Sidebar = () => {
   const pathname = usePathname();
+  const router = useRouter();
+
   const isPathActive = (itemLink) => {
-    // Handle special cases manually
     if (itemLink === '/applications') {
       return pathname.startsWith('/applications') || pathname.startsWith('/profile');
     }
-
     return pathname === itemLink || pathname.startsWith(`${itemLink}/`);
   };
+
+  const handleNavigate = (link) => {
+    if (pathname !== link) {
+      router.push(link);
+    }
+  };
+
   return (
     <div className="fixed top-16 left-0 h-screen w-36 bg-white shadow-md z-20">
       <div className="p-4 space-y-4">
         {sidebarItems.map((item, idx) => {
           const isActive = isPathActive(item.link);
           return (
-            <Link key={idx} href={item.link} className="flex items-center gap-3 text-sm">
-              <div
-                className={`flex items-center gap-3 px-2 py-1 rounded-md transition-colors duration-200 ${isActive
-                  ? "text-green-500 bg-indigo-200 font-bold"
-                  : "text-yellow-400 hover:text-black"
-                  }`}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </div>
-            </Link>
+            <div
+              key={idx}
+              onClick={() => handleNavigate(item.link)}
+              className={`flex items-center gap-3 px-2 py-1 rounded-md cursor-pointer transition-colors duration-200 ${isActive ? "text-green-500 bg-indigo-200 font-bold" : "text-yellow-400 hover:text-black"
+                }`}
+            >
+              {item.icon}
+              <span className="text-sm">{item.label}</span>
+            </div>
           );
         })}
       </div>
     </div>
   );
 };
+
 
 export default function RootLayout({ children }) {
   const context = useContext(RootContext);
@@ -67,7 +73,7 @@ export default function RootLayout({ children }) {
   const dropdownRef = useRef();
   const router = useRouter();
   const [showDropdown, setShowDropdown] = useState(false);
-
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     const user_details = localStorage && JSON.parse(localStorage.getItem("user_details"));
     const updatedContext = { ...contextObject, loader: false };
@@ -76,6 +82,7 @@ export default function RootLayout({ children }) {
       updatedContext.user = user_details;
     }
     setRootContext(updatedContext);
+    setReady(true);
   }, []);
 
   useEffect(() => {
@@ -129,7 +136,6 @@ export default function RootLayout({ children }) {
       </div>
     </div>
   );
-
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
@@ -142,6 +148,7 @@ export default function RootLayout({ children }) {
             <SignIn />
           ) : (
             <div>
+              {!ready && <Loader />}
               <Topbar />
               <div className="flex pt-16 bg-gray-100">
                 <Sidebar />

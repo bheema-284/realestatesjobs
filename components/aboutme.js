@@ -95,7 +95,7 @@ export default function AboutMe({ profile }) {
                                     <div className="flex items-center justify-between w-full">
                                         <div className="flex items-center gap-3">
                                             <img
-                                                src={dummyLogos[index]}
+                                                src={"https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" || dummyLogos[index]}
                                                 alt="Logo"
                                                 className="w-12 h-12 object-contain border rounded"
                                             />
