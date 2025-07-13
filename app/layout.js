@@ -11,11 +11,10 @@ import RegisterForm from "@/components/common/signup";
 import { usePathname, useRouter } from "next/navigation";
 import { FaChartBar, FaUsers, FaTasks, FaCalendarAlt, FaCog, FaSuitcase, FaBell } from "react-icons/fa";
 import { ChevronDownIcon, UserIcon } from "@heroicons/react/24/solid";
-import Link from "next/link";
+import { Inter, Roboto_Mono } from "next/font/google";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-
+const geistSans = Inter({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Roboto_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 const sidebarItems = [
   { icon: <FaChartBar />, label: "Dashboard", link: "/dashboard" },
   { icon: <FaSuitcase />, label: "Jobs", link: "/applications" },
