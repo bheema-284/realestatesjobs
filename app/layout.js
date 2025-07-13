@@ -145,7 +145,7 @@ export default function RootLayout({ children }) {
   );
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable}`}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`antialiased`}>
         <RootContext.Provider value={{ rootContext, setRootContext }}>
           {pathName === "/signup" && !rootContext.authenticated && !rootContext.loader ? (
             <RegisterForm />
