@@ -11,10 +11,18 @@ import RegisterForm from "@/components/common/signup";
 import { usePathname, useRouter } from "next/navigation";
 import { FaChartBar, FaUsers, FaTasks, FaCalendarAlt, FaCog, FaSuitcase, FaBell } from "react-icons/fa";
 import { ChevronDownIcon, UserIcon } from "@heroicons/react/24/solid";
-import { Inter, Roboto_Mono } from "next/font/google";
+import { Inter, Roboto_Mono } from 'next/font/google';
 
-const geistSans = Inter({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Roboto_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+// Font setup (with CSS variable support)
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+});
+
+const mono = Roboto_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+});
 const sidebarItems = [
   { icon: <FaChartBar />, label: "Dashboard", link: "/dashboard" },
   { icon: <FaSuitcase />, label: "Jobs", link: "/applications" },
@@ -136,7 +144,7 @@ export default function RootLayout({ children }) {
     </div>
   );
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${mono.variable}`}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <RootContext.Provider value={{ rootContext, setRootContext }}>
           {pathName === "/signup" && !rootContext.authenticated && !rootContext.loader ? (
