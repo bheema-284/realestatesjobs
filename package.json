@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "LIGHTNINGCSS_DISABLE_NATIVE=true next build",
+    "build": "cross-env LIGHTNINGCSS_DISABLE_NATIVE=true next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -21,8 +21,12 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
     "tailwindcss": "^4"
+  },
+  "optionalDependencies": {
+    "lightningcss-linux-x64-gnu": "latest"
   }
 }
