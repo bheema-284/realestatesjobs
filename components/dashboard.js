@@ -9,7 +9,6 @@ import {
 import { FaCode, FaPaintBrush, FaUserTie, FaBriefcase, FaBell } from "react-icons/fa";
 import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, CalendarIcon, ChevronDownIcon, PlusIcon } from "@heroicons/react/24/solid";
 import RootContext from "../components/config/rootcontext";
-import { contextObject } from "../components/config/contextobject";
 import { Popover } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
