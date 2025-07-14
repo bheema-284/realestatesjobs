@@ -72,8 +72,8 @@ export default function ClientLayout({ children }) {
         const user_details = JSON.parse(localStorage.getItem("user_details"));
         const updatedContext = { ...contextObject, loader: false };
         if (user_details) {
-            updatedContext.authenticated = true;
-            updatedContext.user = user_details;
+            updatedContext?.authenticated = true;
+            updatedContext?.user = user_details;
         }
         setRootContext(updatedContext);
         setReady(true);
