@@ -88,7 +88,7 @@ const RegisterForm = () => {
     <section className="bg-gray-50 dark:bg-gray-900 mt-5">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
         <Link
-          src="/"
+          href="/"
           className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white"
         >
           <Image alt={"logo"} width={100} height={10} src="https://realestatejobs.co.in/images/logo.png" />
@@ -179,7 +179,7 @@ const RegisterForm = () => {
               <p className="text-sm font-light text-gray-500 dark:text-gray-400 flex gap-2">
                 Already have an account?{" "}
                 <Link
-                  src="/"
+                  href="/"
                   className="font-medium text-violet-600 hover:underline dark:text-voilet-500"
                 >
                   Login Now

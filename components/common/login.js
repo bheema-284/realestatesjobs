@@ -135,7 +135,7 @@ const SignIn = () => {
   return (
     <section className="bg-gray-50 dark:bg-gray-900">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-        <Link src="/" className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
+        <Link href="/" className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
           <Image alt={"logo"} width={100} height={10} src="https://realestatejobs.co.in/images/logo.png" />
         </Link>
         <form onSubmit={onSave} className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
@@ -203,7 +203,7 @@ const SignIn = () => {
                     </label>
                   </div>
                 </div>
-                <Link sc="/" className="text-sm text-purple font-medium text-purple-500 hover:underline dark:text-primary-500">
+                <Link href="/" className="text-sm text-purple font-medium text-purple-500 hover:underline dark:text-primary-500">
                   Forgot password?
                 </Link>
               </div>

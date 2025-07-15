@@ -43,7 +43,7 @@ const Sidebar = () => {
             <div
               key={idx}
               onClick={() => router.push(item.link)}
-              className={`flex items-center gap-3 px-2 py-1 rounded-md cursor-pointer transition-colors duration-200 ${isActive ? "text-green-500 bg-indigo-200 font-bold" : "text-yellow-400 hover:text-black"
+              className={`flex items-center gap-3 px-2 py-1 rounded-md cursor-pointer transition-colors duration-200 ${isActive ? "text-black bg-indigo-200 font-bold" : "text-black hover:text-black hover:font-medium"
                 }`}
             >
               {item.icon}
@@ -168,7 +168,7 @@ export default function RootLayout({ children }) {
               </div>
             </div>
           )}
-          <Toast />
+          {rootContext?.toast && <Toast />}
         </RootContext.Provider>
       </body>
     </html>
