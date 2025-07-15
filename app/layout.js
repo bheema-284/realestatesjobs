@@ -1,6 +1,6 @@
 'use client';
 import "./globals.css";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import RootContext from "@/components/config/rootcontext";
 import SignIn from "@/components/common/login";
 import Loader from "@/components/common/loader";
@@ -11,11 +11,7 @@ import { FaChartBar, FaUsers, FaTasks, FaCalendarAlt, FaCog, FaSuitcase, FaBell 
 import { ChevronDownIcon, UserIcon } from "@heroicons/react/24/solid";
 import { Inter } from 'next/font/google';
 
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-});
-
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 const sidebarItems = [
   { icon: <FaChartBar />, label: "Dashboard", link: "/dashboard" },
@@ -38,12 +34,6 @@ const Sidebar = () => {
     return pathname === itemLink || pathname.startsWith(`${itemLink}/`);
   };
 
-  const handleNavigate = (link) => {
-    if (pathname !== link) {
-      router.push(link);
-    }
-  };
-
   return (
     <div className="fixed top-16 left-0 h-screen w-36 bg-white shadow-md z-20">
       <div className="p-4 space-y-4">
@@ -52,7 +42,7 @@ const Sidebar = () => {
           return (
             <div
               key={idx}
-              onClick={() => handleNavigate(item.link)}
+              onClick={() => router.push(item.link)}
               className={`flex items-center gap-3 px-2 py-1 rounded-md cursor-pointer transition-colors duration-200 ${isActive ? "text-green-500 bg-indigo-200 font-bold" : "text-yellow-400 hover:text-black"
                 }`}
             >
@@ -66,22 +56,43 @@ const Sidebar = () => {
   );
 };
 
-
 export default function RootLayout({ children }) {
-  const context = useContext(RootContext);
   const pathName = usePathname();
-  const [rootContext, setRootContext] = useState(context);
-  const dropdownRef = useRef();
   const router = useRouter();
+  const dropdownRef = useRef();
   const [showDropdown, setShowDropdown] = useState(false);
   const [ready, setReady] = useState(false);
+  const [rootContext, setRootContext] = useState(RootContext || {
+    authenticated: false,
+    loader: true,
+    user: {
+      name: "",
+      email: "",
+      mobile: "",
+      password: "",
+      token: "",
+      isAdmin: "",
+    },
+    accessToken: '',
+    remember: false,
+    toast: {
+      show: false,
+      dismiss: true,
+      type: '',
+      title: '',
+      message: ''
+    }
+  });
+
   useEffect(() => {
-    const user_details = localStorage && JSON.parse(localStorage.getItem("user_details"));
+    const user_details = typeof window !== "undefined" && JSON.parse(localStorage.getItem("user_details"));
     const updatedContext = { ...rootContext, loader: false };
+
     if (user_details) {
       updatedContext.authenticated = true;
       updatedContext.user = user_details;
     }
+
     setRootContext(updatedContext);
     setReady(true);
   }, []);
@@ -98,8 +109,7 @@ export default function RootLayout({ children }) {
 
   const logOut = () => {
     localStorage.clear();
-    const resetContext = { ...rootContext, authenticated: false };
-    setRootContext(resetContext);
+    setRootContext({ authenticated: false, user: null, loader: false });
     router.push(`/`);
   };
 
@@ -137,9 +147,10 @@ export default function RootLayout({ children }) {
       </div>
     </div>
   );
+
   return (
     <html lang="en" className={inter.variable}>
-      <body className={`antialiased`}>
+      <body className="antialiased">
         <RootContext.Provider value={{ rootContext, setRootContext }}>
           {pathName === "/signup" && !rootContext.authenticated && !rootContext.loader ? (
             <RegisterForm />
