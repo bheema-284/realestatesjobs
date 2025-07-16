@@ -23,7 +23,7 @@ const sidebarItems = [
   { icon: <FaCog />, label: "Settings", link: "/settings" },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ isMobileOpen, toggleSidebar }) => {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -35,14 +35,18 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="fixed top-16 left-0 h-screen w-36 bg-white shadow-md z-20">
+    <div className={`fixed top-16 left-0 h-screen w-36 bg-white shadow-md z-20 transition-transform duration-300 ease-in-out
+      ${isMobileOpen ? 'translate-x-0 z-50' : '-translate-x-full'} sm:translate-x-0`}>
       <div className="p-4 space-y-4">
         {sidebarItems.map((item, idx) => {
           const isActive = isPathActive(item.link);
           return (
             <div
               key={idx}
-              onClick={() => router.push(item.link)}
+              onClick={() => {
+                router.push(item.link);
+                toggleSidebar(false);
+              }}
               className={`flex items-center gap-3 px-2 py-1 rounded-md cursor-pointer transition-colors duration-200 ${isActive ? "text-black bg-indigo-200 font-bold" : "text-black hover:text-black hover:font-medium"
                 }`}
             >
@@ -62,7 +66,9 @@ export default function RootLayout({ children }) {
   const dropdownRef = useRef();
   const [showDropdown, setShowDropdown] = useState(false);
   const [ready, setReady] = useState(false);
-  const [rootContext, setRootContext] = useState(RootContext || {
+  const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const [rootContext, setRootContext] = useState({
     authenticated: false,
     loader: true,
     user: {
@@ -114,36 +120,55 @@ export default function RootLayout({ children }) {
   };
 
   const Topbar = () => (
-    <div className="flex fixed top-0 left-0 w-full z-50 justify-between items-center px-6 py-2 bg-white shadow">
-      <img width={100} src="https://realestatejobs.co.in/images/logo.png" alt="Logo" />
-      <button className="bg-indigo-900 text-white px-4 py-2 rounded">POST NEW JOB</button>
-      <input
-        type="text"
-        placeholder="Search candidate, vacancy, etc"
-        className="ml-4 px-4 py-2 border rounded w-1/3"
-      />
-      <div className="flex items-center gap-4 relative" ref={dropdownRef}>
-        <FaBell className="text-gray-600" />
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setShowDropdown(!showDropdown)}>
-          <UserIcon className="w-4 h-4 text-gray-400" />
-          <div className="text-sm flex items-center gap-1">
-            <div>
-              <p className="font-semibold">{rootContext?.user?.name || "User"}</p>
-              <p className="text-gray-500 text-xs">Lead HR</p>
+    <div className="flex flex-wrap sm:flex-nowrap fixed top-0 left-0 w-full z-50 justify-between items-center px-4 sm:px-6 py-2 bg-white shadow gap-2">
+      <div className="flex items-center justify-between w-full sm:w-auto">
+        <img width={100} src="https://realestatejobs.co.in/images/logo.png" alt="Logo" />
+        <button
+          onClick={() => setMobileSidebarOpen(!isMobileSidebarOpen)}
+          className="sm:hidden text-gray-700 focus:outline-none"
+        >
+          ☰
+        </button>
+      </div>
+
+      <div className="flex-1 flex items-center justify-between sm:justify-end gap-4 mt-2 sm:mt-0">
+        <button className="bg-indigo-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
+          POST NEW JOB
+        </button>
+        <input
+          type="text"
+          placeholder="Search candidate, vacancy, etc"
+          className="px-3 py-2 border rounded w-full sm:w-1/3 text-sm"
+        />
+        <div className="flex items-center gap-3 relative" ref={dropdownRef}>
+          <FaBell className="text-gray-600" />
+          <div className="flex items-center gap-1 cursor-pointer" onClick={() => setShowDropdown(!showDropdown)}>
+            <UserIcon className="w-4 h-4 text-gray-400" />
+            <div className="text-sm flex flex-col sm:flex-row sm:items-center gap-1">
+              {/* 👇 Small screens: initial in a circle */}
+              <div className="sm:hidden w-6 h-6 rounded-full bg-indigo-900 text-white flex items-center justify-center font-semibold">
+                {(rootContext?.user?.name || "U").charAt(0).toUpperCase()}
+              </div>
+
+              {/* 👇 Larger screens: full name and role */}
+              <div className="hidden sm:flex flex-col">
+                <p className="font-semibold">{rootContext?.user?.name || "User"}</p>
+                <p className="text-gray-500 text-xs">Lead HR</p>
+              </div>
             </div>
-            <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+            <p className="hidden sm:block"><ChevronDownIcon className="w-4 h-4 text-gray-400" /></p>
           </div>
+          {showDropdown && (
+            <div className="absolute top-full right-0 mt-2 w-36 bg-white shadow-lg border rounded-md z-50">
+              <button
+                onClick={logOut}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                Logout
+              </button>
+            </div>
+          )}
         </div>
-        {showDropdown && (
-          <div className="absolute top-full right-0 mt-2 w-36 bg-white shadow-lg border rounded-md z-50">
-            <button
-              onClick={logOut}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            >
-              Logout
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -152,22 +177,16 @@ export default function RootLayout({ children }) {
     <html lang="en" className={inter.variable}>
       <body className="antialiased">
         <RootContext.Provider value={{ rootContext, setRootContext }}>
-          {pathName === "/signup" && !rootContext.authenticated && !rootContext.loader ? (
-            <RegisterForm />
-          ) : rootContext.loader ? (
-            <Loader />
-          ) : !rootContext.authenticated ? (
-            <SignIn />
-          ) : (
+          {
             <div>
               {!ready && <Loader />}
               <Topbar />
-              <div className="flex pt-16 bg-gray-100">
-                <Sidebar />
-                <main className="flex-1 ml-36 p-4">{children}</main>
+              <div className="flex flex-col sm:flex-row pt-20 bg-gray-100 min-h-screen">
+                <Sidebar isMobileOpen={isMobileSidebarOpen} toggleSidebar={setMobileSidebarOpen} />
+                <main className="flex-1 sm:ml-36 p-4">{children}</main>
               </div>
             </div>
-          )}
+          }
           {rootContext?.toast && <Toast />}
         </RootContext.Provider>
       </body>

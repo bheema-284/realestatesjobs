@@ -1,12 +1,13 @@
-// /app/profile/page.js
 'use client';
+import React, { useState, useEffect, useRef } from 'react';
 import { PencilIcon } from '@heroicons/react/24/solid';
-import React, { useState, useEffect } from 'react';
+import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import AboutMe from './aboutme';
 import Applications from './applications';
 import Projects from './projects';
 import Services from './services';
 import Marketing from './marketing';
+import { useRouter } from 'next/navigation';
 
 const tabs = [
     { name: 'About Me', component: AboutMe },
@@ -17,10 +18,19 @@ const tabs = [
 ];
 
 export default function ProfilePage({ userId }) {
-    const [activeTab, setActiveTab] = useState(0);
-    const [profile, setProfile] = useState({ name: '', title: '', email: '', image: '', summary: '', experience: [], education: [] });
+    const router = useRouter();
+    // const [activeTab, setActiveTab] = useState(0);
+    const [activeTab, setActiveTab] = useState(0); // State to manage the active tab (clicked)
+    const [indicatorStyle, setIndicatorStyle] = useState({}); // State for the moving indicator's style
+    const tabRefs = useRef([]); // Ref to store references to each tab button
+    const tabContainerRef = useRef(null); // Ref for the main tab container
+
+    const [profile, setProfile] = useState({
+        name: '', title: '', email: '', image: '', summary: '', experience: [], education: [],
+    });
     const [editingHeader, setEditingHeader] = useState(false);
     const [tempProfile, setTempProfile] = useState(profile);
+    const [accordionOpen, setAccordionOpen] = useState(null);
 
     useEffect(() => {
         const candidateData = [
@@ -33,8 +43,22 @@ export default function ProfilePage({ userId }) {
                 email: 'emma.robin@example.com',
                 summary: 'Full-stack developer with 10+ years experience building scalable web apps and leading agile teams.',
                 experience: [
-                    { company: 'TechMinds', location: 'Hyderabad', role: 'Senior Developer' },
-                    { company: 'NextGen Solutions', location: 'Hyderabad', role: 'Software Engineer' },
+                    {
+                        company: 'TechMinds',
+                        location: 'Hyderabad',
+                        role: 'Senior Developer',
+                        startDate: '2017-04',
+                        endDate: '2023-12',
+                        description: 'Led enterprise-grade web application development using modern tech stacks...'
+                    },
+                    {
+                        company: 'NextGen Solutions',
+                        location: 'Hyderabad',
+                        role: 'Software Engineer',
+                        startDate: '2013-06',
+                        endDate: '2017-03',
+                        description: 'Developed and maintained full-stack applications...'
+                    }
                 ],
                 education: [
                     { degree: 'B.Tech in Computer Science', board: 'Osmania University', years: '2007 - 2011' },
@@ -49,8 +73,32 @@ export default function ProfilePage({ userId }) {
                     { name: 'Code Review', description: 'Ensuring code quality and standards.' },
                 ],
                 marketing: [
-                    { platform: 'LinkedIn', campaign: 'Developer Hiring', performance: '2K clicks' },
-                    { platform: 'YouTube', campaign: 'Product Demos', performance: '15K views' },
+                    {
+                        id: 1,
+                        campaignName: 'Summer Tech Hiring 2024',
+                        platform: 'LinkedIn, YouTube',
+                        status: 'Scheduled',
+                        budget: '$2,500',
+                        impressions: '1M',
+                        clicks: '80K',
+                        conversionRate: '1.8%',
+                        startDate: '2024-12-01',
+                        endDate: '2024-01-31',
+                        description: 'Targeted campaign to attract senior developers across Hyderabad via professional and video platforms.',
+                    },
+                    {
+                        id: 2,
+                        campaignName: 'Summer Tech Hiring 2025',
+                        platform: 'Instagram',
+                        status: 'Active',
+                        budget: '$7,500',
+                        impressions: '2M',
+                        clicks: '60K',
+                        conversionRate: '3.8%',
+                        startDate: '2025-06-01',
+                        endDate: '2025-08-31',
+                        description: 'Targeted campaign to attract senior developers across Hyderabad via professional and video platforms.',
+                    }
                 ],
                 applications: [
                     { jobTitle: 'Lead Developer', company: 'Infosys', status: 'Interview Scheduled' },
@@ -66,8 +114,18 @@ export default function ProfilePage({ userId }) {
                 email: 'alex.johnson@example.com',
                 summary: 'Seasoned recruiter managing end-to-end hiring operations across IT & Finance domains.',
                 experience: [
-                    { company: 'HRSolutions', location: 'Mumbai', role: 'Recruitment Manager' },
-                    { company: 'TalentBridge', location: 'Mumbai', role: 'HR Executive' },
+                    {
+                        company: 'HRSolutions',
+                        location: 'Mumbai',
+                        role: 'Recruitment Manager',
+                        description: 'Managed full-cycle recruitment processes for IT and finance roles, implementing strategic sourcing and reducing time-to-hire by 30%.'
+                    },
+                    {
+                        company: 'TalentBridge',
+                        location: 'Mumbai',
+                        role: 'HR Executive',
+                        description: 'Supported hiring campaigns and built a strong candidate pipeline through campus outreach and job portals.'
+                    }
                 ],
                 education: [
                     { degree: 'MBA in HR', board: 'Mumbai University', years: '2010 - 2012' },
@@ -86,8 +144,19 @@ export default function ProfilePage({ userId }) {
                     { name: 'HR Policy Setup', description: 'Developing internal HR SOPs.' },
                 ],
                 marketing: [
-                    { platform: 'Email', campaign: 'Candidate Outreach', performance: '30% open rate' },
-                    { platform: 'Instagram', campaign: 'Employer Branding', performance: '8K engagement' },
+                    {
+                        id: 2,
+                        campaignName: 'Mass Hiring Drive 2025',
+                        platform: 'Email, Instagram',
+                        status: 'Completed',
+                        budget: '$4,000',
+                        impressions: '1.5M',
+                        clicks: '40K',
+                        conversionRate: '5.1%',
+                        startDate: '2025-04-01',
+                        endDate: '2025-06-30',
+                        description: 'Bulk recruitment marketing campaign focused on finance and IT roles in urban metros.',
+                    }
                 ],
 
             },
@@ -100,8 +169,18 @@ export default function ProfilePage({ userId }) {
                 email: 'priya.mehta@example.com',
                 summary: 'Creative UI/UX designer with a knack for intuitive design, accessibility, and mobile-first interfaces.',
                 experience: [
-                    { company: 'CreativeBox', location: 'Bangalore', role: 'Lead UI Designer' },
-                    { company: 'DesignGrid', location: 'Bangalore', role: 'UX Analyst' },
+                    {
+                        company: 'CreativeBox',
+                        location: 'Bangalore',
+                        role: 'Lead UI Designer',
+                        description: 'Led UI design for web and mobile apps, focusing on user-centered design and brand consistency.'
+                    },
+                    {
+                        company: 'DesignGrid',
+                        location: 'Bangalore',
+                        role: 'UX Analyst',
+                        description: 'Conducted user research, usability testing, and created wireframes to enhance product usability.'
+                    }
                 ],
                 education: [
                     { degree: 'B.Des in Communication Design', board: 'NID', years: '2012 - 2016' },
@@ -120,8 +199,19 @@ export default function ProfilePage({ userId }) {
                     { name: 'Prototyping', description: 'Interactive flows with Figma and XD.' },
                 ],
                 marketing: [
-                    { platform: 'Behance', campaign: 'Portfolio Highlights', performance: '10K views' },
-                    { platform: 'Dribbble', campaign: 'Design Showcase', performance: 'Top trending shots' },
+                    {
+                        id: 3,
+                        campaignName: 'UI/UX Portfolio Showcase',
+                        platform: 'Behance, Dribbble',
+                        status: 'Active',
+                        budget: '$2,000',
+                        impressions: '800K',
+                        clicks: '22K',
+                        conversionRate: '2.75%',
+                        startDate: '2025-05-15',
+                        endDate: '2025-08-15',
+                        description: 'Design campaign highlighting portfolio pieces to attract product companies and recruiters.',
+                    }
                 ],
             },
             {
@@ -133,8 +223,18 @@ export default function ProfilePage({ userId }) {
                 email: 'rahul.verma@example.com',
                 summary: 'Automation-first DevOps engineer with deep experience in CI/CD and Kubernetes.',
                 experience: [
-                    { company: 'CloudOps', location: 'Pune', role: 'DevOps Lead' },
-                    { company: 'SysStack', location: 'Pune', role: 'SRE' },
+                    {
+                        company: 'CloudOps',
+                        location: 'Pune',
+                        role: 'DevOps Lead',
+                        description: 'Architected and managed CI/CD pipelines using Jenkins and GitHub Actions. Automated infrastructure provisioning using Terraform.'
+                    },
+                    {
+                        company: 'SysStack',
+                        location: 'Pune',
+                        role: 'SRE',
+                        description: 'Implemented monitoring systems and improved incident response using Grafana and Prometheus.'
+                    }
                 ],
                 education: [
                     { degree: 'B.Tech in IT', board: 'Pune University', years: '2009 - 2013' },
@@ -152,9 +252,21 @@ export default function ProfilePage({ userId }) {
                     { name: 'Infra as Code', description: 'Terraform + AWS automation.' },
                 ],
                 marketing: [
-                    { platform: 'Twitter', campaign: 'DevOps Tips', performance: '1K followers gained' },
-                    { platform: 'Blog', campaign: 'Weekly DevOps Reads', performance: '5K readers' },
+                    {
+                        id: 5,
+                        campaignName: 'SEO & Lead Gen Blitz',
+                        platform: 'Google Ads, LinkedIn Ads',
+                        status: 'Active',
+                        budget: '$6,000',
+                        impressions: '2.2M',
+                        clicks: '55K',
+                        conversionRate: '4.9%',
+                        startDate: '2025-06-01',
+                        endDate: '2025-09-01',
+                        description: 'Cross-channel campaign focused on driving leads for SaaS clients through paid search and retargeting.',
+                    }
                 ],
+
             },
             {
                 id: 5,
@@ -165,8 +277,18 @@ export default function ProfilePage({ userId }) {
                 email: 'anjali.singh@example.com',
                 summary: 'Performance marketer specializing in SEO, SEM, and content-led campaigns.',
                 experience: [
-                    { company: 'ClickBuzz', location: 'Delhi', role: 'Marketing Manager' },
-                    { company: 'AdLift', location: 'Noida', role: 'SEO Analyst' },
+                    {
+                        company: 'ClickBuzz',
+                        location: 'Delhi',
+                        role: 'Marketing Manager',
+                        description: 'Managed end-to-end marketing strategy, including PPC campaigns and SEO efforts, leading to 150% growth in traffic.'
+                    },
+                    {
+                        company: 'AdLift',
+                        location: 'Noida',
+                        role: 'SEO Analyst',
+                        description: 'Optimized websites for search engines and improved SERP rankings through keyword and backlink strategies.'
+                    }
                 ],
                 education: [
                     { degree: 'MBA in Marketing', board: 'IIM Lucknow', years: '2014 - 2016' },
@@ -180,9 +302,21 @@ export default function ProfilePage({ userId }) {
                     { name: 'Lead Gen Campaigns', description: 'Full-funnel design and tracking.' },
                 ],
                 marketing: [
-                    { platform: 'Google Ads', campaign: 'B2B SaaS', performance: '200+ leads/mo' },
-                    { platform: 'LinkedIn Ads', campaign: 'Consulting Services', performance: '35% CPL reduction' },
+                    {
+                        id: 6,
+                        campaignName: 'Product Demo Webinars',
+                        platform: 'Webinars, Newsletters',
+                        status: 'Active',
+                        budget: '$3,500',
+                        impressions: '1.1M',
+                        clicks: '25K',
+                        conversionRate: '2.3%',
+                        startDate: '2025-06-10',
+                        endDate: '2025-08-31',
+                        description: 'Webinar series showcasing SaaS product features to boost product-led growth.',
+                    }
                 ],
+
             },
             {
                 id: 6,
@@ -193,8 +327,18 @@ export default function ProfilePage({ userId }) {
                 email: 'arjun.desai@example.com',
                 summary: 'Product leader driving vision, roadmap, and GTM strategies for SaaS platforms.',
                 experience: [
-                    { company: 'InnoTech', location: 'Ahmedabad', role: 'Product Manager' },
-                    { company: 'SoftCore', location: 'Ahmedabad', role: 'Business Analyst' },
+                    {
+                        company: 'InnoTech',
+                        location: 'Ahmedabad',
+                        role: 'Product Manager',
+                        description: 'Led product roadmap, feature prioritization, and stakeholder alignment for SaaS offerings.'
+                    },
+                    {
+                        company: 'SoftCore',
+                        location: 'Ahmedabad',
+                        role: 'Business Analyst',
+                        description: 'Analyzed user needs and translated business goals into functional specifications for development teams.'
+                    }
                 ],
                 education: [
                     { degree: 'PGDM in Product Management', board: 'ISB Hyderabad', years: '2015 - 2017' },
@@ -208,8 +352,19 @@ export default function ProfilePage({ userId }) {
                     { name: 'User Research', description: 'Interview frameworks & persona creation' },
                 ],
                 marketing: [
-                    { platform: 'Webinars', campaign: 'Product Demos', performance: '1K attendees avg' },
-                    { platform: 'Newsletters', campaign: 'Product Updates', performance: '50% open rate' },
+                    {
+                        id: 7,
+                        campaignName: 'Thought Leadership Push',
+                        platform: 'Medium, Twitter Threads',
+                        status: 'Active',
+                        budget: '$2,200',
+                        impressions: '1.8M',
+                        clicks: '42K',
+                        conversionRate: '3.4%',
+                        startDate: '2025-05-20',
+                        endDate: '2025-08-31',
+                        description: 'Personal brand campaign focused on content strategy and viral tips for marketers.',
+                    }
                 ],
                 applications: [
                     { jobTitle: 'Senior Product Manager', company: 'Razorpay', status: 'Under Review' },
@@ -225,8 +380,18 @@ export default function ProfilePage({ userId }) {
                 email: 'sneha.kapoor@example.com',
                 summary: 'Helping brands grow through content that ranks, converts, and builds loyalty.',
                 experience: [
-                    { company: 'WriteCraft', location: 'Chennai', role: 'Lead Content Strategist' },
-                    { company: 'InkHive', location: 'Chennai', role: 'Content Writer' },
+                    {
+                        company: 'WriteCraft',
+                        location: 'Chennai',
+                        role: 'Lead Content Strategist',
+                        description: 'Led content strategy and publishing calendar, resulting in consistent traffic growth and improved lead generation.'
+                    },
+                    {
+                        company: 'InkHive',
+                        location: 'Chennai',
+                        role: 'Content Writer',
+                        description: 'Authored high-performing articles for B2B and B2C domains, focusing on SEO and storytelling.'
+                    }
                 ],
                 applications: [
                     { jobTitle: 'Content Lead', company: 'Zomato', status: 'Applied' },
@@ -244,8 +409,19 @@ export default function ProfilePage({ userId }) {
                     { name: 'Copywriting', description: 'Sales pages, ads, and email funnels.' },
                 ],
                 marketing: [
-                    { platform: 'Medium', campaign: 'Thought Leadership', performance: '1M reads total' },
-                    { platform: 'Twitter Threads', campaign: 'Quick Wins', performance: '200K impressions/thread' },
+                    {
+                        id: 8,
+                        campaignName: 'QA Career Insights',
+                        platform: 'LinkedIn, Blog',
+                        status: 'Completed',
+                        budget: '$1,500',
+                        impressions: '900K',
+                        clicks: '21K',
+                        conversionRate: '2.9%',
+                        startDate: '2025-04-01',
+                        endDate: '2025-06-30',
+                        description: 'Educational campaign for fellow QA engineers with automation best practices and tool reviews.',
+                    }
                 ],
             },
             {
@@ -257,8 +433,18 @@ export default function ProfilePage({ userId }) {
                 email: 'rohit.sharma@example.com',
                 summary: 'Detail-driven QA engineer with a passion for test automation and release confidence.',
                 experience: [
-                    { company: 'BugFree Labs', location: 'Kolkata', role: 'QA Lead' },
-                    { company: 'TestCraft', location: 'Kolkata', role: 'Automation Tester' },
+                    {
+                        company: 'BugFree Labs',
+                        location: 'Kolkata',
+                        role: 'QA Lead',
+                        description: 'Designed and executed comprehensive test plans and led QA teams across projects with a focus on automation.'
+                    },
+                    {
+                        company: 'TestCraft',
+                        location: 'Kolkata',
+                        role: 'Automation Tester',
+                        description: 'Developed Selenium and Cypress scripts to ensure product stability across builds and environments.'
+                    }
                 ],
                 education: [
                     { degree: 'B.Sc. in CS', board: 'Calcutta University', years: '2008 - 2011' },
@@ -276,8 +462,19 @@ export default function ProfilePage({ userId }) {
                     { jobTitle: 'Test Engineer', company: 'Tech Mahindra', status: 'Shortlisted' },
                 ],
                 marketing: [
-                    { platform: 'LinkedIn', campaign: 'QA Career Guide', performance: '1.2K likes' },
-                    { platform: 'Blog', campaign: 'Testing Tips', performance: '8K monthly visitors' },
+                    {
+                        id: 9,
+                        campaignName: 'Customer Retention Insights',
+                        platform: 'Webinars, Case Studies',
+                        status: 'Active',
+                        budget: '$3,000',
+                        impressions: '1.3M',
+                        clicks: '30K',
+                        conversionRate: '4.1%',
+                        startDate: '2025-06-01',
+                        endDate: '2025-08-31',
+                        description: 'Client engagement campaign sharing success stories and customer onboarding methods.',
+                    }
                 ],
             },
             {
@@ -289,8 +486,18 @@ export default function ProfilePage({ userId }) {
                 email: 'neha.dubey@example.com',
                 summary: 'Client-focused CSM with a history of improving retention and NPS for SaaS platforms.',
                 experience: [
-                    { company: 'ClientBoost', location: 'Jaipur', role: 'CS Manager' },
-                    { company: 'Supportly', location: 'Remote', role: 'Customer Support' },
+                    {
+                        company: 'ClientBoost',
+                        location: 'Jaipur',
+                        role: 'CS Manager',
+                        description: 'Led customer onboarding and success strategies, achieving 20% churn reduction.'
+                    },
+                    {
+                        company: 'Supportly',
+                        location: 'Remote',
+                        role: 'Customer Support',
+                        description: 'Provided support across channels and contributed to CSAT score improvement through proactive service.'
+                    }
                 ],
                 education: [
                     { degree: 'MBA in Operations', board: 'BITS Pilani', years: '2013 - 2015' },
@@ -321,8 +528,18 @@ export default function ProfilePage({ userId }) {
                 email: 'vikram.rao@example.com',
                 summary: 'Android developer building performant and accessible mobile apps with Kotlin.',
                 experience: [
-                    { company: 'MobilityX', location: 'Nagpur', role: 'Android Dev' },
-                    { company: 'CodeNest', location: 'Nagpur', role: 'Junior Android Dev' },
+                    {
+                        company: 'MobilityX',
+                        location: 'Nagpur',
+                        role: 'Android Dev',
+                        description: 'Developed Kotlin-based mobile apps with Jetpack libraries and followed MVVM architecture for scalability.'
+                    },
+                    {
+                        company: 'CodeNest',
+                        location: 'Nagpur',
+                        role: 'Junior Android Dev',
+                        description: 'Assisted in maintaining existing Android apps and improving app performance and UI responsiveness.'
+                    }
                 ],
                 education: [
                     { degree: 'B.E. in Computer Engineering', board: 'RTMNU', years: '2011 - 2015' },
@@ -336,8 +553,19 @@ export default function ProfilePage({ userId }) {
                     { name: 'Play Store Optimization', description: 'Boost ASO & review management.' },
                 ],
                 marketing: [
-                    { platform: 'Play Store', campaign: 'App Promo', performance: '15K downloads' },
-                    { platform: 'YouTube Shorts', campaign: 'Feature Teasers', performance: '50K views' },
+                    {
+                        id: 10,
+                        campaignName: 'Android App Showcase',
+                        platform: 'Play Store, YouTube Shorts',
+                        status: 'Active',
+                        budget: '$2,500',
+                        impressions: '1.5M',
+                        clicks: '35K',
+                        conversionRate: '4.6%',
+                        startDate: '2025-06-01',
+                        endDate: '2025-08-31',
+                        description: 'Promotional push for Android apps with feature highlights, ASO, and short-form videos.',
+                    }
                 ],
                 applications: [
                     { jobTitle: 'Android App Developer', company: 'CRED', status: 'Interview Scheduled' },
@@ -345,25 +573,58 @@ export default function ProfilePage({ userId }) {
                 ],
             },
         ];
-
-
-        const data = candidateData.find((c) => String(c.id) === String(userId));
+        const data = candidateData.find((c) => String(c.id) === String(userId || 1));
         if (data) {
             setProfile(data);
             setTempProfile(data);
         }
     }, [userId]);
 
+    const updateIndicatorStyle = (index) => {
+        if (tabRefs.current[index]) {
+            const targetButton = tabRefs.current[index];
+            setIndicatorStyle({
+                width: targetButton.offsetWidth,
+                left: targetButton.offsetLeft,
+            });
+        }
+    };
+
+    // Effect to set initial indicator position to the active tab
+    // and recalculate on activeTab change or window resize
+    useEffect(() => {
+        updateIndicatorStyle(activeTab);
+
+        const handleResize = () => {
+            updateIndicatorStyle(activeTab);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [activeTab]);
+
+    // Handle hover effect: move indicator to hovered tab
+    const handleMouseEnter = (index) => {
+        updateIndicatorStyle(index);
+    };
+
+    // Handle mouse leave from the entire tab container: move indicator back to active tab
+    const handleMouseLeave = () => {
+        updateIndicatorStyle(activeTab);
+    };
+
     const ActiveComponent = tabs[activeTab].component;
 
     return (
         <div className="bg-gray-100 min-h-screen">
             <div className="bg-[#0d1b2a] text-white py-6 px-4 relative">
-                <div className="flex items-center gap-4 max-w-5xl mx-auto">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 max-w-5xl mx-auto">
                     <img
                         src={tempProfile.image}
                         alt="Avatar"
-                        className="w-20 h-20 rounded-full border-4 border-white object-cover"
+                        className="w-16 sm:w-20 h-16 sm:h-20 rounded-full border-4 border-white object-cover"
                     />
                     {editingHeader ? (
                         <div className="flex flex-col w-full gap-2">
@@ -405,7 +666,7 @@ export default function ProfilePage({ userId }) {
                         </div>
                     ) : (
                         <div>
-                            <h2 className="font-bold text-xl">{profile.name}</h2>
+                            <h2 className="font-bold text-lg sm:text-xl">{profile.name}</h2>
                             <p className="text-sm">{profile.title}</p>
                             <p className="text-xs text-gray-300">{profile.email}</p>
                         </div>
@@ -415,29 +676,94 @@ export default function ProfilePage({ userId }) {
                             setEditingHeader(true);
                             setTempProfile(profile);
                         }}
-                        className="absolute top-4 right-6 text-white"
+                        className="absolute top-8 sm:top-4 right-6 text-white"
                     >
                         <PencilIcon className="w-5 h-5" />
                     </button>
                 </div>
+                {/* Desktop Edit Icon */}
+                <button
+                    onClick={() => {
+                        setEditingHeader(true);
+                        setTempProfile(profile);
+                    }}
+                    className="hidden sm:block absolute top-4 right-6 text-white"
+                >
+                    <PencilIcon className="w-5 h-5" />
+                </button>
             </div>
 
+            {/* Tab / Accordion Section */}
             <div className="bg-white border-b border-gray-200 max-w-5xl mx-auto px-4 py-6 rounded-b-md shadow-sm">
-                <div className="flex gap-4 justify-between text-sm">
-                    {tabs.map((tab, index) => (
-                        <button
-                            key={tab.name}
-                            className={`py-1 px-3 rounded-t-md transition-colors duration-150 ${activeTab === index
-                                ? 'bg-indigo-900 text-white'
-                                : 'text-gray-600 hover:bg-gray-100'
-                                }`}
-                            onClick={() => setActiveTab(index)}
-                        >
-                            {tab.name}
-                        </button>
-                    ))}
+                {/* Desktop Tabs */}
+                <div className="hidden sm:flex flex-col text-sm mb-6">
+                    {/* Tab Navigation */}
+                    <div
+                        ref={tabContainerRef}
+                        className="flex flex-row justify-between bg-white rounded-t-md relative overflow-hidden"
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        {/* Moving background indicator */}
+                        <span
+                            className="absolute bottom-0 h-full bg-gray-200 rounded-t-md transition-all duration-300 ease-in-out z-0"
+                            style={indicatorStyle}
+                        ></span>
+
+                        {tabs.map((tab, index) => (
+                            <button
+                                key={tab.name}
+                                ref={el => tabRefs.current[index] = el} // Assign ref to each button
+                                className={`py-1 px-3 rounded-t-md transition-colors relative font-medium z-10
+                            transition-colors duration-300 ease-in-out
+                            ${activeTab === index
+                                        ? 'bg-indigo-900 text-white' // Active tab text color (bg handled by indicator)
+                                        : 'text-gray-700' // Non-active tab text color
+                                    }`}
+                                onClick={() => setActiveTab(index)}
+                                onMouseEnter={() => handleMouseEnter(index)} // Listen for mouse entering individual tab
+                            >
+                                {/* Text content */}
+                                {tab.name}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Tab Content */}
+                    <div className="py-1 px-3 rounded-t-md">
+                        {tabs[activeTab].component}
+                    </div>
                 </div>
-                <ActiveComponent profile={profile} />
+
+                {/* Desktop Tab Content */}
+                <div className="hidden sm:block">
+                    <ActiveComponent profile={profile} />
+                </div>
+
+                {/* Mobile Accordion */}
+                <div className="sm:hidden">
+                    {tabs.map((tab, index) => {
+                        const Component = tab.component;
+                        const isOpen = accordionOpen === index;
+                        return (
+                            <div key={tab.name} className="border-b border-gray-200">
+                                <button
+                                    onClick={() => setAccordionOpen(isOpen ? null : index)}
+                                    className="w-full flex justify-between items-center py-2 px-2 bg-gray-50 text-left"
+                                >
+                                    <span className="font-medium text-gray-700 text-sm">{tab.name}</span>
+                                    <ChevronDownIcon
+                                        className={`w-4 h-4 transform transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                                    />
+                                </button>
+                                {isOpen && (
+                                    <div className="p-2">
+                                        <Component profile={profile} />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );
