@@ -199,7 +199,7 @@ export default function AboutMe({ profile }) {
                     </div>
                     <div className="space-y-6">
                         {experience.length === 0 && (
-                            <p className="text-gray-600 text-center py-4">No experience added yet. Click the '+' button to add one.</p>
+                            <p className="text-gray-600 text-center py-4">"No experience added yet. Click the &apos;+&apos; button to add one."</p>
                         )}
                         {experience.map((exp, index) => (
                             <div key={index} className="flex flex-col border border-gray-200 rounded-lg p-4 bg-gray-50 shadow-sm">
