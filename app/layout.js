@@ -10,6 +10,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { FaChartBar, FaUsers, FaTasks, FaCalendarAlt, FaCog, FaSuitcase, FaBell } from "react-icons/fa";
 import { ChevronDownIcon, UserIcon } from "@heroicons/react/24/solid";
 import { Inter } from 'next/font/google';
+import JobPostingModal from "@/components/createjob";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -28,8 +29,8 @@ const Sidebar = ({ isMobileOpen, toggleSidebar }) => {
   const router = useRouter();
 
   const isPathActive = (itemLink) => {
-    if (itemLink === '/applications') {
-      return pathname.startsWith('/applications') || pathname.startsWith('/profile');
+    if (itemLink === '/candidates') {
+      return pathname.startsWith('/candidates') || pathname.startsWith('/profile');
     }
     return pathname === itemLink || pathname.startsWith(`${itemLink}/`);
   };
@@ -67,7 +68,7 @@ export default function RootLayout({ children }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [ready, setReady] = useState(false);
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
+  const [isOpen, setIsOpen] = useState(false);
   const [rootContext, setRootContext] = useState({
     authenticated: false,
     loader: true,
@@ -87,7 +88,8 @@ export default function RootLayout({ children }) {
       type: '',
       title: '',
       message: ''
-    }
+    },
+    jobs: []
   });
 
   useEffect(() => {
@@ -115,7 +117,30 @@ export default function RootLayout({ children }) {
 
   const logOut = () => {
     localStorage.clear();
-    setRootContext({ authenticated: false, user: null, loader: false });
+    setRootContext(
+      {
+        authenticated: false,
+        loader: true,
+        user: {
+          name: "",
+          email: "",
+          mobile: "",
+          password: "",
+          token: "",
+          isAdmin: "",
+        },
+        accessToken: '',
+        remember: false,
+        toast: {
+          show: false,
+          dismiss: true,
+          type: '',
+          title: '',
+          message: ''
+        },
+        jobs: []
+      }
+    );
     router.push(`/`);
   };
 
@@ -132,7 +157,7 @@ export default function RootLayout({ children }) {
       </div>
 
       <div className="flex-1 flex items-center justify-between sm:justify-end gap-4 mt-2 sm:mt-0">
-        <button className="bg-indigo-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
+        <button onClick={() => setIsOpen(!isOpen)} className="bg-indigo-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
           POST NEW JOB
         </button>
         <input
@@ -170,6 +195,7 @@ export default function RootLayout({ children }) {
           )}
         </div>
       </div>
+      {isOpen && <JobPostingModal isOpen={isOpen} setIsOpen={setIsOpen} />}
     </div>
   );
 
@@ -177,16 +203,22 @@ export default function RootLayout({ children }) {
     <html lang="en" className={inter.variable}>
       <body className="antialiased">
         <RootContext.Provider value={{ rootContext, setRootContext }}>
-          {
+          {pathName === "/signup" && !rootContext.authenticated && !rootContext.loader ? (
+            <RegisterForm />
+          ) : rootContext.loader ? (
+            <Loader />
+          ) : !rootContext.authenticated ? (
+            <SignIn />
+          ) : (
             <div>
               {!ready && <Loader />}
               <Topbar />
               <div className="flex flex-col sm:flex-row pt-20 bg-gray-100 min-h-screen">
                 <Sidebar isMobileOpen={isMobileSidebarOpen} toggleSidebar={setMobileSidebarOpen} />
-                <main className="flex-1 sm:ml-36 p-4">{children}</main>
+                <main className="flex-1 ml-36 p-4">{children}</main>
               </div>
             </div>
-          }
+          )}
           {rootContext?.toast && <Toast />}
         </RootContext.Provider>
       </body>

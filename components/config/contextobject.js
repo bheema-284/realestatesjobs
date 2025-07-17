@@ -17,5 +17,6 @@ export const contextObject = {
         type: '',
         title: '',
         message: ''
-    }
+    },
+    jobs: []
 }

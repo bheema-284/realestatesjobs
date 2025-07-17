@@ -2,7 +2,6 @@
 "use client";
 import React, { useState } from "react";
 import Input from "./input";
-import Button from "./button";
 import { useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import { users } from '../config/data'
@@ -84,6 +83,24 @@ const RegisterForm = () => {
   const tabs = ["Applicant", "Company Profile"];
   const [showPassword, setShowPassword] = useState(false);
   const [showCPassword, setShowCPassword] = useState(false);
+
+  const Button = ({ title, type, btnType, disabled, className, onClick }) => {
+    const baseClasses = "w-full text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-all duration-300 ease-in-out";
+    const gradientClasses = "bg-gradient-to-r from-orange-400 via-purple-500 to-purple-700 hover:from-orange-500 hover:via-purple-600 hover:to-purple-800";
+    const disabledClasses = "opacity-50 cursor-not-allowed";
+
+    return (
+      <button
+        type={type}
+        className={`${baseClasses} ${gradientClasses} ${disabled ? disabledClasses : ''} ${className}`}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {title}
+      </button>
+    );
+  };
+  
   return (
     <section className="bg-gray-50 dark:bg-gray-900 mt-5">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">

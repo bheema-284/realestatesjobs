@@ -2,7 +2,6 @@
 import React, { useContext, useState } from "react";
 import Input from "./input";
 import CheckBox from "./checkbox";
-import Button from "./button";
 import RootContext from "../config/rootcontext";
 import { contextObject } from "../config/contextobject";
 import { useRouter } from "next/navigation";
@@ -131,7 +130,22 @@ const SignIn = () => {
   };
 
 
+  const Button = ({ title, type, btnType, disabled, className, onClick }) => {
+    const baseClasses = "w-full text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-all duration-300 ease-in-out";
+    const gradientClasses = "bg-gradient-to-r from-orange-400 via-purple-500 to-purple-700 hover:from-orange-500 hover:via-purple-600 hover:to-purple-800";
+    const disabledClasses = "opacity-50 cursor-not-allowed";
 
+    return (
+      <button
+        type={type}
+        className={`${baseClasses} ${gradientClasses} ${disabled ? disabledClasses : ''} ${className}`}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {title}
+      </button>
+    );
+  };
   return (
     <section className="bg-gray-50 dark:bg-gray-900">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
@@ -155,22 +169,7 @@ const SignIn = () => {
                 errormsg={"Enter Valid Email"}
                 required={true}
               />
-              {/* <Input
-                title={"Your mobile"}
-                type={"number"}
-                placeholder={"Enter mobile"}
-                value={formData.mobile}
-                onChange={(e) => handleChange(e, "mobile")}
-                required={true}
-              /> */}
-              {/* <Input
-                title={"Password"}
-                type={"password"}
-                placeholder={"Enter Password"}
-                value={formData.password}
-                onChange={(e) => handleChange(e, "password")}
-                required={true}
-              /> */}
+
               <div className="relative">
                 <Input
                   title={"Password"}
