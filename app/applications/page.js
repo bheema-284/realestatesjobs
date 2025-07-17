@@ -600,10 +600,11 @@ export default function Jobs() {
     const [isModalOpen, setIsModalOpen] = useState(false); // Keep for potential future manual modal open
     const [currentJobCategory, setCurrentJobCategory] = useState(''); // Still used to identify category
     const { rootContext } = useContext(RootContext);
-    const [jobList, setJobList] = useState(rootContext.jobs || []); // Use imported data or default empty
+    const [jobList, setJobList] = useState([]); // Use imported data or default empty
     // Function to generate dummy job data based on category
-
-    console.log("jobList",jobList)
+    useEffect(() => {
+        setJobList(rootContext.jobs || [])
+    }, [])
     const generateDummyJob = (categoryTitle) => {
         const baseJob = {
             id: `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // More robust unique ID
