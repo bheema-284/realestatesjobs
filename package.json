@@ -11,6 +11,10 @@
   "dependencies": {
     "@headlessui/react": "^2.2.4",
     "@heroicons/react": "^2.2.0",
+    "@tiptap/pm": "^3.0.7",
+    "@tiptap/react": "^3.0.7",
+    "@tiptap/starter-kit": "^3.0.7",
+    "@tiptap/extension-image": "^3.0.7",
     "next": "15.3.3",
     "react": "^19.0.0",
     "react-datepicker": "^8.4.0",

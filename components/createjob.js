@@ -4,11 +4,11 @@ import { Dialog, Transition, RadioGroup, Switch } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid'; // For the dropdown icon
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import RootContext from './config/rootcontext';
-// import dynamic from 'next/dynamic';
-// const DynamicTiptapEditor = dynamic(() => import('../components/common/tiptapeditor'), {
-//     ssr: false,
-//     loading: () => <p className="p-4 border border-gray-300 rounded-md min-h-[200px] bg-gray-50 flex items-center justify-center text-gray-500">Loading editor...</p>,
-// });
+import dynamic from 'next/dynamic';
+const DynamicTiptapEditor = dynamic(() => import('../components/common/tiptapeditor'), {
+    ssr: false,
+    loading: () => <p className="p-4 border border-gray-300 rounded-md min-h-[200px] bg-gray-50 flex items-center justify-center text-gray-500">Loading editor...</p>,
+});
 
 // Helper for word count (Tiptap doesn't have a direct word count, but can get text content)
 const getWordCount = (html) => {
@@ -158,7 +158,7 @@ export default function JobPostingModal({ isOpen, setIsOpen }) {
                                             </label>
                                             <div className="w-full md:w-2/3 mt-2 md:mt-0 relative">
                                                 {/* Simplified rich text editor placeholder */}
-                                                <div className="flex justify-between items-center border border-gray-300 rounded-t-md p-2 bg-gray-50 text-gray-600 text-sm">
+                                                {/* <div className="flex justify-between items-center border border-gray-300 rounded-t-md p-2 bg-gray-50 text-gray-600 text-sm">
                                                     <div className="flex space-x-2">
                                                         <span className="font-bold">B</span>
                                                         <span className="italic">I</span>
@@ -175,7 +175,18 @@ export default function JobPostingModal({ isOpen, setIsOpen }) {
                                                     className="w-full p-2.5 border border-gray-300 rounded-b-md focus:ring-blue-500 focus:border-blue-500 text-sm min-h-[120px]"
                                                     placeholder="Description"
                                                     required
+                                                /> */}
+
+                                                <DynamicTiptapEditor
+                                                    ref={tiptapEditorRef}
+                                                    initialContent={jobDescription}
+                                                    onContentChange={handleDescriptionChange}
+                                                    className="mt-0"
                                                 />
+                                                {/* Word count overlay */}
+                                                <div className="absolute bottom-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded-md border border-gray-200 shadow-sm">
+                                                    {wordCount} words
+                                                </div>
                                             </div>
                                         </div>
                                         <div className='border-b border-gray-300'></div>

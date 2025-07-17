@@ -604,7 +604,7 @@ export default function Jobs() {
     // Function to generate dummy job data based on category
     useEffect(() => {
         setJobList(rootContext.jobs || [])
-    }, [])
+    }, [rootContext])
     const generateDummyJob = (categoryTitle) => {
         const baseJob = {
             id: `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // More robust unique ID
