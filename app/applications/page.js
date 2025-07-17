@@ -605,69 +605,78 @@ export default function Jobs() {
     useEffect(() => {
         setJobList(rootContext.jobs || [])
     }, [rootContext])
+    const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
     const generateDummyJob = (categoryTitle) => {
-        const baseJob = {
-            id: `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // More robust unique ID
-            jobTitle: categoryTitle,
-            jobDescription: `This is an auto-generated description for a ${categoryTitle} role. We are looking for motivated individuals to join our team.`,
-            employmentTypes: ['full-time'], // Default to full-time
-            workingSchedule: { dayShift: true, nightShift: false, weekendAvailability: false, custom: '' },
-            salaryType: 'custom',
-            salaryAmount: '50,000',
-            salaryFrequency: 'Yearly',
-            hiringMultiple: false,
+        const salaryOptions = {
+            'Real Estate Sales': ['80,000 + Commission', '85,000 + Bonus', '75,000 + Incentives'],
+            'Channel Partners': ['70,000', '75,000', '78,000'],
+            'Tele Caller': ['20', '25', '30'],
+            'HR & Operations': ['60,000', '65,000', '68,000'],
+            'CRM Executive': ['45,000', '48,000', '50,000'],
+            'Web Development': ['85,000', '90,000', '95,000'],
+            'Digital Marketing': ['65,000', '70,000', '75,000'],
+            'Accounts & Auditing': ['50,000', '55,000', '58,000'],
         };
 
-        // Customize based on category
-        switch (categoryTitle) {
-            case 'Real Estate Sales':
-                baseJob.jobDescription = 'Drive property sales and achieve targets in a dynamic real estate market.';
-                baseJob.salaryAmount = '80,000 + Commission';
-                baseJob.hiringMultiple = true;
-                break;
-            case 'Channel Partners':
-                baseJob.jobDescription = 'Develop and manage relationships with key channel partners to expand our reach.';
-                baseJob.employmentTypes = ['full-time', 'negotiable'];
-                baseJob.salaryAmount = '75,000';
-                break;
-            case 'Tele Caller':
-                baseJob.jobDescription = 'Engage potential clients over the phone and convert leads into appointments.';
-                baseJob.employmentTypes = ['part-time', 'on-demand'];
-                baseJob.workingSchedule = { dayShift: true, nightShift: false, weekendAvailability: true, custom: 'Flexible shifts' };
-                baseJob.salaryType = 'hourly';
-                baseJob.salaryAmount = '25';
-                break;
-            case 'HR & Operations':
-                baseJob.jobDescription = 'Oversee human resources functions and streamline operational processes.';
-                baseJob.salaryAmount = '65,000';
-                break;
-            case 'CRM Executive':
-                baseJob.jobDescription = 'Manage client relationships and ensure customer satisfaction using CRM tools.';
-                baseJob.employmentTypes = ['full-time'];
-                baseJob.salaryAmount = '48,000';
-                break;
-            case 'Web Development':
-                baseJob.jobDescription = 'Design, develop, and maintain robust web applications for our real estate platform.';
-                baseJob.employmentTypes = ['full-time'];
-                baseJob.salaryAmount = '90,000';
-                baseJob.workingSchedule = { dayShift: true, nightShift: false, weekendAvailability: false, custom: 'Remote friendly' };
-                break;
-            case 'Digital Marketing':
-                baseJob.jobDescription = 'Execute digital marketing strategies to boost brand visibility and lead generation.';
-                baseJob.employmentTypes = ['full-time'];
-                baseJob.salaryAmount = '70,000';
-                baseJob.hiringMultiple = true;
-                break;
-            case 'Accounts & Auditing':
-                baseJob.jobDescription = 'Manage financial records, conduct audits, and ensure compliance with regulations.';
-                baseJob.employmentTypes = ['full-time'];
-                baseJob.salaryAmount = '55,000';
-                break;
-            default:
-                break;
-        }
+        const employmentTypesList = [
+            ['full-time'],
+            ['part-time'],
+            ['full-time', 'remote'],
+            ['contract', 'negotiable'],
+            ['on-demand'],
+            ['full-time', 'negotiable'],
+        ];
+
+        const workingSchedules = [
+            { dayShift: true, nightShift: false, weekendAvailability: false, custom: '' },
+            { dayShift: false, nightShift: true, weekendAvailability: true, custom: 'Night shift only' },
+            { dayShift: true, nightShift: true, weekendAvailability: true, custom: 'Flexible' },
+            { dayShift: true, nightShift: false, weekendAvailability: true, custom: 'Flexible weekends' },
+        ];
+
+        const salaryTypes = ['custom', 'hourly', 'monthly', 'fixed'];
+
+        const jobDescriptions = {
+            'Real Estate Sales': [
+                'Drive property sales and meet targets.',
+                'Sell properties in a fast-paced real estate market.',
+                'Help clients buy dream homes while achieving sales goals.'
+            ],
+            'Channel Partners': [
+                'Manage and grow channel partnerships.',
+                'Expand the business through new partnerships.',
+                'Develop B2B networks and alliances.'
+            ],
+            'Tele Caller': [
+                'Convert leads to appointments via calls.',
+                'Engage prospects over phone and pitch services.',
+                'Contact and follow up with clients effectively.'
+            ],
+            // Add more as needed...
+        };
+
+        const baseJob = {
+            id: `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            jobTitle: categoryTitle,
+            jobDescription: getRandomElement(jobDescriptions[categoryTitle] || [
+                `This is an auto-generated description for a ${categoryTitle} role.`,
+                `Join our team as a ${categoryTitle} specialist.`,
+            ]),
+            employmentTypes: getRandomElement(employmentTypesList),
+            workingSchedule: getRandomElement(workingSchedules),
+            salaryType: getRandomElement(salaryTypes),
+            salaryAmount: getRandomElement(salaryOptions[categoryTitle] || ['50,000', '60,000', '70,000']),
+            salaryFrequency: getRandomElement(['Monthly', 'Yearly', 'Weekly']),
+            hiringMultiple: Math.random() < 0.5, // 50% chance
+            location: getRandomElement(['Mumbai', 'Hyderabad', 'Remote', 'Bangalore', 'Pune']),
+            postedOn: new Date().toISOString().split('T')[0], // Today's date
+        };
+
         return baseJob;
     };
+
 
     const handleCategoryClick = (categoryTitle) => {
         const newJob = generateDummyJob(categoryTitle);
@@ -770,7 +779,7 @@ export default function Jobs() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm text-gray-700">
-                                                    {job.salaryAmount} {job.salaryFrequency} ({job.salaryType})
+                                                    {Number(job.salaryAmount.replace(/,/g, '')).toLocaleString()} {job.salaryFrequency} ({job.salaryType})
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">

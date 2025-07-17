@@ -7,15 +7,16 @@ import Loader from "@/components/common/loader";
 import Toast from "@/components/common/toast";
 import RegisterForm from "@/components/common/signup";
 import { usePathname, useRouter } from "next/navigation";
-import { FaChartBar, FaUsers, FaTasks, FaCalendarAlt, FaCog, FaSuitcase, FaBell } from "react-icons/fa";
+import { FaChartBar, FaUsers, FaTasks, FaCalendarAlt, FaCog, FaSuitcase, FaBell, FaThLarge } from "react-icons/fa";
 import { ChevronDownIcon, UserIcon } from "@heroicons/react/24/solid";
 import { Inter } from 'next/font/google';
 import JobPostingModal from "@/components/createjob";
+import Image from "next/image";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 const sidebarItems = [
-  { icon: <FaChartBar />, label: "Dashboard", link: "/dashboard" },
+  { icon: <FaThLarge />, label: "Dashboard", link: "/dashboard" },
   { icon: <FaSuitcase />, label: "Jobs", link: "/applications" },
   { icon: <FaUsers />, label: "Candidates", link: "/candidates" },
   { icon: <FaTasks />, label: "Tasks", link: "/tasks" },
@@ -36,7 +37,7 @@ const Sidebar = ({ isMobileOpen, toggleSidebar }) => {
   };
 
   return (
-    <div className={`fixed top-16 left-0 h-screen w-36 bg-white shadow-md z-20 transition-transform duration-300 ease-in-out
+    <div className={`fixed top-16 left-0 h-screen w-36 bg-white shadow-md z-50 transition-transform duration-300 ease-in-out
       ${isMobileOpen ? 'translate-x-0 z-50' : '-translate-x-full'} sm:translate-x-0`}>
       <div className="p-4 space-y-4">
         {sidebarItems.map((item, idx) => {
@@ -145,9 +146,9 @@ export default function RootLayout({ children }) {
   };
 
   const Topbar = () => (
-    <div className="flex flex-wrap sm:flex-nowrap fixed top-0 left-0 w-full z-50 justify-between items-center px-4 sm:px-6 py-2 bg-white shadow gap-2">
+    <div className="flex h-16 flex-wrap sm:flex-nowrap fixed top-0 left-0 w-full z-50 justify-between items-center px-4 sm:px-6 py-2 bg-white shadow gap-2">
       <div className="flex items-center justify-between w-full sm:w-auto">
-        <img width={100} src="https://realestatejobs.co.in/images/logo.png" alt="Logo" />
+        <Image alt={"logo"} width={100} height={20} src="https://realestatejobs.co.in/images/logo.png" />
         <button
           onClick={() => setMobileSidebarOpen(!isMobileSidebarOpen)}
           className="sm:hidden text-gray-700 focus:outline-none"
@@ -215,7 +216,7 @@ export default function RootLayout({ children }) {
               <Topbar />
               <div className="flex flex-col sm:flex-row pt-20 bg-gray-100 min-h-screen">
                 <Sidebar isMobileOpen={isMobileSidebarOpen} toggleSidebar={setMobileSidebarOpen} />
-                <main className="flex-1 ml-36 p-4">{children}</main>
+                <main className="flex-1 sm:ml-36 p-4">{children}</main>
               </div>
             </div>
           )}
