@@ -90,9 +90,10 @@ export default function RootLayout({ children }) {
       title: '',
       message: ''
     },
-    jobs: []
+    jobs: [],
+    notification: false,
+    tasks: []
   });
-
   useEffect(() => {
     const user_details = typeof window !== "undefined" && JSON.parse(localStorage.getItem("user_details"));
     const updatedContext = { ...rootContext, loader: false };

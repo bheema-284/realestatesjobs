@@ -18,28 +18,7 @@ export const contextObject = {
         title: '',
         message: ''
     },
-    jobs: [
-        {
-            "id": "job-1752833777976-m3joa98",
-            "jobTitle": "Real Estate Sales",
-            "jobDescription": "Drive property sales and meet targets.",
-            "employmentTypes": [
-                "full-time",
-                "negotiable"
-            ],
-            "workingSchedule": {
-                "dayShift": false,
-                "nightShift": true,
-                "weekendAvailability": true,
-                "custom": "Night shift only"
-            },
-            "salaryType": "monthly",
-            "salaryAmount": "85,000 + Bonus",
-            "salaryFrequency": "Yearly",
-            "hiringMultiple": true,
-            "location": "Hyderabad",
-            "postedOn": "2025-07-18"
-        }
-    ],
-    notification: false
+    jobs: [],
+    notification: false,
+    tasks: []
 }
