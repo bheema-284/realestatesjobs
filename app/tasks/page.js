@@ -96,8 +96,8 @@ export default function TaskPage() {
                 </td>
                 <td className="block md:table-cell py-2 px-4">
                   <span className="md:hidden font-semibold">Status: </span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColor[task.status]}`}>
-                    {task.status}
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColor["In Progress"]}`}>
+                    {"In Progress"}
                   </span>
                 </td>
               </tr>

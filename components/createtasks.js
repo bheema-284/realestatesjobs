@@ -79,7 +79,7 @@ const TaskModal = ({ newTask, setNewTask, handleAddTask, showTaskForm, setShowTa
                                         />
                                         <div className="flex gap-2 justify-end">
                                             <button className="bg-gray-300 text-gray-700 px-4 py-2 rounded text-sm" onClick={() => setShowTaskForm(false)}>Cancel</button>
-                                            <button className="px-4 py-2 rounded bg-gradient-to-r from-orange-400 via-purple-500 to-purple-700 hover:from-orange-500 hover:via-purple-600 hover:to-purple-800" onClick={handleAddTask}>Add</button>
+                                            <button className="bg-green-400 text-gray-800 px-4 py-2 rounded text-sm" onClick={handleAddTask}>Add</button>
                                         </div>
                                     </div>
                                 </Dialog.Panel>
