@@ -20,7 +20,6 @@ const getWordCount = (html) => {
 };
 
 export default function JobPostingModal({ editData, mode, isOpen, setIsOpen }) {
-    console.log("editData", editData)
     const { rootContext, setRootContext } = useContext(RootContext);
     // State for form fields
     const [jobTitle, setJobTitle] = useState('');
@@ -90,7 +89,7 @@ export default function JobPostingModal({ editData, mode, isOpen, setIsOpen }) {
         e.preventDefault();
 
         const newJob = {
-            id: editData.id || `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // use existing `jobId` if updating
+            id: editData?.id || `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // use existing `jobId` if updating
             jobTitle,
             jobDescription,
             employmentTypes,

@@ -580,40 +580,35 @@ export default function ProfilePage({ userId }) {
         }
     }, [userId]);
 
-    const updateIndicatorStyle = (index) => {
-        if (tabRefs.current[index]) {
-            const targetButton = tabRefs.current[index];
+    const handleTabClick = (index) => {
+        const tab = tabRefs.current[index];
+        setActiveTab(index)
+        if (tab) {
             setIndicatorStyle({
-                width: targetButton.offsetWidth,
-                left: targetButton.offsetLeft,
+                width: tab.offsetWidth,
+                left: tab.offsetLeft,
+                opacity: 1,
             });
         }
     };
 
-    // Effect to set initial indicator position to the active tab
-    // and recalculate on activeTab change or window resize
-    useEffect(() => {
-        updateIndicatorStyle(activeTab);
-
-        const handleResize = () => {
-            updateIndicatorStyle(activeTab);
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => {
-            window.removeEventListener('resize', handleResize);
-        };
-    }, [activeTab]);
-
-    // Handle hover effect: move indicator to hovered tab
     const handleMouseEnter = (index) => {
-        updateIndicatorStyle(index);
+        const tab = tabRefs.current[index];
+        if (tab) {
+            setIndicatorStyle({
+                width: tab.offsetWidth,
+                left: tab.offsetLeft,
+                opacity: 1,
+            });
+        }
     };
 
-    // Handle mouse leave from the entire tab container: move indicator back to active tab
     const handleMouseLeave = () => {
-        updateIndicatorStyle(activeTab);
+        setIndicatorStyle({
+            opacity: 0,
+        });
     };
+
 
     const ActiveComponent = tabs[activeTab].component;
 
@@ -706,9 +701,11 @@ export default function ProfilePage({ userId }) {
                         {/* Moving background indicator */}
                         <span
                             className="absolute bottom-0 h-full bg-gray-200 rounded-t-md transition-all duration-300 ease-in-out z-0"
-                            style={indicatorStyle}
+                            style={{
+                                ...indicatorStyle,
+                                transition: 'all 0.3s ease-in-out, opacity 0.2s ease-in-out',
+                            }}
                         ></span>
-
                         {tabs.map((tab, index) => (
                             <button
                                 key={tab.name}
@@ -719,8 +716,8 @@ export default function ProfilePage({ userId }) {
                                         ? 'bg-indigo-900 text-white' // Active tab text color (bg handled by indicator)
                                         : 'text-gray-700' // Non-active tab text color
                                     }`}
-                                onClick={() => setActiveTab(index)}
-                                onMouseEnter={() => handleMouseEnter(index)} // Listen for mouse entering individual tab
+                                onClick={() => handleTabClick(index)}
+                                onMouseEnter={() => handleMouseEnter(index)}// Listen for mouse entering individual tab
                             >
                                 {/* Text content */}
                                 {tab.name}
