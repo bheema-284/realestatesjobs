@@ -4,6 +4,9 @@ import { Dialog, Transition, RadioGroup, Switch } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid'; // For the dropdown icon
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import RootContext from '@/components/config/rootcontext';
+import { PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import JobPostingModal from '@/components/createjob';
 // Assuming jobs data is imported from a config file.
 // If '../../components/config/data' is not available or empty,
 // we'll use a default empty array.
@@ -160,6 +163,9 @@ const Icons = {
             <path d="M9 12l2 2 4-4" stroke="url(#accountsCheckGradient)" strokeWidth="2.5" />
         </svg>
     ),
+    Default: (
+        <ExclamationTriangleIcon className="w-16 h-16 text-gray-400" />
+    ),
 };
 
 // Data for the job category cards
@@ -206,6 +212,11 @@ const jobCategories = [
     },
 ];
 
+const getIconForTitle = (title) => {
+    const normalizedTitle = title.replace(/\s+/g, '').replace(/[^\w]/g, '');
+    return Icons[normalizedTitle] || Icons.Default;
+};
+
 // JobCategoryCard component for individual cards
 const JobCategoryCard = ({ title, description, icon, onClick }) => {
     return (
@@ -222,8 +233,8 @@ const JobCategoryCard = ({ title, description, icon, onClick }) => {
     );
 };
 
-// JobPostingModal component (modified to accept props for state management)
-function JobPostingModal({ isOpen, setIsOpen, initialJobTitle = '', onSave }) {
+// JobModal component (modified to accept props for state management)
+function JobModal({ isOpen, setIsOpen, initialJobTitle = '', onSave }) {
     // State for form fields
     const [jobTitle, setJobTitle] = useState(initialJobTitle);
     const [jobDescription, setJobDescription] = useState('');
@@ -599,12 +610,16 @@ function JobPostingModal({ isOpen, setIsOpen, initialJobTitle = '', onSave }) {
 export default function Jobs() {
     const [isModalOpen, setIsModalOpen] = useState(false); // Keep for potential future manual modal open
     const [currentJobCategory, setCurrentJobCategory] = useState(''); // Still used to identify category
-    const { rootContext } = useContext(RootContext);
-    const [jobList, setJobList] = useState([]); // Use imported data or default empty
+    const { rootContext, setRootContext } = useContext(RootContext);
+    const jobList = rootContext.jobs || []
+    // const [jobList, setJobList] = useState([]); // Use imported data or default empty
+    const [editData, setEditData] = useState({});
+    const [mode, setMode] = useState("create");
+    const [isOpen, setIsOpen] = useState(false);
     // Function to generate dummy job data based on category
-    useEffect(() => {
-        setJobList(rootContext.jobs || [])
-    }, [rootContext])
+    // useEffect(() => {
+    //     setJobList(rootContext.jobs || [])
+    // }, [rootContext])
     const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
     const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
@@ -680,14 +695,22 @@ export default function Jobs() {
 
     const handleCategoryClick = (categoryTitle) => {
         const newJob = generateDummyJob(categoryTitle);
-        setJobList((prevList) => [...prevList, newJob]); // Add the auto-generated job to the list
+        // setJobList((prevList) => [...prevList, newJob]); // Add the auto-generated job to the list
+        setRootContext((prevContext) => ({
+            ...prevContext,
+            jobs: [...prevContext.jobs, newJob],
+        }));
         // No modal opening here
     };
 
     // The handleNewJobPost function is now only relevant if you add a separate button to open the modal manually
     // For this request, it's not directly used by category clicks.
     const handleNewJobPost = (newJob) => {
-        setJobList((prevList) => [...prevList, newJob]);
+        // setJobList((prevList) => [...prevList, newJob]);
+        setRootContext((prevContext) => ({
+            ...prevContext,
+            jobs: [...prevContext.jobs, newJob],
+        }));
         // No modal closing here, as it's assumed to be closed by its own internal state or a separate trigger
     };
 
@@ -708,10 +731,25 @@ export default function Jobs() {
         return parts.length > 0 ? parts.join(', ') : 'Flexible';
     };
 
+    const editForm = (index, mode) => {
+        const jobListToEdit = jobList[index];
+        setEditData(jobListToEdit);
+        setMode(mode)
+        setIsOpen(true)
+    };
+
+    const deleteItem = (index) => {
+        setRootContext((prevContext) => ({
+            ...prevContext,
+            jobs: prevContext.jobs.filter((_, i) => i !== index),
+        }));
+    };
+
+
     return (
         <>
             {/* Job Categories Section */}
-            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
+            <div className="bg-gray-50 flex flex-col items-center justify-center font-sans">
                 <div className="max-w-6xl mx-auto text-center mb-10">
                     <h1 className="text-2xl sm:text-3xl font-normal text-gray-800 leading-tight">
                         Click to unlock your <span className="font-bold">Dream Real Estate Jobs</span> below
@@ -732,7 +770,7 @@ export default function Jobs() {
             </div>
 
             {/* Job Postings Table Section */}
-            <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-8 font-sans antialiased">
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-100 pt-8 font-sans antialiased">
                 <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
                     <div className="p-6 border-b border-gray-200">
                         <h2 className="text-2xl font-bold text-indigo-800">My Job Postings</h2>
@@ -749,6 +787,9 @@ export default function Jobs() {
                                 <thead className="bg-indigo-50">
                                     <tr>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
+                                            Image
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
                                             Job Title
                                         </th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
@@ -763,11 +804,17 @@ export default function Jobs() {
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
                                             Hiring Multiple
                                         </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {jobList.map((job, index) => (
                                         <tr key={job.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-indigo-50 transition-colors duration-150`}>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-medium text-gray-900"> {getIconForTitle(job.jobTitle)}</div>
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-medium text-gray-900">{job.jobTitle}</div>
                                             </td>
@@ -779,7 +826,14 @@ export default function Jobs() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm text-gray-700">
-                                                    {Number(job.salaryAmount.replace(/,/g, '')).toLocaleString()} {job.salaryFrequency} ({job.salaryType})
+                                                    {(() => {
+                                                        const numericMatch = job.salaryAmount.match(/\d[\d,]*/); // match first number like "80,000"
+                                                        const numericValue = numericMatch ? Number(numericMatch[0].replace(/,/g, '')) : null;
+
+                                                        return numericValue !== null
+                                                            ? `${numericValue.toLocaleString()} ${job.salaryFrequency} (${job.salaryType})`
+                                                            : job.salaryAmount; // fallback to raw if parsing fails
+                                                    })()}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -793,6 +847,12 @@ export default function Jobs() {
                                                     </span>
                                                 )}
                                             </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex justify-center gap-2">
+                                                    <PencilIcon className="h-5 ml-5 fill-yellow-400 hover:fill-yellow-500 hover:cursor-pointer" onClick={() => editForm(index, "update")} />
+                                                    <TrashIcon className="h-5 ml-5 fill-red-400 hover:fill-red-500 hover:cursor-pointer" onClick={() => deleteItem(index)} />
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -804,12 +864,14 @@ export default function Jobs() {
 
             {/* Job Posting Modal (rendered but not opened by category clicks) */}
             {/* You can add a separate button to open this modal for manual job creation if needed */}
-            <JobPostingModal
+            <JobModal
                 isOpen={isModalOpen}
                 setIsOpen={setIsModalOpen}
                 initialJobTitle={currentJobCategory}
                 onSave={handleNewJobPost}
             />
+
+            {isOpen && <JobPostingModal editData={editData} mode={mode} isOpen={isOpen} setIsOpen={setIsOpen} />}
         </>
     );
 }

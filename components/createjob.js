@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, Fragment, useContext, useRef } from 'react';
+import React, { useState, Fragment, useContext, useRef, useEffect } from 'react';
 import { Dialog, Transition, RadioGroup, Switch } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid'; // For the dropdown icon
 import { XMarkIcon } from '@heroicons/react/24/solid';
@@ -19,7 +19,8 @@ const getWordCount = (html) => {
     return text.split(/\s+/).filter(word => word.length > 0).length;
 };
 
-export default function JobPostingModal({ isOpen, setIsOpen }) {
+export default function JobPostingModal({ editData, mode, isOpen, setIsOpen }) {
+    console.log("editData", editData)
     const { rootContext, setRootContext } = useContext(RootContext);
     // State for form fields
     const [jobTitle, setJobTitle] = useState('');
@@ -48,6 +49,26 @@ export default function JobPostingModal({ isOpen, setIsOpen }) {
         setIsOpen(false);
     }
 
+    useEffect(() => {
+        if (editData) {
+            setJobTitle(editData.jobTitle || "")
+            setJobDescription(editData.jobDescription || "")
+            setEmploymentTypes(editData.employmentTypes || [])
+            setWorkingSchedule(editData.workingSchedule || {
+                dayShift: false,
+                nightShift: false,
+                weekendAvailability: false,
+                custom: '',
+            })
+            setSalaryType(editData.salaryType || "hourly")
+            setSalaryAmount(editData.salaryAmount || "")
+            setSalaryFrequency(editData.salaryFrequency || "Yearly")
+            setSalaryNegotiable(editData.salaryNegotiable || false)
+            setHiringMultiple(editData.hiringMultiple || false)
+        }
+
+    }, [editData])
+
     // Options for employment type (now treated as checkboxes)
     const employmentOptions = [
         { id: 'full-time', name: 'Full-time' },
@@ -69,7 +90,7 @@ export default function JobPostingModal({ isOpen, setIsOpen }) {
         e.preventDefault();
 
         const newJob = {
-            id: `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            id: editData.id || `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // use existing `jobId` if updating
             jobTitle,
             jobDescription,
             employmentTypes,
@@ -77,16 +98,34 @@ export default function JobPostingModal({ isOpen, setIsOpen }) {
             salaryType,
             salaryAmount,
             salaryFrequency,
-            salaryNegotiable, // Include the new state
+            salaryNegotiable,
             hiringMultiple,
         };
 
-        setRootContext((prevContext) => ({
-            ...prevContext,
-            jobs: [...prevContext.jobs, newJob],
-        }));
+        setRootContext((prevContext) => {
+            const existingIndex = prevContext.jobs.findIndex(job => job.id === newJob.id);
+
+            if (existingIndex !== -1) {
+                // Update existing job
+                const updatedJobs = [...prevContext.jobs];
+                updatedJobs[existingIndex] = newJob;
+
+                return {
+                    ...prevContext,
+                    jobs: updatedJobs,
+                };
+            } else {
+                // Add new job
+                return {
+                    ...prevContext,
+                    jobs: [...prevContext.jobs, newJob],
+                };
+            }
+        });
+
         closeModal();
     };
+
     const timeSlotOptions = [
         { label: 'Select a preferred time range', value: '' }, // Default/placeholder option
         { label: 'Morning (9 AM - 1 PM)', value: 'morning_09_13' },
@@ -339,7 +378,7 @@ export default function JobPostingModal({ isOpen, setIsOpen }) {
                                                     <div>
                                                         <label htmlFor="salaryAmount" className="block text-xs text-gray-500 mb-1">Amount you want to pay</label>
                                                         <input
-                                                            type="number"
+                                                            type="text"
                                                             id="salaryAmount"
                                                             value={salaryAmount}
                                                             onChange={(e) => setSalaryAmount(e.target.value)}

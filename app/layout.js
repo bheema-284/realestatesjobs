@@ -100,6 +100,8 @@ export default function RootLayout({ children }) {
     if (user_details) {
       updatedContext.authenticated = true;
       updatedContext.user = user_details;
+    } else {
+      updatedContext.authenticated = false;
     }
 
     setRootContext(updatedContext);
@@ -118,33 +120,78 @@ export default function RootLayout({ children }) {
 
   const logOut = () => {
     localStorage.clear();
-    setRootContext(
-      {
-        authenticated: false,
-        loader: true,
-        user: {
-          name: "",
-          email: "",
-          mobile: "",
-          password: "",
-          token: "",
-          isAdmin: "",
-        },
-        accessToken: '',
-        remember: false,
-        toast: {
-          show: false,
-          dismiss: true,
-          type: '',
-          title: '',
-          message: ''
-        },
-        jobs: []
-      }
-    );
+    const updatedContext = {
+      ...rootContext,
+      authenticated: false,
+    };
+
+    setRootContext(updatedContext);
     router.push(`/`);
   };
 
+
+  const AnimatedBorderLoader = () => {
+    return (
+      <div
+        className={`
+        relative w-full max-w-[150px] h-10
+        flex items-center justify-center
+        rounded-lg overflow-hidden
+        bg-white dark:bg-slate-700
+      `}
+      >
+        {/* Top border */}
+        <span
+          className="absolute top-0 left-0 h-0.5 w-0 
+                   bg-gradient-to-r from-orange-400 via-purple-500 to-pink-500
+                   animate-drawLineTop"
+        />
+        {/* Right border */}
+        <span
+          className="absolute top-0 right-0 w-0.5 h-0 
+                   bg-gradient-to-b from-orange-400 via-purple-500 to-pink-500
+                   animate-drawLineRight"
+        />
+        {/* Bottom border */}
+        <span
+          className="absolute bottom-0 right-0 h-0.5 w-0 
+                   bg-gradient-to-l from-orange-400 via-purple-500 to-pink-500
+                   animate-drawLineBottom"
+        />
+        {/* Left border */}
+        <span
+          className="absolute bottom-0 left-0 w-0.5 h-0 
+                   bg-gradient-to-t from-orange-400 via-purple-500 to-pink-500
+                   animate-drawLineLeft"
+        />
+
+        <div className="relative z-10 font-semibold text-gray-700 dark:text-gray-300 text-center">
+          POST NEW JOB
+        </div>
+      </div>
+    );
+  };
+
+  const [showLoader, setShowLoader] = useState(true);
+
+  useEffect(() => {
+    setShowLoader(true);
+    const timer = setTimeout(() => {
+      setShowLoader(false);
+    }, 3000); // Loader displays for 3 seconds
+
+    return () => clearTimeout(timer);
+  }, [pathName]);
+  const NotificationBell = ({ showDot }) => {
+    return (
+      <div className="relative w-4 h-4">
+        <FaBell className="text-gray-700 dark:text-white w-full h-full" />
+        {showDot && (
+          <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
+        )}
+      </div>
+    );
+  };
   const Topbar = () => (
     <div className="flex h-16 flex-wrap sm:flex-nowrap fixed top-0 left-0 w-full z-50 justify-between items-center px-4 sm:px-6 py-2 bg-white shadow gap-2">
       <div className="flex items-center justify-between w-full sm:w-auto">
@@ -158,16 +205,21 @@ export default function RootLayout({ children }) {
       </div>
 
       <div className="flex-1 flex items-center justify-between sm:justify-end gap-4 mt-2 sm:mt-0">
-        <button onClick={() => setIsOpen(!isOpen)} className="bg-indigo-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
-          POST NEW JOB
-        </button>
+        {showLoader ? (
+          // Use the new AnimatedBorderLoader here
+          <AnimatedBorderLoader />
+        ) : (
+          <button onClick={() => setIsOpen(!isOpen)} className="bg-indigo-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
+            POST NEW JOB
+          </button>
+        )}
         <input
           type="text"
           placeholder="Search candidate, vacancy, etc"
           className="px-3 py-2 border rounded w-full sm:w-1/3 text-sm"
         />
         <div className="flex items-center gap-3 relative" ref={dropdownRef}>
-          <FaBell className="text-gray-600" />
+          {rootContext.notification ? <NotificationBell showDot={true} /> : <FaBell className="text-gray-600" />}
           <div className="flex items-center gap-1 cursor-pointer" onClick={() => setShowDropdown(!showDropdown)}>
             <UserIcon className="w-4 h-4 text-gray-400" />
             <div className="text-sm flex flex-col sm:flex-row sm:items-center gap-1">
@@ -214,9 +266,9 @@ export default function RootLayout({ children }) {
             <div>
               {!ready && <Loader />}
               <Topbar />
-              <div className="flex flex-col sm:flex-row pt-20 bg-gray-100 min-h-screen">
+              <div className="flex flex-col sm:flex-row pt-16 bg-gray-100 min-h-screen">
                 <Sidebar isMobileOpen={isMobileSidebarOpen} toggleSidebar={setMobileSidebarOpen} />
-                <main className="flex-1 sm:ml-36 p-4">{children}</main>
+                <main className="flex-1 sm:ml-36 p-1">{children}</main>
               </div>
             </div>
           )}

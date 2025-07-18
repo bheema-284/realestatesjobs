@@ -7,6 +7,7 @@ import {
     Line,
 } from "recharts";
 import { FaCode, FaPaintBrush, FaUserTie, FaBriefcase, FaBell } from "react-icons/fa";
+import { FaLaptopCode, FaBuilding, FaHeadset, FaUsers, FaBullhorn, FaFileInvoiceDollar, FaUserCog } from "react-icons/fa";
 import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, CalendarIcon, ChevronDownIcon, PlusIcon } from "@heroicons/react/24/solid";
 import RootContext from "../components/config/rootcontext";
 import { Popover } from "@headlessui/react";
@@ -17,6 +18,7 @@ import { Dialog, Transition } from '@headlessui/react';
 
 const Dashboard = () => {
     const { rootContext, setRootContext } = useContext(RootContext);
+    console.log("rootContext", rootContext)
     const [selectedDate, setSelectedDate] = useState(new Date());
 
     const stats = [
@@ -120,64 +122,7 @@ const Dashboard = () => {
     ];
 
 
-    const events = [
-        {
-            title: "Software Developer",
-            icon: <FaCode className="text-xl text-indigo-600" />,
-            tags: ["Full-time", "Remote"],
-            salary: "$70K - $90K/y",
-            applicants: 120,
-        },
-        {
-            title: "Graphic Designer",
-            icon: <FaPaintBrush className="text-xl text-green-500" />,
-            tags: ["Part-time", "Hybrid"],
-            salary: "$40K - $55K/y (pro-rated)",
-            applicants: 75,
-        },
-        {
-            title: "Sales Manager",
-            icon: <FaUserTie className="text-xl text-yellow-500" />,
-            tags: ["Full-time", "On-site"],
-            salary: "$65K - $80K/y + commission",
-            applicants: 75,
-        },
-        {
-            title: "HR Coordinator",
-            icon: <FaBriefcase className="text-xl text-purple-500" />,
-            tags: ["Contract", "Remote"],
-            salary: "$50K - $60K/y",
-            applicants: 60,
-        },
-        {
-            title: "Software Developer",
-            icon: <FaCode className="text-xl text-indigo-600" />,
-            tags: ["Full-time", "Remote"],
-            salary: "$70K - $90K/y",
-            applicants: 120,
-        },
-        {
-            title: "Graphic Designer",
-            icon: <FaPaintBrush className="text-xl text-green-500" />,
-            tags: ["Part-time", "Hybrid"],
-            salary: "$40K - $55K/y (pro-rated)",
-            applicants: 75,
-        },
-        {
-            title: "Sales Manager",
-            icon: <FaUserTie className="text-xl text-yellow-500" />,
-            tags: ["Full-time", "On-site"],
-            salary: "$65K - $80K/y + commission",
-            applicants: 75,
-        },
-        {
-            title: "HR Coordinator",
-            icon: <FaBriefcase className="text-xl text-purple-500" />,
-            tags: ["Contract", "Remote"],
-            salary: "$50K - $60K/y",
-            applicants: 60,
-        },
-    ];
+    const events = rootContext.jobs || []
 
     const schedule = [
         { time: "1:00 PM", title: "Marketing Strategy Presentation", dept: "Marketing", color: "bg-lime-200 text-lime-900" },
@@ -196,67 +141,122 @@ const Dashboard = () => {
 
 
 
-    const filteredEvents = filterType === "Popular"
-        ? [...events].sort((a, b) => b.applicants - a.applicants).slice(0, 4)
-        : events;
+    const getNumericSalary = (salaryStr) => {
+        const match = salaryStr.replace(/,/g, "").match(/\d+/);
+        return match ? parseInt(match[0], 10) : 0;
+    };
+
+    const filteredEvents =
+        filterType === "Popular"
+            ? [...events]
+                .sort((a, b) => getNumericSalary(b.salaryAmount) - getNumericSalary(a.salaryAmount))
+                .slice(0, 5)
+            : events;
+
     function handleAddTask() {
         setTaskList([...taskList, newTask]);
         setNewTask({ title: "", stage: "", date: "", percent: 0 });
         setShowTaskForm(false);
     }
 
+    const Icons = {
+        RealEstateSales: <FaBuilding className="w-5 h-5 text-blue-600" />,
+        ChannelPartners: <FaUserTie className="w-5 h-5 text-purple-600" />,
+        TeleCaller: <FaHeadset className="w-5 h-5 text-pink-600" />,
+        HROperations: <FaUsers className="w-5 h-5 text-green-600" />,
+        CRMExecutive: <FaUserCog className="w-5 h-5 text-yellow-600" />,
+        WebDevelopment: <FaLaptopCode className="w-5 h-5 text-indigo-600" />,
+        DigitalMarketing: <FaBullhorn className="w-5 h-5 text-red-600" />,
+        AccountsAuditing: <FaFileInvoiceDollar className="w-5 h-5 text-gray-600" />,
+    };
+
+    const jobCategories = [
+        {
+            title: 'Real Estate Sales',
+            description: 'Sell Property Faster',
+            icon: Icons.RealEstateSales,
+        },
+        {
+            title: 'Channel Partners',
+            description: 'Collaborate & Earn',
+            icon: Icons.ChannelPartners,
+        },
+        {
+            title: 'Tele Caller',
+            description: 'Engage & Convert',
+            icon: Icons.TeleCaller,
+        },
+        {
+            title: 'HR & Operations',
+            description: 'People & Process',
+            icon: Icons.HROperations,
+        },
+        {
+            title: 'CRM Executive',
+            description: 'Manage Client Relations',
+            icon: Icons.CRMExecutive,
+        },
+        {
+            title: 'Web Development',
+            description: 'Build Real Estate Tech',
+            icon: Icons.WebDevelopment,
+        },
+        {
+            title: 'Digital Marketing',
+            description: 'Promote & Convert',
+            icon: Icons.DigitalMarketing,
+        },
+        {
+            title: 'Accounts & Auditing',
+            description: 'Ensure Financial Clarity',
+            icon: Icons.AccountsAuditing,
+        },
+    ];
+
     function VacancyCard({ job }) {
-        const salaryText = job.salary;
-        const hasBracket = salaryText.includes("(");
-        const hasPlus = salaryText.includes("+");
-
-        // Split salary properly
-        let baseSalary = salaryText;
-        let extraInfo = "";
-
-        if (hasBracket) {
-            baseSalary = salaryText.split("(")[0].trim();
-            extraInfo = `(${salaryText.split("(")[1].replace(")", "").trim()})`;
-        } else if (hasPlus) {
-            const parts = salaryText.split("+");
-            baseSalary = parts[0].trim();
-            extraInfo = `+ ${parts[1].trim()}`;
-        }
+        // Construct salary text based on structure
+        const salaryText = `${job.salaryAmount} / ${job.salaryFrequency}`;
 
         return (
-            <div className="p-2 border border-gray-50 rounded-xl shadow-sm space-y-2">
+            <div className="border border-gray-50 rounded-xl shadow-sm space-y-2 p-3">
                 <div className="flex items-center gap-2">
                     {job.icon}
-                    <h2 className="text-sm font-semibold text-gray-800">{job.title}</h2>
+                    <h2 className="text-sm font-semibold text-gray-800">{job.jobTitle}</h2>
                 </div>
 
-                <div className="flex gap-2">
-                    {job.tags.map((tag, index) => (
+                <div className="flex gap-2 flex-wrap">
+                    {job.employmentTypes.map((tag, index) => (
                         <span
                             key={index}
-                            className="bg-gray-100 text-gray-600 text-[11px] px-2 py-1 rounded-full"
+                            className="bg-gray-100 text-gray-600 text-[11px] px-2 py-1 rounded-full capitalize"
                         >
-                            {tag}
+                            {tag.replace("-", " ")}
                         </span>
                     ))}
                 </div>
 
                 <div className="flex justify-between items-center">
                     <p className="mb-1">
-                        <span className="text-xs font-semibold text-gray-900">
-                            {baseSalary}
-                        </span>{" "}
-                        {extraInfo && (
-                            <span className="text-[9px] text-gary-500 italic">
-                                {extraInfo}
-                            </span>
-                        )}
+                        <span className="text-xs font-semibold text-gray-900">{salaryText}</span>
                     </p>
-                    <p className="text-xs text-gray-500">{job.applicants} Applicants</p>
+                    <p className="text-xs text-gray-500">
+                        {job.applicants ?? Math.floor(Math.random() * 1001)} Applicants
+                    </p>
                 </div>
             </div>
         );
     }
+
+    const EnhancedJobs = filteredEvents.map((job) => {
+        const category = jobCategories.find(
+            (cat) => cat.title.toLowerCase() === job.jobTitle.toLowerCase()
+        );
+        return {
+            ...job,
+            icon: category?.icon || null,
+            tags: job.employmentTypes,
+        };
+    });
 
 
 
@@ -469,8 +469,14 @@ const Dashboard = () => {
                             </p>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-1 h-[300px] overflow-y-auto gap-4">
+                    {/* <div className="grid grid-cols-1 sm:grid-cols-1 h-[300px] overflow-y-auto gap-4">
                         {filteredEvents.map((job, idx) => <VacancyCard key={idx} job={job} />)}
+                    </div> */}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-1 h-[300px] overflow-y-auto gap-4">
+                        {EnhancedJobs.map((job, indx) => (
+                            <VacancyCard key={indx} job={job} />
+                        ))}
                     </div>
                 </div>
 

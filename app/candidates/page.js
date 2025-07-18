@@ -1,4 +1,5 @@
 'use client';
+import { ChartBarIcon, ChatBubbleOvalLeftEllipsisIcon, EyeIcon } from '@heroicons/react/24/solid';
 import { useRouter } from 'next/navigation';
 import React from 'react';
 import {
@@ -127,15 +128,15 @@ const ApplicationCard = ({ candidate }) => {
                     <option>Rejected</option>
                 </select>
 
-                <button className="border px-2 py-1 rounded text-xs sm:text-sm flex items-center gap-1">
-                    <span>💬</span> <span className="hidden sm:inline">Chat</span>
+                <button className="border px-2 py-1 rounded text-xs sm:text-sm flex gap-2 items-center gap-1 text-gray-500">
+                    <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4 text-gray-500"/> <span className="hidden sm:inline text-gray-500">Chat</span>
                 </button>
 
                 <button
                     onClick={handleViewProfile}
-                    className="border px-2 py-1 rounded text-xs sm:text-sm text-green-600 border-green-600 hover:bg-green-50 whitespace-nowrap"
+                    className="border px-2 py-1 flex gap-2 items-center rounded text-xs sm:text-sm text-green-600 border-green-600 hover:bg-green-50 whitespace-nowrap"
                 >
-                    👁 <span className="inline">View Profile</span>
+                    <EyeIcon className="w-4 h-4 text-green-600" /> <span className="inline">View Profile</span>
                 </button>
             </div>
         </div>
