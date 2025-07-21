@@ -5,6 +5,7 @@ import {
     ResponsiveContainer,
     LineChart,
     Line,
+    Label,
 } from "recharts";
 import { FaCode, FaPaintBrush, FaUserTie, FaBriefcase, FaBell } from "react-icons/fa";
 import { FaLaptopCode, FaBuilding, FaHeadset, FaUsers, FaBullhorn, FaFileInvoiceDollar, FaUserCog } from "react-icons/fa";
@@ -14,106 +15,146 @@ import { Popover } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
-import { Dialog, Transition } from '@headlessui/react';
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import TaskModal from "./createtasks";
 
 const Dashboard = () => {
     const { rootContext, setRootContext } = useContext(RootContext);
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [selectedStatType, setSelectedStatType] = useState("Applications");
+    const COLORS = [
+        '#a29eff', // Engineering
+        '#e1fb9b', // Marketing
+        '#fef8ae', // Sales
+        '#e4fcb0', // Customer Support
+        '#e7f5e6', // Finance
+        '#f8f5fc', // Human Resources
+    ];
+    const dailyRecruitmentData = [
+        { date: "13 May", Applications: 300, Shortlisted: 100, Hired: 15, Rejected: 185 }, // 100+15+185 = 300
+        { date: "14 May", Applications: 330, Shortlisted: 110, Hired: 18, Rejected: 202 }, // 110+18+202 = 330
+        { date: "15 May", Applications: 360, Shortlisted: 120, Hired: 20, Rejected: 220 }, // 120+20+220 = 360
+        { date: "16 May", Applications: 340, Shortlisted: 105, Hired: 17, Rejected: 218 }, // 105+17+218 = 340
+        { date: "17 May", Applications: 370, Shortlisted: 115, Hired: 22, Rejected: 233 }, // 115+22+233 = 370
+        { date: "18 May", Applications: 390, Shortlisted: 125, Hired: 25, Rejected: 240 }, // 125+25+240 = 390
+    ];
+
+    // Base distributions (percentages or proportions) for pie charts.
+    // These will be scaled by the total value of the selectedStatType.
+    const departmentDistribution = [
+        { name: "Engineering", proportion: 0.25 },
+        { name: "Marketing", proportion: 0.20 },
+        { name: "Sales", proportion: 0.15 },
+        { name: "Customer Support", proportion: 0.15 },
+        { name: "Finance", proportion: 0.10 },
+        { name: "Human Resources", proportion: 0.149 },
+    ];
+    // Sum of proportions should ideally be 1 (100%)
+    // console.log("Dept Proportion Sum:", departmentDistribution.reduce((sum, d) => sum + d.proportion, 0));
+
+
+    const resourceDistribution = [
+        { name: "Job Boards", proportion: 0.35 },
+        { name: "Social Media Campaigns", proportion: 0.30 },
+        { name: "Employee Referrals", proportion: 0.20 },
+        { name: "Recruitment Agencies", proportion: 0.12 },
+    ];
+    // Sum of proportions should ideally be 1 (100%)
+    // console.log("Resource Proportion Sum:", resourceDistribution.reduce((sum, r) => sum + r.proportion, 0));
+
+
+    // --- STATS DATA (largely remains the same, but now derived from dailyRecruitmentData for consistency) ---
+    // Calculate current totals from the dailyRecruitmentData for the stats cards
+    const totalApplications = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Applications, 0);
+    const totalShortlisted = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Shortlisted, 0);
+    const totalHired = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Hired, 0);
+    const totalRejected = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Rejected, 0);
 
     const stats = [
         {
             title: "Applications",
-            value: "542",
-            change: (
+            value: totalApplications.toString(),
+            change: ( // This change logic is still static, you might want to make it dynamic based on previous period
                 <span className="flex items-center gap-1 bg-green-100 px-2 py-0.5 rounded-md">
                     <ArrowTrendingUpIcon className="w-3 h-3 text-green-600" />
                     <span className="text-xs text-green-700">14%</span>
                 </span>
             ),
-            bgColor: "bg-blue-100",
-            details: {
-                agency: "Dream Homes Realty",
-                lastMonth: 475,
-                growth: "67 more applications than last month",
-            }
+            details: { agency: "Dream Homes Realty", lastMonth: 475, growth: "67 more applications than last month" }
         },
         {
             title: "Shortlisted",
-            value: "118",
+            value: totalShortlisted.toString(),
             change: (
                 <span className="flex items-center gap-1 bg-green-100 px-2 py-0.5 rounded-md">
                     <ArrowTrendingUpIcon className="w-3 h-3 text-green-600" />
                     <span className="text-xs text-green-700">10%</span>
                 </span>
             ),
-            bgColor: "bg-white",
-            details: {
-                agency: "Urban Nest Group",
-                lastMonth: 107,
-                growth: "11 more shortlisted than last month",
-            }
+            details: { agency: "Urban Nest Group", lastMonth: 107, growth: "11 more shortlisted than last month" }
         },
         {
             title: "Hired",
-            value: "42",
+            value: totalHired.toString(),
             change: (
                 <span className="flex items-center gap-1 bg-green-100 px-2 py-0.5 rounded-md">
                     <ArrowTrendingUpIcon className="w-3 h-3 text-green-600" />
                     <span className="text-xs text-green-700">5%</span>
                 </span>
             ),
-            bgColor: "bg-white",
-            details: {
-                agency: "Skyline Realtors",
-                lastMonth: 40,
-                growth: "2 more hires than last month",
-            }
+            details: { agency: "Skyline Realtors", lastMonth: 40, growth: "2 more hires than last month" }
         },
         {
             title: "Rejected",
-            value: "88",
+            value: totalRejected.toString(),
             change: (
                 <span className="flex items-center gap-1 bg-red-100 px-2 py-0.5 rounded-md">
                     <ArrowTrendingDownIcon className="w-3 h-3 text-red-500" />
                     <span className="text-xs text-red-600">3%</span>
                 </span>
             ),
-            bgColor: "bg-white",
-            details: {
-                agency: "Elite Brokers",
-                lastMonth: 91,
-                drop: "3 fewer rejections than last month",
-            }
+            details: { agency: "Elite Brokers", lastMonth: 91, drop: "3 fewer rejections than last month" }
         },
     ];
 
+    const getBarColorByType = (type) => {
+        switch (type) {
+            case "Applications": return "#bfdbfe"; // Tailwind blue-200
+            case "Shortlisted": return "#fef08a";  // Tailwind yellow-200
+            case "Hired": return "#c4fcd8ff";      // Tailwind green-200 (example)
+            case "Rejected": return "#ffbabaff";   // Tailwind red-200 (example)
+            default: return "#bfdbfe";
+        }
+    };
 
-    const barData = [
-        { date: "13 May", Applied: 300, Shortlisted: 100 },
-        { date: "14 May", Applied: 330, Shortlisted: 110 },
-        { date: "15 May", Applied: 360, Shortlisted: 120 },
-        { date: "16 May", Applied: 340, Shortlisted: 105 },
-        { date: "17 May", Applied: 370, Shortlisted: 115 },
-        { date: "18 May", Applied: 390, Shortlisted: 125 },
-    ];
+    // --- PIE CHART GETTER FUNCTIONS (now derive values from total of selectedStatType) ---
+    const getPieDataByType = (type) => {
+        // Find the total value of the selected stat type from dailyRecruitmentData
+        const totalValue = dailyRecruitmentData.reduce((sum, entry) => sum + (entry[type] || 0), 0);
 
-    const pieData = [
-        { name: "Engineering", value: 120 },
-        { name: "Marketing", value: 110 },
-        { name: "Sales", value: 95 },
-        { name: "Customer Support", value: 85 },
-        { name: "Finance", value: 65 },
-        { name: "Human Resources", value: 50 },
-    ];
+        // Distribute this total value across departments based on proportions
+        return departmentDistribution.map(dept => ({
+            name: dept.name,
+            value: Math.round(totalValue * dept.proportion) // Use Math.round for whole numbers
+        })).filter(item => item.value > 0); // Filter out zero values for better pie chart rendering
+    };
 
-    const resourceData = [
-        { name: "Job Boards", value: 350 },
-        { name: "Social Media Campaigns", value: 300 },
-        { name: "Employee Referrals", value: 200 },
-        { name: "Recruitment Agencies", value: 150 },
-    ];
+    const getResourceDataByType = (type) => {
+        // Find the total value of the selected stat type from dailyRecruitmentData
+        const totalValue = dailyRecruitmentData.reduce((sum, entry) => sum + (entry[type] || 0), 0);
+
+        // Distribute this total value across resources based on proportions
+        return resourceDistribution.map(res => ({
+            name: res.name,
+            value: Math.round(totalValue * res.proportion) // Use Math.round for whole numbers
+        })).filter(item => item.value > 0); // Filter out zero values for better pie chart rendering
+    };
+
+    // Pre-calculate the data based on selectedStatType
+    const currentPieChartData = getPieDataByType(selectedStatType);
+    const currentResourceChartData = getResourceDataByType(selectedStatType);
+
+
 
     const events = rootContext.jobs || [{
         "id": "job-1752833777976-m3joa98",
@@ -143,6 +184,14 @@ const Dashboard = () => {
         { time: "4:00 PM", title: "Customer Feedback Analysis", dept: "Customer Support", color: "bg-indigo-100 text-indigo-800" },
         { time: "5:30 PM", title: "Financial Reporting Session", dept: "Finance", color: "bg-indigo-200 text-indigo-900" },
     ];
+
+    const tailwindBgToHex = {
+        "bg-lime-200": "#e0f780", // Approximate hex for lime-200
+        "bg-lime-100": "#f0f7c2", // Approximate hex for lime-100
+        "bg-indigo-100": "#e0e7ff", // Approximate hex for indigo-100
+        "bg-indigo-200": "#c7d2fe", // Approximate hex for indigo-200
+        // Add other background colors you might use in your schedule data
+    };
 
     // const [startDate, setStartDate] = useState(new Date());
     const [filterType, setFilterType] = useState("Popular");
@@ -278,11 +327,6 @@ const Dashboard = () => {
         };
     });
 
-
-
-    const COLORS = ["#a5f3fc", "#86efac", "#fde68a", "#fcd34d"];
-
-
     const [dateRange, setDateRange] = useState([null, null]);
     const [startDate, endDate] = dateRange;
 
@@ -298,7 +342,7 @@ const Dashboard = () => {
         }
     }
     return (
-        <div className="text-gray-800 font-sans pb-6 space-y-8 mt-10 sm:mt-0">
+        <div className="text-gray-800 font-sans pb-6 space-y-8">
             {/* Main Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Section */}
@@ -306,7 +350,12 @@ const Dashboard = () => {
                     {/* Stats */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                         {stats.map((item, index) => (
-                            <div key={index} className={`${item.bgColor} px-4 py-3 rounded-xl shadow`}>
+                            <div
+                                key={index}
+                                onClick={() => setSelectedStatType(item.title)}
+                                className={`px-4 py-3 rounded-xl shadow cursor-pointer transition-transform duration-200 ${selectedStatType === item.title ? `bg-lime-200` : ""
+                                    }`}
+                            >
                                 <div className="flex justify-between items-center">
                                     <p className="text-sm text-gray-600">{item.title}</p>
                                     <Popover className="relative">
@@ -327,7 +376,7 @@ const Dashboard = () => {
                                     </Popover>
                                 </div>
                                 <div className="flex mt-2 justify-between items-center flex-wrap">
-                                    <h2 className="text-2xl font-bold">{item.value}</h2>
+                                    <h2 className="text-2xl font-bold">{Number(item.value).toLocaleString()}</h2>
                                     <p className="text-xs mt-1">{item.change}</p>
                                 </div>
                             </div>
@@ -338,10 +387,10 @@ const Dashboard = () => {
                     {/* Charts */}
                     <div className="flex flex-col lg:flex-row gap-6">
                         <div className="bg-white shadow rounded-xl w-full lg:w-1/2">
-                            <div className="flex justify-between items-center mb-4 p-4">
-                                <h3 className="text-lg font-semibold">Applications</h3>
+                            <div className="flex justify-between items-center pt-4 px-4">
+                                <h3 className="text-md font-semibold">{selectedStatType}</h3>
                                 <Popover className="relative">
-                                    <Popover.Button className="w-auto h-7 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-xs gap-1">
+                                    <Popover.Button className="w-auto h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px] gap-1">
                                         <CalendarIcon className="w-4 h-4" />
                                         <span className="font-semibold">{display1Date}</span>
                                         <ChevronDownIcon className="w-4 h-4" />
@@ -360,37 +409,114 @@ const Dashboard = () => {
                                     </Popover.Panel>
                                 </Popover>
                             </div>
-                            <div className="w-full h-64 p-4 bg-white rounded-xl shadow-md">
+                            <div className="w-full h-64 bg-white rounded-xl mt-5">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart
-                                        width={430}
-                                        height={230}
-                                        data={barData}
-                                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                                        barCategoryGap="30%" // space between groups (date-based)
-                                        barGap={5}           // space between bars inside a group
+                                        width={750}
+                                        height={200}
+                                        data={dailyRecruitmentData}
+                                        barCategoryGap="30%"
+                                        barGap={5}
                                     >
-                                        <CartesianGrid stroke="white" strokeDasharray="4 4" />
-                                        <XAxis dataKey="date" />
-                                        <YAxis />
+                                        <CartesianGrid stroke="white" strokeDashArray="4 4" />
+                                        <XAxis dataKey="date" axisLine={{ stroke: "#f3f4f6" }}    // gray-100
+                                            tickLine={false}
+                                            tick={{ fontSize: 12, fill: "#9ca3af" }} />
+                                        <YAxis axisLine={{ stroke: "#f3f4f6" }}    // gray-100
+                                            tickLine={false}
+                                            tick={{ fontSize: 12, fill: "#9ca3af" }} />
                                         <Tooltip />
                                         <Legend />
-                                        {/* Shortlisted bar */}
-                                        <Bar
-                                            dataKey="Shortlisted"
-                                            fill="#fef08a" // Tailwind yellow-200
-                                            stackId="a"
-                                            radius={[0, 0, 0, 0]}
-                                            barSize={30} // same thickness
-                                        />
-                                        {/* Applied bar */}
-                                        <Bar
-                                            dataKey="Applied"
-                                            fill="#bfdbfe" // Tailwind blue-200
-                                            stackId="a"
-                                            radius={[8, 8, 0, 0]}
-                                            barSize={30} // thin bar
-                                        />
+
+                                        {/* Conditional Bar Rendering Logic for Stacking */}
+
+                                        {/* Case 1: selectedStatType is "Applications" */}
+                                        {selectedStatType === "Applications" && (
+                                            <>
+                                                {/* Shortlisted at the bottom */}
+                                                <Bar
+                                                    dataKey="Shortlisted"
+                                                    fill={getBarColorByType("Shortlisted")}
+                                                    stackId="applications-shortlisted"
+                                                    radius={[0, 0, 0, 0]} // Flat bottom for stack
+                                                    barSize={20}
+                                                />
+                                                {/* Applications on top */}
+                                                <Bar
+                                                    dataKey="Applications"
+                                                    fill={getBarColorByType("Applications")}
+                                                    stackId="applications-shortlisted"
+                                                    radius={[8, 8, 0, 0]} // Rounded top for stack
+                                                    barSize={20}
+                                                />
+                                            </>
+                                        )}
+
+                                        {/* Case 2: selectedStatType is "Shortlisted" */}
+                                        {selectedStatType === "Shortlisted" && (
+                                            <>
+                                                {/* Applications at the bottom */}
+                                                <Bar
+                                                    dataKey="Applications"
+                                                    fill={getBarColorByType("Applications")}
+                                                    stackId="applications-shortlisted"
+                                                    radius={[0, 0, 0, 0]} // Flat bottom for stack
+                                                    barSize={20}
+                                                />
+                                                {/* Shortlisted on top */}
+                                                <Bar
+                                                    dataKey="Shortlisted"
+                                                    fill={getBarColorByType("Shortlisted")}
+                                                    stackId="applications-shortlisted"
+                                                    radius={[8, 8, 0, 0]} // Rounded top for stack
+                                                    barSize={20}
+                                                />
+                                            </>
+                                        )}
+
+                                        {/* Case 3: selectedStatType is "Hired" */}
+                                        {selectedStatType === "Hired" && (
+                                            <>
+                                                {/* Rejected at the bottom */}
+                                                <Bar
+                                                    dataKey="Rejected"
+                                                    fill={getBarColorByType("Rejected")}
+                                                    stackId="hired-rejected"
+                                                    radius={[0, 0, 0, 0]} // Flat bottom for stack
+                                                    barSize={20}
+                                                />
+                                                {/* Hired on top */}
+                                                <Bar
+                                                    dataKey="Hired"
+                                                    fill={getBarColorByType("Hired")}
+                                                    stackId="hired-rejected"
+                                                    radius={[8, 8, 0, 0]} // Rounded top for stack
+                                                    barSize={20}
+                                                />
+                                            </>
+                                        )}
+
+                                        {/* Case 4: selectedStatType is "Rejected" */}
+                                        {selectedStatType === "Rejected" && (
+                                            <>
+                                                {/* Hired at the bottom */}
+                                                <Bar
+                                                    dataKey="Hired"
+                                                    fill={getBarColorByType("Hired")}
+                                                    stackId="hired-rejected"
+                                                    radius={[0, 0, 0, 0]} // Flat bottom for stack
+                                                    barSize={20}
+                                                />
+                                                {/* Rejected on top */}
+                                                <Bar
+                                                    dataKey="Rejected"
+                                                    fill={getBarColorByType("Rejected")}
+                                                    stackId="hired-rejected"
+                                                    radius={[8, 8, 0, 0]} // Rounded top for stack
+                                                    barSize={20}
+                                                />
+                                            </>
+                                        )}
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -398,9 +524,9 @@ const Dashboard = () => {
 
                         <div className="bg-white p-4 shadow rounded-xl w-full lg:w-1/2">
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-lg font-semibold">Appication by Deportment</h3>
+                                <h3 className="text-md font-semibold">{selectedStatType} by Deportment</h3>
                                 <Popover className="relative ">
-                                    <Popover.Button className="w-32 h-7 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-xs">
+                                    <Popover.Button className="w-26 h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px]">
                                         <CalendarIcon className="w-4 h-4" />
                                         <span className="font-semibold">{display2Date}</span>
                                         <ChevronDownIcon className="w-4 h-4" />
@@ -417,17 +543,29 @@ const Dashboard = () => {
                                     </Popover.Panel>
                                 </Popover>
                             </div>
-                            <div className="flex flex-col sm:flex-row justify-between items-center">
-                                <PieChart width={200} height={200}>
-                                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={2}>
-                                        {pieData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                                <ul className="text-xs text-gray-700">
-                                    {pieData.map((item, idx) => (
+                            <div className="flex flex-col sm:flex-row justify-between  w-full bg-white rounded-xl">
+                                <div className="flex flex-col justify-center items-center">
+                                    <PieChart width={200} height={200}>
+                                        <Pie
+                                            data={currentPieChartData} // Use the dynamic data
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={45}
+                                            outerRadius={80}
+                                            paddingAngle={0}
+                                            stroke="none"
+                                        >
+                                            {currentPieChartData.map((entry, index) => ( // Map over the dynamic data
+                                                <Cell key={`cell-dept-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                    </PieChart>
+                                    <p className="font-bold text-xl">{Number(currentPieChartData.reduce((sum, item) => sum + item.value, 0) || 0).toLocaleString()}</p>
+                                    <p>Total {selectedStatType}</p>
+                                </div>
+                                <ul className="text-xs text-gray-700 mt-6">
+                                    {currentPieChartData.map((item, idx) => ( // Map over the dynamic data for the legend
                                         <li key={idx} className="flex items-center gap-2">
                                             <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
                                             {item.name}: {item.value}
@@ -440,21 +578,42 @@ const Dashboard = () => {
                 </div>
 
                 {/* Right Section */}
-                <div className="bg-indigo-100 pt-3 shadow rounded-xl w-full space-y-4">
-                    <h3 className="text-lg font-semibold text-center">Applicant Resources</h3>
+                <div className="bg-[#d4ddff] pt-3 shadow rounded-xl w-full space-y-4">
+                    <h3 className="text-md font-semibold text-center">Applicant Resources</h3>
                     <div className="flex justify-center items-center">
                         <PieChart width={250} height={250}>
-                            <Pie data={resourceData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={2}>
-                                {resourceData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            <Pie
+                                data={currentResourceChartData} // Use the dynamic data
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={85}
+                                outerRadius={102}
+                                paddingAngle={2}
+                                stroke="none"
+                            >
+                                {currentResourceChartData.map((entry, index) => ( // Map over the dynamic data
+                                    <Cell key={`cell-resource-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
+                                <Label
+                                    position="center"
+                                    content={() => (
+                                        <>
+                                            <text x="50%" y="48%" textAnchor="middle" dominantBaseline="central" fontSize="16" fontWeight="bold" fill="#333">
+                                                {Number(currentResourceChartData.reduce((sum, item) => sum + item.value, 0) || 0).toLocaleString()}
+                                            </text>
+                                            <text x="50%" y="55%" textAnchor="middle" dominantBaseline="central" fontSize="11" fill="#666">
+                                                Total Applicants
+                                            </text>
+                                        </>
+                                    )}
+                                />
                             </Pie>
                             <Tooltip />
                         </PieChart>
                     </div>
                     <div className="flex justify-center items-center">
-                        <ul className="text-xs text-gray-700 mt-2 grid grid-cols-2 sm:grid grid-cols-4 gap-2 list-none">
-                            {resourceData.map((item, idx) => (
+                        <ul className="text-xs text-gray-700 mt-2 grid grid-cols-2 gap-2 list-none">
+                            {currentResourceChartData.map((item, idx) => ( // Map over the dynamic data for the legend
                                 <li key={item.name} className="flex gap-1 items-center">
                                     <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
                                     <div className="leading-tight">
@@ -477,13 +636,13 @@ const Dashboard = () => {
                         <div className="flex gap-2">
                             <div
                                 onClick={() => setFilterType("Popular")}
-                                className={`flex gap-1 text-xs cursor-pointer ${filterType === "Popular" ? "text-red-500 font-bold text-lg" : "text-blue-400 hover:text-orange-600"}`}
+                                className={`flex gap-1 text-xs cursor-pointer ${filterType === "Popular" ? "text-lime-600 font-bold text-lg" : "text-blue-400 hover:text-orange-600"}`}
                             >
                                 <p>Popular</p>
                             </div>
                             <p
                                 onClick={() => setFilterType("All")}
-                                className={`text-xs cursor-pointer ${filterType === "All" ? "text-red-500 font-bold text-lg" : "text-blue-400 hover:text-orange-600"}`}
+                                className={`text-xs cursor-pointer ${filterType === "All" ? "text-lime-600 font-bold text-lg" : "text-blue-400 hover:text-orange-600"}`}
                             >
                                 See All
                             </p>
@@ -504,7 +663,7 @@ const Dashboard = () => {
                 <div className="bg-white p-4 rounded-xl shadow w-full">
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-md font-semibold">Tasks</h3>
-                        <button className="w-5 h-5 bg-green-300 p-1 rounded" onClick={() => setShowTaskForm(!showTaskForm)}><PlusIcon /></button>
+                        <button className="w-5 h-5 bg-lime-300 p-1 rounded" onClick={() => setShowTaskForm(!showTaskForm)}><PlusIcon /></button>
                     </div>
                     {showTaskForm && <TaskModal newTask={newTask} setNewTask={setNewTask} handleAddTask={handleAddTask} showTaskForm={showTaskForm} setShowTaskForm={setShowTaskForm} />}
                     <div className="space-y-4">
@@ -546,7 +705,7 @@ const Dashboard = () => {
                     <div className="flex justify-between mb-3">
                         <h3 className="text-md font-semibold">Daily Schedule</h3>
                         <Popover className="relative ">
-                            <Popover.Button className="w-32 h-7 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-xs">
+                            <Popover.Button className="w-26 h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px]">
                                 <CalendarIcon className="w-4 h-4" />
                                 <span className="font-semibold">{displayDate}</span>
                                 <ChevronDownIcon className="w-4 h-4" />
@@ -563,20 +722,57 @@ const Dashboard = () => {
                             </Popover.Panel>
                         </Popover>
                     </div>
-                    <div>
-                        {schedule.map((item, index) => (
-                            <div key={index} className="flex items-start gap-4 relative mt-2">
-                                <div className="w-[18%] pt-1 text-xs font-medium text-gray-500">{item.time}</div>
-                                <div className="flex flex-col items-center relative">
-                                    <span className={`w-3 h-3 rounded-full border-2 border-white shadow ${item.color}`} />
-                                    <div className="w-px border-l-2 border-dashed mt-1 min-h-10" style={{ borderColor: item.color.replace("bg-", "#") }} />
+                    <div className="relative"> {/* Main container for the timeline */}
+                        {schedule.map((item, index) => {
+                            const bgColorClassMatch = item.color.match(/bg-[a-z]+-[0-9]+/);
+                            const bgColorClass = bgColorClassMatch ? bgColorClassMatch[0] : '';
+                            const borderColorHex = tailwindBgToHex[bgColorClass] || 'gray';
+
+                            return (
+                                <div key={index} className="flex items-start gap-4 relative mt-2">
+                                    <div className="w-[18%] pt-1 text-xs font-medium text-gray-500">{item.time}</div>
+
+                                    {/* Dot and Line Column */}
+                                    <div className="flex flex-col items-center relative">
+                                        {/* The dot */}
+                                        <span className={`w-3 h-3 rounded-full border-2 border-white shadow ${item.color.split(' ')[0]} z-10`} />
+
+                                        {/* Vertical line: Only for items that are *not* the last one */}
+                                        {index < schedule.length - 1 && (
+                                            <div
+                                                className="absolute left-1/2 transform -translate-x-1/2 w-px border-l-2 border-dashed"
+                                                style={{
+                                                    borderColor: borderColorHex,
+                                                    top: '6px',
+                                                    height: `calc(100% + 5rem)`, // Connects to the top of the next item's container
+                                                }}
+                                            />
+                                        )}
+                                        {/* If you specifically want a trailing line from the last dot,
+                                you can add it here, with a fixed height.
+                                If you want it to disappear after the last dot, remove this block.
+                            */}
+                                        {index === schedule.length - 1 && (
+                                            <div
+                                                className="absolute left-1/2 transform -translate-x-1/2 w-px border-l-2 border-dashed"
+                                                style={{
+                                                    borderColor: borderColorHex,
+                                                    top: '6px',
+                                                    height: '3.5rem', // A fixed length for the last line to trail off
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+
+                                    {/* Content Box */}
+                                    {/* The height of this box largely dictates how long the line needs to be */}
+                                    <div className={`w-[75%] flex flex-col gap-1 p-3 rounded-xl ${item.color}`}>
+                                        <span className="text-sm font-semibold text-gray-900">{item.title}</span>
+                                        <span className="text-xs text-gray-700">{item.dept}</span>
+                                    </div>
                                 </div>
-                                <div className={`w-[75%] flex flex-col gap-1 p-3 rounded-xl ${item.color}`}>
-                                    <span className="text-sm font-semibold text-gray-900">{item.title}</span>
-                                    <span className="text-xs text-gray-700">{item.dept}</span>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </div>
