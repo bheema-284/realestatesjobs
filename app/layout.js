@@ -94,6 +94,7 @@ export default function RootLayout({ children }) {
     notification: false,
     tasks: []
   });
+
   useEffect(() => {
     const user_details = typeof window !== "undefined" && JSON.parse(localStorage.getItem("user_details"));
     const updatedContext = { ...rootContext, loader: false };
@@ -166,7 +167,7 @@ export default function RootLayout({ children }) {
                    animate-drawLineLeft"
         />
 
-        <div className="relative z-10 font-semibold text-gray-700 dark:text-gray-300 text-center">
+        <div className="relative z-10 font-semibold text-gray-700 dark:text-gray-300 text-center text-sm whitespace-nowrap">
           POST NEW JOB
         </div>
       </div>
