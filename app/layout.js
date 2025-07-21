@@ -183,18 +183,20 @@ export default function RootLayout({ children }) {
 
     return () => clearTimeout(timer);
   }, [pathName]);
-  const NotificationBell = ({ showDot }) => {
+  const NotificationBell = ({ count }) => {
     return (
       <div className="relative w-4 h-4">
         <FaBell className="text-gray-700 dark:text-white w-full h-full" />
-        {showDot && (
-          <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
+        {count > 0 && (
+          <span className="absolute -top-[2px] -right-[2px] min-w-[12px] h-[12px] px-[2px] text-[8px] leading-[12px] text-white bg-red-500 rounded-full text-center ring-1 ring-white dark:ring-gray-800">
+            {count > 99 ? '99+' : count}
+          </span>
         )}
       </div>
     );
   };
   const Topbar = () => (
-    <div className="flex h-16 flex-wrap sm:flex-nowrap fixed top-0 left-0 w-full z-50 justify-between items-center px-4 sm:px-6 py-2 bg-white shadow gap-2">
+    <div className="flex h-26 sm:h-16 flex-wrap sm:flex-nowrap fixed top-0 left-0 w-full z-50 justify-between items-center px-4 sm:px-6 py-2 bg-white shadow gap-2">
       <div className="flex items-center justify-between w-full sm:w-auto">
         <Image alt={"logo"} width={100} height={20} src="https://realestatejobs.co.in/images/logo.png" />
         <button
@@ -210,7 +212,7 @@ export default function RootLayout({ children }) {
           // Use the new AnimatedBorderLoader here
           <AnimatedBorderLoader />
         ) : (
-          <button onClick={() => setIsOpen(!isOpen)} className="bg-indigo-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
+          <button onClick={() => setIsOpen(!isOpen)} className="bg-gray-900 border border-gray-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
             POST NEW JOB
           </button>
         )}
@@ -220,7 +222,7 @@ export default function RootLayout({ children }) {
           className="px-3 py-2 border rounded w-full sm:w-1/3 text-sm"
         />
         <div className="flex items-center gap-3 relative" ref={dropdownRef}>
-          {rootContext.notification ? <NotificationBell showDot={true} /> : <FaBell className="text-gray-600" />}
+          {rootContext.notification ? <NotificationBell count={3} /> : <FaBell className="text-gray-600" />}
           <div className="flex items-center gap-1 cursor-pointer" onClick={() => setShowDropdown(!showDropdown)}>
             <UserIcon className="w-4 h-4 text-gray-400" />
             <div className="text-sm flex flex-col sm:flex-row sm:items-center gap-1">
@@ -267,7 +269,7 @@ export default function RootLayout({ children }) {
             <div>
               {!ready && <Loader />}
               <Topbar />
-              <div className="flex flex-col sm:flex-row pt-16 bg-gray-100 min-h-screen">
+              <div className="flex flex-col sm:flex-row pt-26 sm:pt-16 bg-gray-100 min-h-screen">
                 <Sidebar isMobileOpen={isMobileSidebarOpen} toggleSidebar={setMobileSidebarOpen} />
                 <main className="flex-1 sm:ml-36 p-1">{children}</main>
               </div>
