@@ -1,7 +1,9 @@
+// ApplicationList.js
 'use client';
-import { ChartBarIcon, ChatBubbleOvalLeftEllipsisIcon, EyeIcon } from '@heroicons/react/24/solid';
+import Chat from '@/components/common/chat';
+import { ChatBubbleOvalLeftEllipsisIcon, EyeIcon } from '@heroicons/react/24/solid';
 import { useRouter } from 'next/navigation';
-import React from 'react';
+import React, { useState } from 'react';
 import {
     FaGraduationCap,
     FaHandshake,
@@ -11,76 +13,33 @@ import {
     FaCheckCircle,
 } from 'react-icons/fa';
 
-// Dummy candidate data
+// Dummy candidate data (remains the same)
 const candidates = [
-    {
-        id: 1,
-        name: 'Emma Robin',
-        location: 'Hyderabad, Madhapur',
-        image: 'https://randomuser.me/api/portraits/women/75.jpg',
-    },
-    {
-        id: 2,
-        name: 'Alex Johnson',
-        location: 'Mumbai, Andheri',
-        image: 'https://randomuser.me/api/portraits/men/32.jpg',
-    },
-    {
-        id: 3,
-        name: 'Priya Mehta',
-        location: 'Bangalore, Koramangala',
-        image: 'https://randomuser.me/api/portraits/women/65.jpg',
-    },
-    {
-        id: 4,
-        name: 'Rahul Verma',
-        location: 'Pune, Baner',
-        image: 'https://randomuser.me/api/portraits/men/44.jpg',
-    },
-    {
-        id: 5,
-        name: 'Anjali Singh',
-        location: 'Delhi, Hauz Khas',
-        image: 'https://randomuser.me/api/portraits/women/25.jpg',
-    },
-    {
-        id: 6,
-        name: 'Arjun Desai',
-        location: 'Ahmedabad, Satellite',
-        image: 'https://randomuser.me/api/portraits/men/15.jpg',
-    },
-    {
-        id: 7,
-        name: 'Sneha Kapoor',
-        location: 'Chennai, T. Nagar',
-        image: 'https://randomuser.me/api/portraits/women/35.jpg',
-    },
-    {
-        id: 8,
-        name: 'Rohit Sharma',
-        location: 'Kolkata, Salt Lake',
-        image: 'https://randomuser.me/api/portraits/men/55.jpg',
-    },
-    {
-        id: 9,
-        name: 'Neha Dubey',
-        location: 'Jaipur, Malviya Nagar',
-        image: 'https://randomuser.me/api/portraits/women/45.jpg',
-    },
-    {
-        id: 10,
-        name: 'Vikram Rao',
-        location: 'Nagpur, Dharampeth',
-        image: 'https://randomuser.me/api/portraits/men/65.jpg',
-    },
+    { id: 1, name: 'Emma Robin', location: 'Hyderabad, Madhapur', image: 'https://randomuser.me/api/portraits/women/75.jpg' },
+    { id: 2, name: 'Alex Johnson', location: 'Mumbai, Andheri', image: 'https://randomuser.me/api/portraits/men/32.jpg' },
+    { id: 3, name: 'Priya Mehta', location: 'Bangalore, Koramangala', image: 'https://randomuser.me/api/portraits/women/65.jpg' },
+    { id: 4, name: 'Rahul Verma', location: 'Pune, Baner', image: 'https://randomuser.me/api/portraits/men/44.jpg' },
+    { id: 5, name: 'Anjali Singh', location: 'Delhi, Hauz Khas', image: 'https://randomuser.me/api/portraits/women/25.jpg' },
+    { id: 6, name: 'Arjun Desai', location: 'Ahmedabad, Satellite', image: 'https://randomuser.me/api/portraits/men/15.jpg' },
+    { id: 7, name: 'Sneha Kapoor', location: 'Chennai, T. Nagar', image: 'https://randomuser.me/api/portraits/women/35.jpg' },
+    { id: 8, name: 'Rohit Sharma', location: 'Kolkata, Salt Lake', image: 'https://randomuser.me/api/portraits/men/55.jpg' },
+    { id: 9, name: 'Neha Dubey', location: 'Jaipur, Malviya Nagar', image: 'https://randomuser.me/api/portraits/women/45.jpg' },
+    { id: 10, name: 'Vikram Rao', location: 'Nagpur, Dharampeth', image: 'https://randomuser.me/api/portraits/men/65.jpg' },
 ];
 
-// Card Component
-const ApplicationCard = ({ candidate }) => {
+// Card Component (simplified for the chat button, no longer managing `isChatOpen` itself)
+const ApplicationCard = ({ candidate, onOpenChatWithCandidate }) => {
     const router = useRouter();
 
     const handleViewProfile = () => {
         router.push(`/profile/${candidate.id}`);
+    };
+
+    const handleOpenWhatsApp = () => {
+        const message = encodeURIComponent(`Hello, I'm a recruiter interested in ${candidate.name}. Can we chat about their profile?`);
+        // Replace 'YOUR_WHATSAPP_NUMBER' with your actual WhatsApp Business number
+        // For example, if your number is +91-9876543210 (India), it would be 919876543210
+        window.open(`https://wa.me/YOUR_WHATSAPP_NUMBER?text=${message}`, '_blank');
     };
 
     return (
@@ -128,8 +87,12 @@ const ApplicationCard = ({ candidate }) => {
                     <option>Rejected</option>
                 </select>
 
-                <button className="border px-2 py-1 rounded text-xs sm:text-sm flex gap-2 items-center gap-1 text-gray-500">
-                    <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4 text-gray-500"/> <span className="hidden sm:inline text-gray-500">Chat</span>
+                {/* This button will open the global chat for this specific candidate */}
+                <button
+                    onClick={() => onOpenChatWithCandidate(candidate.name)}
+                    className="border px-2 py-1 rounded text-xs sm:text-sm flex gap-2 items-center gap-1 text-gray-500"
+                >
+                    <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4 text-gray-500" /> <span className="hidden sm:inline text-gray-500">Chat</span>
                 </button>
 
                 <button
@@ -140,12 +103,33 @@ const ApplicationCard = ({ candidate }) => {
                 </button>
             </div>
         </div>
-
     );
 };
 
 // Main List Component
 const ApplicationList = () => {
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [selectedCandidateName, setSelectedCandidateName] = useState('');
+
+    const handleOpenChatWithCandidate = (name) => {
+        setSelectedCandidateName(name);
+        setIsChatOpen(true);
+    };
+
+    const handleOpenFloatingChat = () => {
+        // If chat is opened via floating button without a specific candidate,
+        // you might want to default to a general assistant or the last candidate.
+        // For now, let's just open it without changing the candidate context.
+        // You might want to unset selectedCandidateName here if you want a "fresh" general chat.
+        setIsChatOpen(true);
+    };
+
+    const handleCloseChat = () => {
+        setIsChatOpen(false);
+        // Optional: clear selected candidate name when closing
+        setSelectedCandidateName('');
+    };
+
     return (
         <div className="max-w-6xl mx-auto p-4">
             <div className="mb-4">
@@ -158,11 +142,28 @@ const ApplicationList = () => {
 
             <div className="grid grid-cols-1 gap-4">
                 {candidates.map((candidate) => (
-                    <ApplicationCard key={candidate.id} candidate={candidate} />
+                    <ApplicationCard
+                        key={candidate.id}
+                        candidate={candidate}
+                        onOpenChatWithCandidate={handleOpenChatWithCandidate} // Pass down the new handler
+                    />
                 ))}
             </div>
-        </div>
 
+            {/* Floating Chat Button */}
+            {/* {!isChatOpen && ( 
+                <ChatFloatingButton onOpenChat={handleOpenFloatingChat} />
+            )} */}
+
+
+            {/* Conditionally render the Chat component globally */}
+            {isChatOpen && (
+                <Chat
+                    candidateName={selectedCandidateName} // Pass the selected candidate's name
+                    onClose={handleCloseChat}
+                />
+            )}
+        </div>
     );
 };
 
