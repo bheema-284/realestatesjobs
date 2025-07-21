@@ -14,7 +14,7 @@ import RootContext from "../components/config/rootcontext";
 import { Popover } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { format } from "date-fns";
+import { addDays, format, differenceInDays, subDays } from "date-fns";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import TaskModal from "./createtasks";
 
@@ -22,6 +22,20 @@ const Dashboard = () => {
     const { rootContext, setRootContext } = useContext(RootContext);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedStatType, setSelectedStatType] = useState("Applications");
+    const [dateRange, setDateRange] = useState([null, null]);
+    const [startDate, endDate] = dateRange;
+
+    const displayDate = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
+    const display2Date = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
+    let display1Date = "Today";
+    if (startDate && endDate) {
+        const sameMonth = format(startDate, "MMM yyyy") === format(endDate, "MMM yyyy");
+        if (sameMonth) {
+            display1Date = `${format(startDate, "d")}–${format(endDate, "d MMM")}`;
+        } else {
+            display1Date = `${format(startDate, "d MMM")} – ${format(endDate, "d MMM")}`;
+        }
+    }
     const COLORS = [
         '#a29eff', // Engineering
         '#e1fb9b', // Marketing
@@ -30,14 +44,31 @@ const Dashboard = () => {
         '#e7f5e6', // Finance
         '#f8f5fc', // Human Resources
     ];
-    const dailyRecruitmentData = [
-        { date: "13 May", Applications: 300, Shortlisted: 100, Hired: 15, Rejected: 185 }, // 100+15+185 = 300
-        { date: "14 May", Applications: 330, Shortlisted: 110, Hired: 18, Rejected: 202 }, // 110+18+202 = 330
-        { date: "15 May", Applications: 360, Shortlisted: 120, Hired: 20, Rejected: 220 }, // 120+20+220 = 360
-        { date: "16 May", Applications: 340, Shortlisted: 105, Hired: 17, Rejected: 218 }, // 105+17+218 = 340
-        { date: "17 May", Applications: 370, Shortlisted: 115, Hired: 22, Rejected: 233 }, // 115+22+233 = 370
-        { date: "18 May", Applications: 390, Shortlisted: 125, Hired: 25, Rejected: 240 }, // 125+25+240 = 390
-    ];
+
+    const generateRecruitmentData = (start = new Date(), end = addDays(new Date(), 6)) => {
+        const days = differenceInDays(end, start) + 1;
+        const data = [];
+
+        for (let i = 0; i < days; i++) {
+            const date = format(addDays(start, i), "dd MMM");
+            const applications = Math.floor(Math.random() * 101) + 300; // 300–400
+            const shortlisted = Math.floor(applications * 0.3);
+            const hired = Math.floor(shortlisted * 0.2);
+            const rejected = applications - shortlisted - hired;
+
+            data.push({ date, Applications: applications, Shortlisted: shortlisted, Hired: hired, Rejected: rejected });
+        }
+
+        return data;
+    };
+
+    const [dailyRecruitmentData, setDailyRecruitmentData] = useState(generateRecruitmentData(subDays(new Date(), 6), new Date()));
+
+    useEffect(() => {
+        if (startDate && endDate) {
+            setDailyRecruitmentData(generateRecruitmentData(startDate, endDate));
+        }
+    }, [startDate, endDate]);
 
     // Base distributions (percentages or proportions) for pie charts.
     // These will be scaled by the total value of the selectedStatType.
@@ -65,22 +96,37 @@ const Dashboard = () => {
 
     // --- STATS DATA (largely remains the same, but now derived from dailyRecruitmentData for consistency) ---
     // Calculate current totals from the dailyRecruitmentData for the stats cards
+    const getRandomPercentage = (value, base) => {
+        if (base === 0) return 0;
+        const percentage = (value / base) * 100;
+        return Math.min(100, Math.max(1, Math.round(percentage)));
+    };
+
     const totalApplications = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Applications, 0);
     const totalShortlisted = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Shortlisted, 0);
     const totalHired = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Hired, 0);
     const totalRejected = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Rejected, 0);
 
+    // Dynamically calculate percentages
+    const shortlistedPercent = getRandomPercentage(totalShortlisted, totalApplications);
+    const hiredPercent = getRandomPercentage(totalHired, totalApplications);
+    const rejectedPercent = getRandomPercentage(totalRejected, totalApplications);
+
     const stats = [
         {
             title: "Applications",
             value: totalApplications.toString(),
-            change: ( // This change logic is still static, you might want to make it dynamic based on previous period
+            change: (
                 <span className="flex items-center gap-1 bg-green-100 px-2 py-0.5 rounded-md">
                     <ArrowTrendingUpIcon className="w-3 h-3 text-green-600" />
-                    <span className="text-xs text-green-700">14%</span>
+                    <span className="text-xs text-green-700">95%</span>
                 </span>
             ),
-            details: { agency: "Dream Homes Realty", lastMonth: 475, growth: "67 more applications than last month" }
+            details: {
+                agency: "Dream Homes Realty",
+                lastMonth: 475,
+                growth: `${totalApplications - 475} more applications than last month`
+            }
         },
         {
             title: "Shortlisted",
@@ -88,10 +134,14 @@ const Dashboard = () => {
             change: (
                 <span className="flex items-center gap-1 bg-green-100 px-2 py-0.5 rounded-md">
                     <ArrowTrendingUpIcon className="w-3 h-3 text-green-600" />
-                    <span className="text-xs text-green-700">10%</span>
+                    <span className="text-xs text-green-700">{shortlistedPercent}%</span>
                 </span>
             ),
-            details: { agency: "Urban Nest Group", lastMonth: 107, growth: "11 more shortlisted than last month" }
+            details: {
+                agency: "Urban Nest Group",
+                lastMonth: 107,
+                growth: `${totalShortlisted - 107} more shortlisted than last month`
+            }
         },
         {
             title: "Hired",
@@ -99,10 +149,14 @@ const Dashboard = () => {
             change: (
                 <span className="flex items-center gap-1 bg-green-100 px-2 py-0.5 rounded-md">
                     <ArrowTrendingUpIcon className="w-3 h-3 text-green-600" />
-                    <span className="text-xs text-green-700">5%</span>
+                    <span className="text-xs text-green-700">{hiredPercent}%</span>
                 </span>
             ),
-            details: { agency: "Skyline Realtors", lastMonth: 40, growth: "2 more hires than last month" }
+            details: {
+                agency: "Skyline Realtors",
+                lastMonth: 40,
+                growth: `${totalHired - 40} more hires than last month`
+            }
         },
         {
             title: "Rejected",
@@ -110,11 +164,15 @@ const Dashboard = () => {
             change: (
                 <span className="flex items-center gap-1 bg-red-100 px-2 py-0.5 rounded-md">
                     <ArrowTrendingDownIcon className="w-3 h-3 text-red-500" />
-                    <span className="text-xs text-red-600">3%</span>
+                    <span className="text-xs text-red-600">{rejectedPercent}%</span>
                 </span>
             ),
-            details: { agency: "Elite Brokers", lastMonth: 91, drop: "3 fewer rejections than last month" }
-        },
+            details: {
+                agency: "Elite Brokers",
+                lastMonth: 91,
+                drop: `${91 - totalRejected} fewer rejections than last month`
+            }
+        }
     ];
 
     const getBarColorByType = (type) => {
@@ -153,8 +211,6 @@ const Dashboard = () => {
     // Pre-calculate the data based on selectedStatType
     const currentPieChartData = getPieDataByType(selectedStatType);
     const currentResourceChartData = getResourceDataByType(selectedStatType);
-
-
 
     const events = rootContext.jobs || [{
         "id": "job-1752833777976-m3joa98",
@@ -327,20 +383,7 @@ const Dashboard = () => {
         };
     });
 
-    const [dateRange, setDateRange] = useState([null, null]);
-    const [startDate, endDate] = dateRange;
 
-    const displayDate = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
-    const display2Date = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
-    let display1Date = "Today";
-    if (startDate && endDate) {
-        const sameMonth = format(startDate, "MMM yyyy") === format(endDate, "MMM yyyy");
-        if (sameMonth) {
-            display1Date = `${format(startDate, "d")}–${format(endDate, "d MMM")}`;
-        } else {
-            display1Date = `${format(startDate, "d MMM")} – ${format(endDate, "d MMM")}`;
-        }
-    }
     return (
         <div className="text-gray-800 font-sans pb-6 space-y-8">
             {/* Main Section */}
@@ -396,7 +439,7 @@ const Dashboard = () => {
                                         <ChevronDownIcon className="w-4 h-4" />
                                     </Popover.Button>
 
-                                    <Popover.Panel className="absolute z-10 mt-2">
+                                    <Popover.Panel className="absolute z-10 mt-2 right-0">
                                         <div className="bg-white p-2 rounded shadow-lg">
                                             <DatePicker
                                                 selectsRange
