@@ -20,14 +20,28 @@ import TaskModal from "./createtasks";
 
 const Dashboard = () => {
     const { rootContext, setRootContext } = useContext(RootContext);
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(null);
     const [selectedStatType, setSelectedStatType] = useState("Applications");
     const [dateRange, setDateRange] = useState([null, null]);
     const [startDate, endDate] = dateRange;
 
     const displayDate = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
     const display2Date = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
-    let display1Date = "Today";
+
+    const formatDateRange = () => {
+        const endDate = new Date(); // today
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - 6); // 7 days range: includes today
+
+        const dayStart = startDate.getDate();
+        const dayEnd = endDate.getDate();
+        const monthName = endDate.toLocaleDateString('en-US', { month: 'long' });
+
+        return `${dayStart}-${dayEnd} ${monthName}`;
+    };
+
+    const dynamicRange = formatDateRange();
+    let display1Date = dynamicRange;
     if (startDate && endDate) {
         const sameMonth = format(startDate, "MMM yyyy") === format(endDate, "MMM yyyy");
         if (sameMonth) {
@@ -536,9 +550,7 @@ const Dashboard = () => {
                             <div
                                 key={index}
                                 onClick={() => setSelectedStatType(item.title)}
-                                className={`px-4 py-3 rounded-xl shadow cursor-pointer transition-transform duration-200 ${selectedStatType === item.title ? `bg-lime-200` : ""
-                                    }`}
-                            >
+                                className={`px-4 py-3 rounded-xl shadow cursor-pointer transition-transform duration-200 ${selectedStatType === item.title ? `bg-lime-200` : ""}`}>
                                 <div className="flex justify-between items-center">
                                     <p className="text-sm text-gray-600">{item.title}</p>
                                     <Popover className="relative">
