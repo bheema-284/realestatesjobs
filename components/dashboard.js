@@ -1,5 +1,5 @@
 'use client';
-import React, { Fragment, useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend,
     ResponsiveContainer,
@@ -7,14 +7,14 @@ import {
     Line,
     Label,
 } from "recharts";
-import { FaCode, FaPaintBrush, FaUserTie, FaBriefcase, FaBell } from "react-icons/fa";
+import { FaUserTie } from "react-icons/fa";
 import { FaLaptopCode, FaBuilding, FaHeadset, FaUsers, FaBullhorn, FaFileInvoiceDollar, FaUserCog } from "react-icons/fa";
-import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, CalendarIcon, ChevronDownIcon, PlusIcon } from "@heroicons/react/24/solid";
+import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, CalendarIcon, ChevronDownIcon, PlusIcon, MinusIcon } from "@heroicons/react/24/solid";
 import RootContext from "../components/config/rootcontext";
 import { Popover } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { addDays, format, differenceInDays, subDays } from "date-fns";
+import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays } from "date-fns";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import TaskModal from "./createtasks";
 
@@ -50,7 +50,7 @@ const Dashboard = () => {
         const data = [];
 
         for (let i = 0; i < days; i++) {
-            const date = format(addDays(start, i), "dd MMM");
+            const date = format(addDays(start, i), "yyyy-MM-dd"); // full ISO date string
             const applications = Math.floor(Math.random() * 101) + 300; // 300–400
             const shortlisted = Math.floor(applications * 0.3);
             const hired = Math.floor(shortlisted * 0.2);
@@ -96,10 +96,14 @@ const Dashboard = () => {
 
     // --- STATS DATA (largely remains the same, but now derived from dailyRecruitmentData for consistency) ---
     // Calculate current totals from the dailyRecruitmentData for the stats cards
-    const getRandomPercentage = (value, base) => {
-        if (base === 0) return 0;
-        const percentage = (value / base) * 100;
-        return Math.min(100, Math.max(1, Math.round(percentage)));
+    const getRandomizedPercentage = (actual, total, min = 5, max = 95) => {
+        if (total === 0) return 0;
+
+        const actualPercent = (actual / total) * 100;
+        const deviation = Math.random() * 10 - 5; // Random between -5 and +5
+        const randomized = actualPercent + deviation;
+
+        return Math.max(min, Math.min(max, Math.round(randomized)));
     };
 
     const totalApplications = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Applications, 0);
@@ -108,20 +112,39 @@ const Dashboard = () => {
     const totalRejected = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Rejected, 0);
 
     // Dynamically calculate percentages
-    const shortlistedPercent = getRandomPercentage(totalShortlisted, totalApplications);
-    const hiredPercent = getRandomPercentage(totalHired, totalApplications);
-    const rejectedPercent = getRandomPercentage(totalRejected, totalApplications);
+    const shortlistedPercent = getRandomizedPercentage(totalShortlisted, totalApplications);
+    const hiredPercent = getRandomizedPercentage(totalHired, totalApplications);
+    const rejectedPercent = getRandomizedPercentage(totalRejected, totalApplications);
+
+    const getRandomChangeChip = (percent) => {
+        const rand = Math.random();
+        if (rand < 0.33) {
+            return {
+                bg: "bg-green-100",
+                text: "text-green-700",
+                icon: <ArrowTrendingUpIcon className="w-3 h-3 text-green-600" />,
+            };
+        } else if (rand < 0.66) {
+            return {
+                bg: "bg-red-100",
+                text: "text-red-600",
+                icon: <ArrowTrendingDownIcon className="w-3 h-3 text-red-500" />,
+            };
+        } else {
+            return {
+                bg: "bg-yellow-100",
+                text: "text-yellow-600",
+                icon: <MinusIcon className="w-3 h-3 text-yellow-500" />,
+            };
+        }
+    };
 
     const stats = [
         {
             title: "Applications",
             value: totalApplications.toString(),
-            change: (
-                <span className="flex items-center gap-1 bg-green-100 px-2 py-0.5 rounded-md">
-                    <ArrowTrendingUpIcon className="w-3 h-3 text-green-600" />
-                    <span className="text-xs text-green-700">95%</span>
-                </span>
-            ),
+            ...getRandomChangeChip(95), // simulate percentage
+            percent: "95%",
             details: {
                 agency: "Dream Homes Realty",
                 lastMonth: 475,
@@ -131,12 +154,8 @@ const Dashboard = () => {
         {
             title: "Shortlisted",
             value: totalShortlisted.toString(),
-            change: (
-                <span className="flex items-center gap-1 bg-green-100 px-2 py-0.5 rounded-md">
-                    <ArrowTrendingUpIcon className="w-3 h-3 text-green-600" />
-                    <span className="text-xs text-green-700">{shortlistedPercent}%</span>
-                </span>
-            ),
+            ...getRandomChangeChip(shortlistedPercent),
+            percent: `${shortlistedPercent}%`,
             details: {
                 agency: "Urban Nest Group",
                 lastMonth: 107,
@@ -146,12 +165,8 @@ const Dashboard = () => {
         {
             title: "Hired",
             value: totalHired.toString(),
-            change: (
-                <span className="flex items-center gap-1 bg-green-100 px-2 py-0.5 rounded-md">
-                    <ArrowTrendingUpIcon className="w-3 h-3 text-green-600" />
-                    <span className="text-xs text-green-700">{hiredPercent}%</span>
-                </span>
-            ),
+            ...getRandomChangeChip(hiredPercent),
+            percent: `${hiredPercent}%`,
             details: {
                 agency: "Skyline Realtors",
                 lastMonth: 40,
@@ -161,12 +176,8 @@ const Dashboard = () => {
         {
             title: "Rejected",
             value: totalRejected.toString(),
-            change: (
-                <span className="flex items-center gap-1 bg-red-100 px-2 py-0.5 rounded-md">
-                    <ArrowTrendingDownIcon className="w-3 h-3 text-red-500" />
-                    <span className="text-xs text-red-600">{rejectedPercent}%</span>
-                </span>
-            ),
+            ...getRandomChangeChip(rejectedPercent),
+            percent: `${rejectedPercent}%`,
             details: {
                 agency: "Elite Brokers",
                 lastMonth: 91,
@@ -174,6 +185,7 @@ const Dashboard = () => {
             }
         }
     ];
+
 
     const getBarColorByType = (type) => {
         switch (type) {
@@ -234,20 +246,6 @@ const Dashboard = () => {
         "postedOn": "2025-07-18"
     }]
 
-    const schedule = [
-        { time: "1:00 PM", title: "Marketing Strategy Presentation", dept: "Marketing", color: "bg-lime-200 text-lime-900" },
-        { time: "2:30 PM", title: "HR Policy Update Session", dept: "Human Resources", color: "bg-lime-100 text-lime-800" },
-        { time: "4:00 PM", title: "Customer Feedback Analysis", dept: "Customer Support", color: "bg-indigo-100 text-indigo-800" },
-        { time: "5:30 PM", title: "Financial Reporting Session", dept: "Finance", color: "bg-indigo-200 text-indigo-900" },
-    ];
-
-    const tailwindBgToHex = {
-        "bg-lime-200": "#e0f780", // Approximate hex for lime-200
-        "bg-lime-100": "#f0f7c2", // Approximate hex for lime-100
-        "bg-indigo-100": "#e0e7ff", // Approximate hex for indigo-100
-        "bg-indigo-200": "#c7d2fe", // Approximate hex for indigo-200
-        // Add other background colors you might use in your schedule data
-    };
 
     // const [startDate, setStartDate] = useState(new Date());
     const [filterType, setFilterType] = useState("Popular");
@@ -383,6 +381,148 @@ const Dashboard = () => {
         };
     });
 
+    // Function to aggregate daily data into monthly data
+    const aggregateToMonthly = (data) => {
+        const monthlyData = {};
+        data.forEach(item => {
+            const date = new Date(item.date);
+            const monthKey = format(date, 'yyyy-MM'); // YYYY-MM format
+
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = {
+                    month: monthKey,
+                    Applications: 0,
+                    Shortlisted: 0,
+                    Hired: 0,
+                    Rejected: 0,
+                };
+            }
+            monthlyData[monthKey].Applications += item.Applications || 0;
+            monthlyData[monthKey].Shortlisted += item.Shortlisted || 0;
+            monthlyData[monthKey].Hired += item.Hired || 0;
+            monthlyData[monthKey].Rejected += item.Rejected || 0;
+        });
+
+        // Convert object back to array and sort by month
+        return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
+    };
+
+    // Use useMemo to calculate chart data based on date range and aggregation logic
+    const chartData = useMemo(() => {
+        // Calculate the difference in calendar months between the start and end dates
+        const diffInMonths = differenceInCalendarMonths(endDate, startDate);
+
+        // If the date range is 3 months or more, aggregate to monthly
+        if (diffInMonths >= 3) {
+            return aggregateToMonthly(dailyRecruitmentData);
+        }
+        // Otherwise, show daily data for the selected range
+        return dailyRecruitmentData;
+    }, [dailyRecruitmentData, startDate, endDate]); // Re-calculate when raw data or range changes
+
+    const xAxisDataKey = differenceInCalendarMonths(endDate, startDate) >= 3 ? 'month' : 'date';
+
+    const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    const tailwindBgToHex = {
+        // Lime colors
+        "bg-lime-200": "#e6ee9c", // Official hex for lime-200
+        "text-lime-900": "#827717", // Official hex for text-lime-900
+
+        "bg-lime-100": "#f0f4c3", // Official hex for lime-100
+        "text-lime-800": "#9e9d24", // Official hex for text-lime-800
+
+        // Indigo colors
+        "bg-indigo-100": "#e0e7ff", // Official hex for indigo-100
+        "text-indigo-800": "#3730a3", // Official hex for text-indigo-800
+
+        "bg-indigo-200": "#c7d2fe", // Official hex for indigo-200
+        "text-indigo-900": "#312e81", // Official hex for text-indigo-900
+
+        // Teal colors
+        "bg-teal-100": "#b2dfdb", // Official hex for teal-100
+        "text-teal-800": "#00695c", // Official hex for text-teal-800
+
+        // Purple colors
+        "bg-purple-100": "#e1bee7", // Official hex for purple-100
+        "text-purple-800": "#6a1b9a", // Official hex for text-purple-800
+
+        // Red colors
+        "bg-red-100": "#ffcdd2", // Official hex for red-100
+        "text-red-800": "#c62828", // Official hex for text-red-800
+
+        // Blue colors
+        "bg-blue-100": "#bbdefb", // Official hex for blue-100
+        "text-blue-800": "#1565c0", // Official hex for text-blue-800
+    };
+    const generateRandomSchedule = (date) => {
+        const departments = ["Marketing", "Human Resources", "Customer Support", "Finance", "Product Development", "Sales", "IT"];
+        const marketingTitles = ["Market Trend Analysis", "Competitor Review", "Campaign Brainstorm", "SEO Workshop"];
+        const hrTitles = ["Recruitment Strategy", "Onboarding Session", "Employee Engagement Talk", "Performance Review Guidelines"];
+        const csTitles = ["Service Improvement", "Troubleshooting Session", "FAQ Update", "Customer Retention Ideas"];
+        const financeTitles = ["Budget Review", "Expense Reconciliation", "Investment Planning", "Quarterly Projections"];
+        const productTitles = ["Feature Ideation", "Roadmap Discussion", "Bug Prioritization", "User Testing Feedback"];
+        const salesTitles = ["Client Outreach Strategy", "Pipeline Review", "Negotiation Skills Workshop", "Sales Target Discussion"];
+        const itTitles = ["System Maintenance Plan", "Security Audit", "Software Update Review", "Network Optimization"];
+
+        const colors = [
+            "bg-lime-200 text-lime-900", "bg-lime-100 text-lime-800",
+            "bg-indigo-100 text-indigo-800", "bg-indigo-200 text-indigo-900",
+            "bg-teal-100 text-teal-800", "bg-purple-100 text-purple-800",
+            "bg-red-100 text-red-800", "bg-blue-100 text-blue-800"
+        ];
+
+        const possibleTimes = ["9:00 AM", "10:30 AM", "11:00 AM", "1:00 PM", "2:30 PM", "3:00 PM", "4:00 PM", "5:30 PM"];
+
+        const numEvents = Math.floor(Math.random() * 4) + 2; // Generate between 2 and 5 events
+
+        const newSchedule = [];
+        for (let i = 0; i < numEvents; i++) {
+            const dept = getRandomElement(departments);
+            let title = "";
+
+            switch (dept) {
+                case "Marketing":
+                    title = getRandomElement(marketingTitles);
+                    break;
+                case "Human Resources":
+                    title = getRandomElement(hrTitles);
+                    break;
+                case "Customer Support":
+                    title = getRandomElement(csTitles);
+                    break;
+                case "Finance":
+                    title = getRandomElement(financeTitles);
+                    break;
+                case "Product Development":
+                    title = getRandomElement(productTitles);
+                    break;
+                case "Sales":
+                    title = getRandomElement(salesTitles);
+                    break;
+                case "IT":
+                    title = getRandomElement(itTitles);
+                    break;
+                default:
+                    title = "General Meeting";
+            }
+
+            newSchedule.push({
+                time: getRandomElement(possibleTimes),
+                title: title,
+                dept: dept,
+                color: getRandomElement(colors),
+                date: date.toDateString() // Add the date to the entry for clarity
+            });
+        }
+
+        // Sort schedule by time for better readability
+        newSchedule.sort((a, b) => new Date(`2000/01/01 ${a.time}`) - new Date(`2000/01/01 ${b.time}`));
+
+        return newSchedule;
+    };
+
+    const scheduleData = generateRandomSchedule(new Date())
 
     return (
         <div className="text-gray-800 font-sans pb-6 space-y-8">
@@ -420,7 +560,10 @@ const Dashboard = () => {
                                 </div>
                                 <div className="flex mt-2 justify-between items-center flex-wrap">
                                     <h2 className="text-2xl font-bold">{Number(item.value).toLocaleString()}</h2>
-                                    <p className="text-xs mt-1">{item.change}</p>
+                                    <p className={`flex items-center gap-1 px-2 py-0.5 rounded-md ${item.bg}`}>
+                                        {item.icon}
+                                        <span className={`text-xs ${item.text}`}>{item.percent}</span>
+                                    </p>
                                 </div>
                             </div>
                         ))}
@@ -457,17 +600,38 @@ const Dashboard = () => {
                                     <BarChart
                                         width={750}
                                         height={200}
-                                        data={dailyRecruitmentData}
+                                        data={chartData}
                                         barCategoryGap="30%"
                                         barGap={5}
                                     >
                                         <CartesianGrid stroke="white" strokeDashArray="4 4" />
-                                        <XAxis dataKey="date" axisLine={{ stroke: "#f3f4f6" }}    // gray-100
+
+                                        {/* XAxis: Labels are now conditionally formatted or hidden. */}
+                                        <XAxis
+                                            dataKey={xAxisDataKey} // 'date' for short, 'month' for long range
+                                            axisLine={{ stroke: "#e5e7eb" }}
                                             tickLine={false}
-                                            tick={{ fontSize: 12, fill: "#9ca3af" }} />
-                                        <YAxis axisLine={{ stroke: "#f3f4f6" }}    // gray-100
+                                            tickFormatter={(tick) => {
+                                                try {
+                                                    if (xAxisDataKey === 'month') {
+                                                        return format(new Date(tick + '-01'), 'MMM yyyy');
+                                                    }
+                                                    return format(new Date(tick), 'dd MMM');
+                                                } catch {
+                                                    return tick;
+                                                }
+                                            }}
+                                            // Conditionally rotate labels for daily view if many data points
+                                            angle={xAxisDataKey === 'date' && chartData.length > 10 ? -45 : 0}
+                                            textAnchor={xAxisDataKey === 'date' && chartData.length > 10 ? "end" : "middle"}
+                                            interval="preserveStartEnd" // Show start and end ticks, and some in between
+                                            tick={{ fontSize: 11, fill: "#9ca3af" }}
+                                        />
+                                        <YAxis
+                                            axisLine={{ stroke: "#f3f4f6" }}    // gray-100
                                             tickLine={false}
-                                            tick={{ fontSize: 12, fill: "#9ca3af" }} />
+                                            tick={{ fontSize: 12, fill: "#9ca3af" }}
+                                        />
                                         <Tooltip />
                                         <Legend />
 
@@ -766,7 +930,7 @@ const Dashboard = () => {
                         </Popover>
                     </div>
                     <div className="relative"> {/* Main container for the timeline */}
-                        {schedule.map((item, index) => {
+                        {scheduleData.map((item, index) => {
                             const bgColorClassMatch = item.color.match(/bg-[a-z]+-[0-9]+/);
                             const bgColorClass = bgColorClassMatch ? bgColorClassMatch[0] : '';
                             const borderColorHex = tailwindBgToHex[bgColorClass] || 'gray';
@@ -781,7 +945,7 @@ const Dashboard = () => {
                                         <span className={`w-3 h-3 rounded-full border-2 border-white shadow ${item.color.split(' ')[0]} z-10`} />
 
                                         {/* Vertical line: Only for items that are *not* the last one */}
-                                        {index < schedule.length - 1 && (
+                                        {index < scheduleData.length - 1 && (
                                             <div
                                                 className="absolute left-1/2 transform -translate-x-1/2 w-px border-l-2 border-dashed"
                                                 style={{
@@ -795,7 +959,7 @@ const Dashboard = () => {
                                 you can add it here, with a fixed height.
                                 If you want it to disappear after the last dot, remove this block.
                             */}
-                                        {index === schedule.length - 1 && (
+                                        {index === scheduleData.length - 1 && (
                                             <div
                                                 className="absolute left-1/2 transform -translate-x-1/2 w-px border-l-2 border-dashed"
                                                 style={{

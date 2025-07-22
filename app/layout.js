@@ -37,7 +37,7 @@ const Sidebar = ({ isMobileOpen, toggleSidebar }) => {
   };
 
   return (
-    <div className={`fixed top-16 left-0 h-screen w-36 bg-white shadow-md z-50 transition-transform duration-300 ease-in-out
+    <div className={`fixed top-26 sm:top-16 left-0 h-screen w-36 bg-white shadow-md z-50 transition-transform duration-300 ease-in-out
       ${isMobileOpen ? 'translate-x-0 z-50' : '-translate-x-full'} sm:translate-x-0`}>
       <div className="p-4 space-y-4">
         {sidebarItems.map((item, idx) => {
@@ -137,7 +137,7 @@ export default function RootLayout({ children }) {
       <div
         className={`
         relative w-full max-w-[150px] h-10
-        flex items-center justify-center
+        flex items-center px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base justify-center
         rounded-lg overflow-hidden
         bg-white dark:bg-slate-700
       `}
@@ -167,7 +167,7 @@ export default function RootLayout({ children }) {
                    animate-drawLineLeft"
         />
 
-        <div className="relative z-10 font-semibold text-gray-700 dark:text-gray-300 text-center text-sm whitespace-nowrap">
+        <div className="relative z-10 font-semibold text-gray-700 dark:text-gray-300 text-center px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
           POST NEW JOB
         </div>
       </div>
@@ -197,7 +197,7 @@ export default function RootLayout({ children }) {
     );
   };
   const Topbar = () => (
-    <div className="flex h-26 sm:h-16 flex-wrap sm:flex-nowrap fixed top-0 left-0 w-full z-50 justify-between items-center px-4 sm:px-6 py-2 bg-white shadow gap-2">
+    <div className="flex h-26 sm:h-16 flex-wrap sm:flex-nowrap fixed top-0 left-0 w-full z-50 justify-between items-center px-4 sm:px-6 py-2 bg-white shadow-md gap-2">
       <div className="flex items-center justify-between w-full sm:w-auto">
         <Image alt={"logo"} width={100} height={20} src="https://realestatejobs.co.in/images/logo.png" />
         <button
@@ -213,7 +213,7 @@ export default function RootLayout({ children }) {
           // Use the new AnimatedBorderLoader here
           <AnimatedBorderLoader />
         ) : (
-          <button onClick={() => setIsOpen(!isOpen)} className="bg-gray-900 border border-gray-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
+          <button onClick={() => setIsOpen(!isOpen)} className="bg-gray-900 border-1.5 border-gray-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
             POST NEW JOB
           </button>
         )}
