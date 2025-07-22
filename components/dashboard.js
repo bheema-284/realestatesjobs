@@ -963,10 +963,6 @@ const Dashboard = () => {
                             </p>
                         </div>
                     </div>
-                    {/* <div className="grid grid-cols-1 sm:grid-cols-1 h-[300px] overflow-y-auto gap-4">
-                        {filteredEvents.map((job, idx) => <VacancyCard key={idx} job={job} />)}
-                    </div> */}
-
                     <div className="grid grid-cols-1 sm:grid-cols-1 h-[300px] overflow-y-auto gap-4">
                         {EnhancedJobs.map((job, indx) => (
                             <VacancyCard key={indx} job={job} />
