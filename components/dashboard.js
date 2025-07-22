@@ -19,14 +19,96 @@ import TaskModal from "./createtasks";
 const Dashboard = () => {
     const { rootContext, setRootContext } = useContext(RootContext);
     const [selectedDate, setSelectedDate] = useState(null);
-    const [selectScheduleDate, setSelectScheduleDate] = useState(null);
+    const [selectScheduleDate, setSelectScheduleDate] = useState(new Date());
     const [selectedStatType, setSelectedStatType] = useState("Applications");
     const [dateRange, setDateRange] = useState([null, null]);
     const [startDate, endDate] = dateRange;
-
-    const displayDate = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
     const display2Date = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
-    const displayScheduleDateDate = selectScheduleDate ? format(selectScheduleDate, "dd MMM yyyy") : "Today";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set hours, minutes, seconds, milliseconds to 0
+
+    const normalizedSelectScheduleDate = new Date(selectScheduleDate); // Create a copy
+    normalizedSelectScheduleDate.setHours(0, 0, 0, 0); // Set hours, minutes, seconds, milliseconds to 0
+    const displayScheduleDateDate = (normalizedSelectScheduleDate.getTime() === today.getTime())
+        ? "Today"
+        : format(selectScheduleDate, "dd MMM yyyy");
+
+    const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    const generateRandomSchedule = (date) => {
+        const departments = ["Marketing", "Human Resources", "Customer Support", "Finance", "Product Development", "Sales", "IT"];
+        const marketingTitles = ["Market Trend Analysis", "Competitor Review", "Campaign Brainstorm", "SEO Workshop"];
+        const hrTitles = ["Recruitment Strategy", "Onboarding Session", "Employee Engagement Talk", "Performance Review Guidelines"];
+        const csTitles = ["Service Improvement", "Troubleshooting Session", "FAQ Update", "Customer Retention Ideas"];
+        const financeTitles = ["Budget Review", "Expense Reconciliation", "Investment Planning", "Quarterly Projections"];
+        const productTitles = ["Feature Ideation", "Roadmap Discussion", "Bug Prioritization", "User Testing Feedback"];
+        const salesTitles = ["Client Outreach Strategy", "Pipeline Review", "Negotiation Skills Workshop", "Sales Target Discussion"];
+        const itTitles = ["System Maintenance Plan", "Security Audit", "Software Update Review", "Network Optimization"];
+
+        const colors = [
+            "bg-lime-200 text-lime-900", "bg-lime-100 text-lime-800",
+            "bg-indigo-100 text-indigo-800", "bg-indigo-200 text-indigo-900",
+            "bg-teal-100 text-teal-800", "bg-purple-100 text-purple-800",
+            "bg-red-100 text-red-800", "bg-blue-100 text-blue-800"
+        ];
+
+        const possibleTimes = ["9:00 AM", "10:30 AM", "11:00 AM", "1:00 PM", "2:30 PM", "3:00 PM", "4:00 PM", "5:30 PM"];
+
+        const numEvents = Math.floor(Math.random() * 4) + 2; // Generate between 2 and 5 events
+
+        const newSchedule = [];
+        for (let i = 0; i < numEvents; i++) {
+            const dept = getRandomElement(departments);
+            let title = "";
+
+            switch (dept) {
+                case "Marketing":
+                    title = getRandomElement(marketingTitles);
+                    break;
+                case "Human Resources":
+                    title = getRandomElement(hrTitles);
+                    break;
+                case "Customer Support":
+                    title = getRandomElement(csTitles);
+                    break;
+                case "Finance":
+                    title = getRandomElement(financeTitles);
+                    break;
+                case "Product Development":
+                    title = getRandomElement(productTitles);
+                    break;
+                case "Sales":
+                    title = getRandomElement(salesTitles);
+                    break;
+                case "IT":
+                    title = getRandomElement(itTitles);
+                    break;
+                default:
+                    title = "General Meeting";
+            }
+
+            newSchedule.push({
+                time: getRandomElement(possibleTimes),
+                title: title,
+                dept: dept,
+                color: getRandomElement(colors),
+                date: date.toDateString() // Add the date to the entry for clarity
+            });
+        }
+
+        // Sort schedule by time for better readability
+        newSchedule.sort((a, b) => new Date(`2000/01/01 ${a.time}`) - new Date(`2000/01/01 ${b.time}`));
+
+        return newSchedule;
+    };
+
+    const [scheduleData, setScheduleData] = useState(() =>
+        generateRandomSchedule(selectScheduleDate)
+    );
+
+    useEffect(() => {
+        setScheduleData(generateRandomSchedule(selectScheduleDate));
+    }, [selectScheduleDate]);
 
     const formatDateRange = () => {
         const endDate = new Date(); // today
@@ -513,7 +595,6 @@ const Dashboard = () => {
 
     const xAxisDataKey = differenceInCalendarMonths(endDate, startDate) >= 3 ? 'month' : 'date';
 
-    const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
     const tailwindBgToHex = {
         // Lime colors
@@ -546,74 +627,6 @@ const Dashboard = () => {
         "bg-blue-100": "#bbdefb", // Official hex for blue-100
         "text-blue-800": "#1565c0", // Official hex for text-blue-800
     };
-    const generateRandomSchedule = (date) => {
-        const departments = ["Marketing", "Human Resources", "Customer Support", "Finance", "Product Development", "Sales", "IT"];
-        const marketingTitles = ["Market Trend Analysis", "Competitor Review", "Campaign Brainstorm", "SEO Workshop"];
-        const hrTitles = ["Recruitment Strategy", "Onboarding Session", "Employee Engagement Talk", "Performance Review Guidelines"];
-        const csTitles = ["Service Improvement", "Troubleshooting Session", "FAQ Update", "Customer Retention Ideas"];
-        const financeTitles = ["Budget Review", "Expense Reconciliation", "Investment Planning", "Quarterly Projections"];
-        const productTitles = ["Feature Ideation", "Roadmap Discussion", "Bug Prioritization", "User Testing Feedback"];
-        const salesTitles = ["Client Outreach Strategy", "Pipeline Review", "Negotiation Skills Workshop", "Sales Target Discussion"];
-        const itTitles = ["System Maintenance Plan", "Security Audit", "Software Update Review", "Network Optimization"];
-
-        const colors = [
-            "bg-lime-200 text-lime-900", "bg-lime-100 text-lime-800",
-            "bg-indigo-100 text-indigo-800", "bg-indigo-200 text-indigo-900",
-            "bg-teal-100 text-teal-800", "bg-purple-100 text-purple-800",
-            "bg-red-100 text-red-800", "bg-blue-100 text-blue-800"
-        ];
-
-        const possibleTimes = ["9:00 AM", "10:30 AM", "11:00 AM", "1:00 PM", "2:30 PM", "3:00 PM", "4:00 PM", "5:30 PM"];
-
-        const numEvents = Math.floor(Math.random() * 4) + 2; // Generate between 2 and 5 events
-
-        const newSchedule = [];
-        for (let i = 0; i < numEvents; i++) {
-            const dept = getRandomElement(departments);
-            let title = "";
-
-            switch (dept) {
-                case "Marketing":
-                    title = getRandomElement(marketingTitles);
-                    break;
-                case "Human Resources":
-                    title = getRandomElement(hrTitles);
-                    break;
-                case "Customer Support":
-                    title = getRandomElement(csTitles);
-                    break;
-                case "Finance":
-                    title = getRandomElement(financeTitles);
-                    break;
-                case "Product Development":
-                    title = getRandomElement(productTitles);
-                    break;
-                case "Sales":
-                    title = getRandomElement(salesTitles);
-                    break;
-                case "IT":
-                    title = getRandomElement(itTitles);
-                    break;
-                default:
-                    title = "General Meeting";
-            }
-
-            newSchedule.push({
-                time: getRandomElement(possibleTimes),
-                title: title,
-                dept: dept,
-                color: getRandomElement(colors),
-                date: date.toDateString() // Add the date to the entry for clarity
-            });
-        }
-
-        // Sort schedule by time for better readability
-        newSchedule.sort((a, b) => new Date(`2000/01/01 ${a.time}`) - new Date(`2000/01/01 ${b.time}`));
-
-        return newSchedule;
-    };
-
-    const scheduleData = generateRandomSchedule(new Date())
 
     return (
         <div className="text-gray-800 font-sans pb-6 space-y-8">
