@@ -927,7 +927,7 @@ const Dashboard = () => {
                         </PieChart>
                     </div>
                     <div className="flex justify-center items-center">
-                        <ul className="text-xs text-gray-700 mt-2 grid grid-cols-2 gap-2 list-none">
+                        <ul className="text-xs text-gray-700 my-2 grid grid-cols-2 gap-2 list-none">
                             {currentResourceChartData.map((item, idx) => ( // Map over the dynamic data for the legend
                                 <li key={item.name} className="flex gap-1 items-center">
                                     <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
@@ -1059,14 +1059,10 @@ const Dashboard = () => {
                                                 style={{
                                                     borderColor: borderColorHex,
                                                     top: '6px',
-                                                    height: `calc(100% + 5rem)`, // Connects to the top of the next item's container
+                                                    height: `calc(100% + 4.3rem)`, // Connects to the top of the next item's container
                                                 }}
                                             />
                                         )}
-                                        {/* If you specifically want a trailing line from the last dot,
-                                you can add it here, with a fixed height.
-                                If you want it to disappear after the last dot, remove this block.
-                            */}
                                         {index === scheduleData.length - 1 && (
                                             <div
                                                 className="absolute left-1/2 transform -translate-x-1/2 w-px border-l-2 border-dashed"

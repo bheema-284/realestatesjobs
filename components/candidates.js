@@ -617,7 +617,7 @@ export default function ProfilePage({ userId }) {
             <div className="bg-[#0d1b2a] text-white py-6 px-4 relative">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 max-w-5xl mx-auto">
                     <img
-                        src={tempProfile.image}
+                        src={tempProfile.image || "https://placehold.co/48x48/F0F0F0/000000?text=Logo"}
                         alt="Avatar"
                         className="w-16 sm:w-20 h-16 sm:h-20 rounded-full border-4 border-white object-cover"
                     />

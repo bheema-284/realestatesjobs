@@ -289,7 +289,7 @@ export default function AboutMe({ profile }) {
                                         <div className="flex items-start justify-between w-full">
                                             <div className="flex items-center gap-4 mb-2">
                                                 <img
-                                                    src={exp.logo || dummyLogos[index % dummyLogos.length]} // Fallback to dummy logo
+                                                    src={exp.logo || dummyLogos[index % dummyLogos.length] || "https://placehold.co/48x48/F0F0F0/000000?text=Logo"} // Fallback to dummy logo
                                                     alt={`${exp.company} Logo`}
                                                     className="w-12 h-12 object-contain border border-gray-200 rounded-full p-1 bg-white shadow-sm"
                                                     onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/48x48/F0F0F0/000000?text=Logo'; }} // Fallback on error
