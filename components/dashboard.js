@@ -3,8 +3,6 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend,
     ResponsiveContainer,
-    LineChart,
-    Line,
     Label,
 } from "recharts";
 import { FaUserTie } from "react-icons/fa";
@@ -21,12 +19,14 @@ import TaskModal from "./createtasks";
 const Dashboard = () => {
     const { rootContext, setRootContext } = useContext(RootContext);
     const [selectedDate, setSelectedDate] = useState(null);
+    const [selectScheduleDate, setSelectScheduleDate] = useState(null);
     const [selectedStatType, setSelectedStatType] = useState("Applications");
     const [dateRange, setDateRange] = useState([null, null]);
     const [startDate, endDate] = dateRange;
 
     const displayDate = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
     const display2Date = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
+    const displayScheduleDateDate = selectScheduleDate ? format(selectScheduleDate, "dd MMM yyyy") : "Today";
 
     const formatDateRange = () => {
         const endDate = new Date(); // today
@@ -50,14 +50,81 @@ const Dashboard = () => {
             display1Date = `${format(startDate, "d MMM")} – ${format(endDate, "d MMM")}`;
         }
     }
-    const COLORS = [
-        '#a29eff', // Engineering
-        '#e1fb9b', // Marketing
-        '#fef8ae', // Sales
-        '#e4fcb0', // Customer Support
-        '#e7f5e6', // Finance
-        '#f8f5fc', // Human Resources
-    ];
+
+    const PALETTES_BY_STAT_TYPE = {
+        "Applications": [
+            "#dbeafe", // blue-100
+            "#bfdbfe", // blue-200
+            "#93c5fd"  // blue-300
+        ],
+        "Shortlisted": [
+            "#d9f99d", // lime-100
+            "#bef264", // lime-200
+            "#a3e635"  // lime-300
+        ],
+        "Hired": [
+            "#dcfce7", // green-100
+            "#bbf7d0", // green-200
+            "#86efac"  // green-300
+        ],
+        "Rejected": [
+            "#fee2e2", // red-100
+            "#fecaca", // red-200
+            "#fca5a5"  // red-300
+        ],
+        // Default palette if selectedStatType doesn't match
+        "default": [
+            '#a29eff', // Fallback or general department colors
+            '#e1fb9b',
+            '#fef8ae',
+            '#e4fcb0',
+            '#e7f5e6',
+            '#f8f5fc',
+        ]
+    };
+
+    // --- MODIFIED getColorsForChart FUNCTION ---
+    const getColorsForChart = (selectedStatType) => {
+        let combinedPalette = [];
+
+        switch (selectedStatType) {
+            case "Applications":
+                // Applications colors + Shortlisted colors
+                combinedPalette = [
+                    ...PALETTES_BY_STAT_TYPE["Applications"],
+                    ...PALETTES_BY_STAT_TYPE["Shortlisted"]
+                ];
+                break;
+            case "Shortlisted":
+                // Shortlisted colors + Applications colors
+                combinedPalette = [
+                    ...PALETTES_BY_STAT_TYPE["Shortlisted"],
+                    ...PALETTES_BY_STAT_TYPE["Applications"]
+                ];
+                break;
+            case "Hired":
+                // Hired colors + Rejected colors
+                combinedPalette = [
+                    ...PALETTES_BY_STAT_TYPE["Hired"],
+                    ...PALETTES_BY_STAT_TYPE["Rejected"]
+                ];
+                break;
+            case "Rejected":
+                // Rejected colors + Hired colors
+                combinedPalette = [
+                    ...PALETTES_BY_STAT_TYPE["Rejected"],
+                    ...PALETTES_BY_STAT_TYPE["Hired"]
+                ];
+                break;
+            default:
+                // Fallback to default palette
+                combinedPalette = PALETTES_BY_STAT_TYPE["default"];
+                break;
+        }
+        return combinedPalette;
+    };
+
+    const COLORS = getColorsForChart(selectedStatType);
 
     const generateRecruitmentData = (start = new Date(), end = addDays(new Date(), 6)) => {
         const days = differenceInDays(end, start) + 1;
@@ -204,10 +271,20 @@ const Dashboard = () => {
     const getBarColorByType = (type) => {
         switch (type) {
             case "Applications": return "#bfdbfe"; // Tailwind blue-200
-            case "Shortlisted": return "#fef08a";  // Tailwind yellow-200
-            case "Hired": return "#c4fcd8ff";      // Tailwind green-200 (example)
-            case "Rejected": return "#ffbabaff";   // Tailwind red-200 (example)
-            default: return "#bfdbfe";
+            case "Shortlisted": return "#bef264";  // Tailwind lime-200
+            case "Hired": return "#bbf7d0";      // Tailwind green-200
+            case "Rejected": return "#fecaca";   // Tailwind red-200
+            default: return "#bfdbfe"; // Default to blue-200 if type is not recognized
+        }
+    };
+
+    const getPieColorClassByType = (type) => {
+        switch (type) {
+            case "Applications": return "bg-blue-50";
+            case "Shortlisted": return "bg-yellow-50";
+            case "Hired": return "bg-green-50";
+            case "Rejected": return "bg-red-50";
+            default: return "bg-blue-50";
         }
     };
 
@@ -550,7 +627,13 @@ const Dashboard = () => {
                             <div
                                 key={index}
                                 onClick={() => setSelectedStatType(item.title)}
-                                className={`px-4 py-3 rounded-xl shadow cursor-pointer transition-transform duration-200 ${selectedStatType === item.title ? `bg-lime-200` : ""}`}>
+                                // Dynamic className based on selection and type
+                                className={`px-4 py-3 rounded-xl shadow cursor-pointer transition-transform duration-200 ${selectedStatType === item.title ? item.title === "Applications" ? "bg-[#bfdbfe]" : // Tailwind blue-200
+                                    item.title === "Shortlisted" ? "bg-[#bef264]" :
+                                        item.title === "Hired" ? "bg-[#bbf7d0]" :
+                                            item.title === "Rejected" ? "bg-[#fecaca]" :
+                                                "bg-gray-200" : "bg-white"}`}>
+
                                 <div className="flex justify-between items-center">
                                     <p className="text-sm text-gray-600">{item.title}</p>
                                     <Popover className="relative">
@@ -762,7 +845,7 @@ const Dashboard = () => {
                                     </Popover.Panel>
                                 </Popover>
                             </div>
-                            <div className="flex flex-col sm:flex-row justify-between  w-full bg-white rounded-xl">
+                            <div className="flex flex-col sm:flex-row justify-between w-full bg-white rounded-xl">
                                 <div className="flex flex-col justify-center items-center">
                                     <PieChart width={200} height={200}>
                                         <Pie
@@ -797,7 +880,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* Right Section */}
-                <div className="bg-[#d4ddff] pt-3 shadow rounded-xl w-full space-y-4">
+                <div className={`${getPieColorClassByType(selectedStatType)} pt-3 shadow rounded-xl w-full space-y-4`}>
                     <h3 className="text-md font-semibold text-center">Applicant Resources</h3>
                     <div className="flex justify-center items-center">
                         <PieChart width={250} height={250}>
@@ -926,15 +1009,15 @@ const Dashboard = () => {
                         <Popover className="relative ">
                             <Popover.Button className="w-26 h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px]">
                                 <CalendarIcon className="w-4 h-4" />
-                                <span className="font-semibold">{displayDate}</span>
+                                <span className="font-semibold">{displayScheduleDateDate}</span>
                                 <ChevronDownIcon className="w-4 h-4" />
                             </Popover.Button>
 
                             <Popover.Panel className="absolute z-10 mt-2 right-0">
                                 <div className="bg-white p-2 rounded shadow-lg">
                                     <DatePicker
-                                        selected={selectedDate}
-                                        onChange={(date) => setSelectedDate(date)}
+                                        selected={selectScheduleDate}
+                                        onChange={(date) => setSelectScheduleDate(date)}
                                         inline
                                     />
                                 </div>
@@ -949,12 +1032,12 @@ const Dashboard = () => {
 
                             return (
                                 <div key={index} className="flex items-start gap-4 relative mt-2">
-                                    <div className="w-[18%] pt-1 text-xs font-medium text-gray-500">{item.time}</div>
+                                    <div className="w-[18%] text-xs font-medium text-gray-500">{item.time}</div>
 
                                     {/* Dot and Line Column */}
                                     <div className="flex flex-col items-center relative">
                                         {/* The dot */}
-                                        <span className={`w-3 h-3 rounded-full border-2 border-white shadow ${item.color.split(' ')[0]} z-10`} />
+                                        <span className={`w-3 h-3 rounded-full ${item.color.split(' ')[0]} z-10`} />
 
                                         {/* Vertical line: Only for items that are *not* the last one */}
                                         {index < scheduleData.length - 1 && (
