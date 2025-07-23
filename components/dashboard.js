@@ -5,7 +5,7 @@ import {
     ResponsiveContainer,
     Label,
 } from "recharts";
-import { FaUserTie } from "react-icons/fa";
+import { FaChartBar, FaCode, FaUserTie } from "react-icons/fa";
 import { FaLaptopCode, FaBuilding, FaHeadset, FaUsers, FaBullhorn, FaFileInvoiceDollar, FaUserCog } from "react-icons/fa";
 import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, CalendarIcon, ChevronDownIcon, PlusIcon, MinusIcon } from "@heroicons/react/24/solid";
 import RootContext from "../components/config/rootcontext";
@@ -144,12 +144,12 @@ const Dashboard = () => {
             "#bef264", // lime-200
             "#a3e635"  // lime-300
         ],
-        "Hired": [
+        "Selected": [
             "#dcfce7", // green-100
             "#bbf7d0", // green-200
             "#86efac"  // green-300
         ],
-        "Rejected": [
+        "Not Selected": [
             "#fee2e2", // red-100
             "#fecaca", // red-200
             "#fca5a5"  // red-300
@@ -184,18 +184,18 @@ const Dashboard = () => {
                     ...PALETTES_BY_STAT_TYPE["Applications"]
                 ];
                 break;
-            case "Hired":
-                // Hired colors + Rejected colors
+            case "Selected":
+                // Selected colors + Not Selected colors
                 combinedPalette = [
-                    ...PALETTES_BY_STAT_TYPE["Hired"],
-                    ...PALETTES_BY_STAT_TYPE["Rejected"]
+                    ...PALETTES_BY_STAT_TYPE["Selected"],
+                    ...PALETTES_BY_STAT_TYPE["Not Selected"]
                 ];
                 break;
-            case "Rejected":
-                // Rejected colors + Hired colors
+            case "Not Selected":
+                // Not Selected colors + Selected colors
                 combinedPalette = [
-                    ...PALETTES_BY_STAT_TYPE["Rejected"],
-                    ...PALETTES_BY_STAT_TYPE["Hired"]
+                    ...PALETTES_BY_STAT_TYPE["Not Selected"],
+                    ...PALETTES_BY_STAT_TYPE["Selected"]
                 ];
                 break;
             default:
@@ -216,10 +216,10 @@ const Dashboard = () => {
             const date = format(addDays(start, i), "yyyy-MM-dd"); // full ISO date string
             const applications = Math.floor(Math.random() * 101) + 300; // 300–400
             const shortlisted = Math.floor(applications * 0.3);
-            const hired = Math.floor(shortlisted * 0.2);
-            const rejected = applications - shortlisted - hired;
+            const selected = Math.floor(shortlisted * 0.2);
+            const notselected = applications - shortlisted - selected;
 
-            data.push({ date, Applications: applications, Shortlisted: shortlisted, Hired: hired, Rejected: rejected });
+            data.push({ date, Applications: applications, Shortlisted: shortlisted, Selected: selected, ["Not Selected"]: notselected });
         }
 
         return data;
@@ -271,13 +271,12 @@ const Dashboard = () => {
 
     const totalApplications = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Applications, 0);
     const totalShortlisted = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Shortlisted, 0);
-    const totalHired = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Hired, 0);
-    const totalRejected = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Rejected, 0);
-
+    const totalSelected = dailyRecruitmentData.reduce((sum, entry) => sum + entry.Selected, 0);
+    const totalNotSelected = dailyRecruitmentData.reduce((sum, entry) => sum + entry["Not Selected"], 0);
     // Dynamically calculate percentages
     const shortlistedPercent = getRandomizedPercentage(totalShortlisted, totalApplications);
-    const hiredPercent = getRandomizedPercentage(totalHired, totalApplications);
-    const rejectedPercent = getRandomizedPercentage(totalRejected, totalApplications);
+    const hiredPercent = getRandomizedPercentage(totalSelected, totalApplications);
+    const rejectedPercent = getRandomizedPercentage(totalNotSelected, totalApplications);
 
     const getRandomChangeChip = (percent) => {
         const rand = Math.random();
@@ -326,25 +325,25 @@ const Dashboard = () => {
             }
         },
         {
-            title: "Hired",
-            value: totalHired.toString(),
+            title: "Selected",
+            value: totalSelected.toString(),
             ...getRandomChangeChip(hiredPercent),
             percent: `${hiredPercent}%`,
             details: {
                 agency: "Skyline Realtors",
                 lastMonth: 40,
-                growth: `${totalHired - 40} more hires than last month`
+                growth: `${totalSelected - 40} more hires than last month`
             }
         },
         {
-            title: "Rejected",
-            value: totalRejected.toString(),
+            title: "Not Selected",
+            value: totalNotSelected.toString(),
             ...getRandomChangeChip(rejectedPercent),
             percent: `${rejectedPercent}%`,
             details: {
                 agency: "Elite Brokers",
                 lastMonth: 91,
-                drop: `${91 - totalRejected} fewer rejections than last month`
+                drop: `${91 - totalNotSelected} fewer rejections than last month`
             }
         }
     ];
@@ -354,8 +353,8 @@ const Dashboard = () => {
         switch (type) {
             case "Applications": return "#bfdbfe"; // Tailwind blue-200
             case "Shortlisted": return "#bef264";  // Tailwind lime-200
-            case "Hired": return "#bbf7d0";      // Tailwind green-200
-            case "Rejected": return "#fecaca";   // Tailwind red-200
+            case "Selected": return "#bbf7d0";      // Tailwind green-200
+            case "Not Selected": return "#fecaca";   // Tailwind red-200
             default: return "#bfdbfe"; // Default to blue-200 if type is not recognized
         }
     };
@@ -364,8 +363,8 @@ const Dashboard = () => {
         switch (type) {
             case "Applications": return "bg-blue-50";
             case "Shortlisted": return "bg-yellow-50";
-            case "Hired": return "bg-green-50";
-            case "Rejected": return "bg-red-50";
+            case "Selected": return "bg-green-50";
+            case "Not Selected": return "bg-red-50";
             default: return "bg-blue-50";
         }
     };
@@ -455,15 +454,15 @@ const Dashboard = () => {
     }
 
     const Icons = {
-        RealEstateSales: <FaBuilding className="w-5 h-5 text-blue-600" />,
-        ChannelPartners: <FaUserTie className="w-5 h-5 text-purple-600" />,
-        TeleCaller: <FaHeadset className="w-5 h-5 text-pink-600" />,
-        HROperations: <FaUsers className="w-5 h-5 text-green-600" />,
-        CRMExecutive: <FaUserCog className="w-5 h-5 text-yellow-600" />,
-        WebDevelopment: <FaLaptopCode className="w-5 h-5 text-indigo-600" />,
-        DigitalMarketing: <FaBullhorn className="w-5 h-5 text-red-600" />,
-        AccountsAuditing: <FaFileInvoiceDollar className="w-5 h-5 text-gray-900" />,
-        Default: <ExclamationTriangleIcon className="w-5 h-5 text-gray-600" />,
+        RealEstateSales: <FaBuilding className="w-4 h-4 text-gray-800" />,
+        ChannelPartners: <FaUsers className="w-4 h-4 text-gray-800" />,
+        TeleCaller: <FaHeadset className="w-4 h-4 text-gray-800" />,
+        HROperations: <FaUserTie className="w-4 h-4 text-gray-800" />,
+        CRMExecutive: <FaUserCog className="w-4 h-4 text-gray-800" />,
+        WebDevelopment: <FaCode className="w-4 h-4 text-gray-800" />,
+        DigitalMarketing: <FaChartBar className="w-4 h-4 text-gray-800" />,
+        AccountsAuditing: <FaFileInvoiceDollar className="w-4 h-4 text-gray-800" />,
+        Default: <ExclamationTriangleIcon className="w-4 h-4 text-gray-800" />,
     };
 
     const jobCategories = [
@@ -509,14 +508,57 @@ const Dashboard = () => {
         },
     ];
 
-    function VacancyCard({ job }) {
+    const getAltBackgroundColor = (selectedStatType, index) => {
+        const colorPairs = {
+            "Applications": ["Applications", "Shortlisted"],
+            "Shortlisted": ["Shortlisted", "Applications"],
+            "Selected": ["Selected", "Not Selected"],
+            "Not Selected": ["Not Selected", "Selected"],
+        };
+
+        const pair = colorPairs[selectedStatType];
+
+        if (!pair) {
+            // If selectedStatType doesn't match, return null or fallback logic (up to you)
+            return "#ffc9c9ff";
+        }
+
+        const [firstType, secondType] = pair;
+
+        // Get the second color (index 1) from each corresponding stat type
+        const firstColor = PALETTES_BY_STAT_TYPE[firstType]?.[1] || "#ffffff";
+        const secondColor = PALETTES_BY_STAT_TYPE[secondType]?.[1] || "#ffffff";
+
+        // Alternate based on index
+        return index % 2 === 0 ? firstColor : secondColor;
+    };
+
+    // 2. Distribute total applications randomly but consistently across jobs
+    const distributeApplications = (total, count) => {
+        const randoms = Array.from({ length: count }, () => Math.random());
+        const sum = randoms.reduce((acc, val) => acc + val, 0);
+        return randoms.map((val, idx, arr) =>
+            idx === count - 1
+                ? total - arr.slice(0, count - 1).reduce((s, v, i) => s + Math.round((v / sum) * total), 0) // make sure total is preserved
+                : Math.round((val / sum) * total)
+        );
+    };
+
+    // 3. Generate once and memoize to avoid recalculating on re-render
+    const jobApplications = useMemo(() => distributeApplications(totalApplications, events.length), [totalApplications, events.length]);
+
+
+    function VacancyCard({ index, job }) {
         // Construct salary text based on structure
         const salaryText = `${job.salaryAmount} / ${job.salaryFrequency}`;
 
         return (
-            <div className="border border-gray-50 rounded-xl shadow-sm space-y-2 p-3">
+            <div className="border border-gray-50 rounded-xl shadow-sm p-3">
                 <div className="flex items-center gap-2">
-                    {job.icon}
+                    {/* <p className="bg-[#bef264] p-1 rounded-sm">{job.icon}</p> */}
+                    <p className="p-1 rounded-sm" style={{ backgroundColor: getAltBackgroundColor(selectedStatType, index) }}>
+                        {job.icon}
+                    </p>
                     <h2 className="text-sm font-semibold text-gray-800">{job.jobTitle}</h2>
                 </div>
 
@@ -524,19 +566,19 @@ const Dashboard = () => {
                     {job.employmentTypes.map((tag, index) => (
                         <span
                             key={index}
-                            className="bg-gray-100 text-gray-600 text-[11px] px-2 py-1 rounded-full capitalize"
+                            className="bg-gray-100 font-semibold text-gray-600 text-[11px] px-2 py-1 rounded-full capitalize"
                         >
                             {tag.replace("-", " ")}
                         </span>
                     ))}
                 </div>
 
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center text-xs font-semibold text-gray-900">
                     <p className="mb-1">
-                        <span className="text-xs font-semibold text-gray-900">{salaryText}</span>
+                        <span className="">{salaryText}</span>
                     </p>
-                    <p className="text-xs text-gray-500">
-                        {job.applicants ?? Math.floor(Math.random() * 1001)} Applicants
+                    <p className="">
+                        {job.applicants ?? jobApplications[index]} Applicants
                     </p>
                 </div>
             </div>
@@ -566,14 +608,14 @@ const Dashboard = () => {
                     month: monthKey,
                     Applications: 0,
                     Shortlisted: 0,
-                    Hired: 0,
-                    Rejected: 0,
+                    Selected: 0,
+                    ["Not Selected"]: 0,
                 };
             }
             monthlyData[monthKey].Applications += item.Applications || 0;
             monthlyData[monthKey].Shortlisted += item.Shortlisted || 0;
-            monthlyData[monthKey].Hired += item.Hired || 0;
-            monthlyData[monthKey].Rejected += item.Rejected || 0;
+            monthlyData[monthKey].Selected += item.Selected || 0;
+            monthlyData[monthKey]["Not Selected"] += item["Not Selected"] || 0;
         });
 
         // Convert object back to array and sort by month
@@ -643,8 +685,8 @@ const Dashboard = () => {
                                 // Dynamic className based on selection and type
                                 className={`px-4 py-3 rounded-xl shadow cursor-pointer transition-transform duration-200 ${selectedStatType === item.title ? item.title === "Applications" ? "bg-[#bfdbfe]" : // Tailwind blue-200
                                     item.title === "Shortlisted" ? "bg-[#bef264]" :
-                                        item.title === "Hired" ? "bg-[#bbf7d0]" :
-                                            item.title === "Rejected" ? "bg-[#fecaca]" :
+                                        item.title === "Selected" ? "bg-[#bbf7d0]" :
+                                            item.title === "Not Selected" ? "bg-[#fecaca]" :
                                                 "bg-gray-200" : "bg-white"}`}>
 
                                 <div className="flex justify-between items-center">
@@ -789,44 +831,44 @@ const Dashboard = () => {
                                             </>
                                         )}
 
-                                        {/* Case 3: selectedStatType is "Hired" */}
-                                        {selectedStatType === "Hired" && (
+                                        {/* Case 3: selectedStatType is "Selected" */}
+                                        {selectedStatType === "Selected" && (
                                             <>
-                                                {/* Rejected at the bottom */}
+                                                {/* Not Selected at the bottom */}
                                                 <Bar
-                                                    dataKey="Rejected"
-                                                    fill={getBarColorByType("Rejected")}
-                                                    stackId="hired-rejected"
+                                                    dataKey="Not Selected"
+                                                    fill={getBarColorByType("Not Selected")}
+                                                    stackId="selected-notselected"
                                                     radius={[0, 0, 0, 0]} // Flat bottom for stack
                                                     barSize={20}
                                                 />
-                                                {/* Hired on top */}
+                                                {/* Selected on top */}
                                                 <Bar
-                                                    dataKey="Hired"
-                                                    fill={getBarColorByType("Hired")}
-                                                    stackId="hired-rejected"
+                                                    dataKey="Selected"
+                                                    fill={getBarColorByType("Selected")}
+                                                    stackId="selected-notselected"
                                                     radius={[8, 8, 0, 0]} // Rounded top for stack
                                                     barSize={20}
                                                 />
                                             </>
                                         )}
 
-                                        {/* Case 4: selectedStatType is "Rejected" */}
-                                        {selectedStatType === "Rejected" && (
+                                        {/* Case 4: selectedStatType is "Not Selected" */}
+                                        {selectedStatType === "Not Selected" && (
                                             <>
-                                                {/* Hired at the bottom */}
+                                                {/* Selected at the bottom */}
                                                 <Bar
-                                                    dataKey="Hired"
-                                                    fill={getBarColorByType("Hired")}
-                                                    stackId="hired-rejected"
+                                                    dataKey="Selected"
+                                                    fill={getBarColorByType("Selected")}
+                                                    stackId="selected-notselected"
                                                     radius={[0, 0, 0, 0]} // Flat bottom for stack
                                                     barSize={20}
                                                 />
-                                                {/* Rejected on top */}
+                                                {/* Not Selected on top */}
                                                 <Bar
-                                                    dataKey="Rejected"
-                                                    fill={getBarColorByType("Rejected")}
-                                                    stackId="hired-rejected"
+                                                    dataKey="Not Selected"
+                                                    fill={getBarColorByType("Not Selected")}
+                                                    stackId="selected-notselected"
                                                     radius={[8, 8, 0, 0]} // Rounded top for stack
                                                     barSize={20}
                                                 />
@@ -929,7 +971,7 @@ const Dashboard = () => {
                     <div className="flex justify-center items-center">
                         <ul className="text-xs text-gray-700 my-2 grid grid-cols-2 gap-2 list-none">
                             {currentResourceChartData.map((item, idx) => ( // Map over the dynamic data for the legend
-                                <li key={item.name} className="flex gap-1 items-center">
+                                <li key={idx} className="flex gap-1 items-center">
                                     <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
                                     <div className="leading-tight">
                                         <span className="font-medium text-gray-900">{item.value}</span>
@@ -943,10 +985,10 @@ const Dashboard = () => {
             </div>
 
             {/* Events, Tasks, Schedule */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
                 {/* Events */}
-                <div className="bg-white p-2 rounded-xl shadow w-full">
-                    <div className="flex gap-5 items-center">
+                <div className="bg-white p-2 rounded-xl shadow w-full sm:w-1/2">
+                    <div className="flex gap-5 justify-between items-center">
                         <p className="text-medium font-semibold">Current Vacancies <span className="text-medium">({filteredEvents.length})</span></p>
                         <div className="flex gap-2">
                             <div
@@ -963,123 +1005,123 @@ const Dashboard = () => {
                             </p>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-1 h-[300px] overflow-y-auto gap-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 h-[300px] overflow-y-auto">
                         {EnhancedJobs.map((job, indx) => (
-                            <VacancyCard key={indx} job={job} />
+                            <VacancyCard key={indx} index={indx} job={job} />
                         ))}
                     </div>
                 </div>
-
-                {/* Tasks */}
-                <div className="bg-white p-4 rounded-xl shadow w-full">
-                    <div className="flex justify-between items-center mb-3">
-                        <h3 className="text-md font-semibold">Tasks</h3>
-                        <button className="w-5 h-5 bg-lime-300 p-1 rounded" onClick={() => setShowTaskForm(!showTaskForm)}><PlusIcon /></button>
-                    </div>
-                    {showTaskForm && <TaskModal newTask={newTask} setNewTask={setNewTask} handleAddTask={handleAddTask} showTaskForm={showTaskForm} setShowTaskForm={setShowTaskForm} />}
-                    <div className="space-y-4">
-                        {taskList.map((task, idx) => (
-                            <div key={idx} className="flex items-center gap-4 bg-gray-200 rounded-lg p-1">
-                                <div className="relative w-12 h-12">
-                                    <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
-                                        <path
-                                            className="text-blue-200"
-                                            stroke="currentColor"
-                                            strokeWidth="3"
-                                            fill="none"
-                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                        />
-                                        <path
-                                            className="text-blue-500"
-                                            stroke="currentColor"
-                                            strokeWidth="3"
-                                            strokeDasharray={`${task.percent}, 100`}
-                                            fill="none"
-                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                        />
-                                    </svg>
-                                    <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-700">
-                                        {task.percent}%
-                                    </div>
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-800">{task.title}</h4>
-                                    <p className="text-xs text-gray-500">{task.stage} — {task.date}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Schedule */}
-                <div className="bg-white p-4 rounded-xl shadow w-full">
-                    <div className="flex justify-between mb-3">
-                        <h3 className="text-md font-semibold">Daily Schedule</h3>
-                        <Popover className="relative ">
-                            <Popover.Button className="w-26 h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px]">
-                                <CalendarIcon className="w-4 h-4" />
-                                <span className="font-semibold">{displayScheduleDateDate}</span>
-                                <ChevronDownIcon className="w-4 h-4" />
-                            </Popover.Button>
-
-                            <Popover.Panel className="absolute z-10 mt-2 right-0">
-                                <div className="bg-white p-2 rounded shadow-lg">
-                                    <DatePicker
-                                        selected={selectScheduleDate}
-                                        onChange={(date) => setSelectScheduleDate(date)}
-                                        inline
-                                    />
-                                </div>
-                            </Popover.Panel>
-                        </Popover>
-                    </div>
-                    <div className="relative"> {/* Main container for the timeline */}
-                        {scheduleData.map((item, index) => {
-                            const bgColorClassMatch = item.color.match(/bg-[a-z]+-[0-9]+/);
-                            const bgColorClass = bgColorClassMatch ? bgColorClassMatch[0] : '';
-                            const borderColorHex = tailwindBgToHex[bgColorClass] || 'gray';
-
-                            return (
-                                <div key={index} className="flex items-start gap-4 relative mt-2">
-                                    <div className="w-[18%] text-xs font-medium text-gray-500">{item.time}</div>
-
-                                    {/* Dot and Line Column */}
-                                    <div className="flex flex-col items-center relative">
-                                        {/* The dot */}
-                                        <span className={`w-3 h-3 rounded-full ${item.color.split(' ')[0]} z-10`} />
-
-                                        {/* Vertical line: Only for items that are *not* the last one */}
-                                        {index < scheduleData.length - 1 && (
-                                            <div
-                                                className="absolute left-1/2 transform -translate-x-1/2 w-px border-l-2 border-dashed"
-                                                style={{
-                                                    borderColor: borderColorHex,
-                                                    top: '6px',
-                                                    height: `calc(100% + 4.3rem)`, // Connects to the top of the next item's container
-                                                }}
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-3 w-full sm:w-1/2">
+                    {/* Tasks */}
+                    <div className="bg-white p-4 rounded-xl shadow w-full">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-md font-semibold">Tasks</h3>
+                            <button className="w-5 h-5 bg-lime-300 p-1 rounded" onClick={() => setShowTaskForm(!showTaskForm)}><PlusIcon /></button>
+                        </div>
+                        {showTaskForm && <TaskModal newTask={newTask} setNewTask={setNewTask} handleAddTask={handleAddTask} showTaskForm={showTaskForm} setShowTaskForm={setShowTaskForm} />}
+                        <div className="space-y-4  h-[300px] overflow-y-auto">
+                            {taskList.map((task, idx) => (
+                                <div key={idx} className="flex text-xs items-center gap-4 bg-gray-200 rounded-lg p-1">
+                                    <div className="relative w-12 h-12">
+                                        <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
+                                            <path
+                                                className="text-blue-200"
+                                                stroke="currentColor"
+                                                strokeWidth="3"
+                                                fill="none"
+                                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                             />
-                                        )}
-                                        {index === scheduleData.length - 1 && (
-                                            <div
-                                                className="absolute left-1/2 transform -translate-x-1/2 w-px border-l-2 border-dashed"
-                                                style={{
-                                                    borderColor: borderColorHex,
-                                                    top: '6px',
-                                                    height: '3.5rem', // A fixed length for the last line to trail off
-                                                }}
+                                            <path
+                                                className="text-blue-500"
+                                                stroke="currentColor"
+                                                strokeWidth="3"
+                                                strokeDasharray={`${task.percent}, 100`}
+                                                fill="none"
+                                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                             />
-                                        )}
+                                        </svg>
+                                        <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-700">
+                                            {task.percent}%
+                                        </div>
                                     </div>
-
-                                    {/* Content Box */}
-                                    {/* The height of this box largely dictates how long the line needs to be */}
-                                    <div className={`w-[75%] flex flex-col gap-1 p-3 rounded-xl ${item.color}`}>
-                                        <span className="text-sm font-semibold text-gray-900">{item.title}</span>
-                                        <span className="text-xs text-gray-700">{item.dept}</span>
+                                    <div>
+                                        <h4 className="text-xs font-semibold text-gray-800">{task.title}</h4>
+                                        <p className="text-xs text-gray-500">{task.stage} — {task.date}</p>
                                     </div>
                                 </div>
-                            );
-                        })}
+                            ))}
+                        </div>
+                    </div>
+                    {/* Schedule */}
+                    <div className="bg-white p-4 rounded-xl shadow w-full">
+                        <div className="flex justify-between mb-3">
+                            <h3 className="text-sm font-semibold">Daily Schedule</h3>
+                            <Popover className="relative ">
+                                <Popover.Button className="w-26 h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px]">
+                                    <CalendarIcon className="w-4 h-4" />
+                                    <span className="font-semibold">{displayScheduleDateDate}</span>
+                                    <ChevronDownIcon className="w-4 h-4" />
+                                </Popover.Button>
+
+                                <Popover.Panel className="absolute z-10 mt-2 right-0">
+                                    <div className="bg-white p-2 rounded shadow-lg">
+                                        <DatePicker
+                                            selected={selectScheduleDate}
+                                            onChange={(date) => setSelectScheduleDate(date)}
+                                            inline
+                                        />
+                                    </div>
+                                </Popover.Panel>
+                            </Popover>
+                        </div>
+                        <div className="relative h-[300px] overflow-y-auto"> {/* Main container for the timeline */}
+                            {scheduleData.map((item, index) => {
+                                const bgColorClassMatch = item.color.match(/bg-[a-z]+-[0-9]+/);
+                                const bgColorClass = bgColorClassMatch ? bgColorClassMatch[0] : '';
+                                const borderColorHex = tailwindBgToHex[bgColorClass] || 'gray';
+
+                                return (
+                                    <div key={index} className="flex items-start gap-4 relative mt-2">
+                                        <div className="w-[18%] text-xs font-medium text-gray-500">{item.time}</div>
+
+                                        {/* Dot and Line Column */}
+                                        <div className="flex flex-col items-center relative">
+                                            {/* The dot */}
+                                            <span className={`w-3 h-3 rounded-full ${item.color.split(' ')[0]} z-10`} />
+
+                                            {/* Vertical line: Only for items that are *not* the last one */}
+                                            {index < scheduleData.length - 1 && (
+                                                <div
+                                                    className="absolute left-1/2 transform -translate-x-1/2 w-px border-l-2 border-dashed"
+                                                    style={{
+                                                        borderColor: borderColorHex,
+                                                        top: '6px',
+                                                        height: `calc(100% + 4.3rem)`, // Connects to the top of the next item's container
+                                                    }}
+                                                />
+                                            )}
+                                            {index === scheduleData.length - 1 && (
+                                                <div
+                                                    className="absolute left-1/2 transform -translate-x-1/2 w-px border-l-2 border-dashed"
+                                                    style={{
+                                                        borderColor: borderColorHex,
+                                                        top: '6px',
+                                                        height: '3rem', // A fixed length for the last line to trail off
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
+
+                                        {/* Content Box */}
+                                        {/* The height of this box largely dictates how long the line needs to be */}
+                                        <div className={`w-[75%] flex flex-col gap-1 p-2 rounded-xl ${item.color}`}>
+                                            <span className="text-xs font-semibold text-gray-900">{item.title}</span>
+                                            <span className="text-xs text-gray-700">{item.dept}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>

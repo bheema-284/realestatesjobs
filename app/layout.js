@@ -90,9 +90,344 @@ export default function RootLayout({ children }) {
       title: '',
       message: ''
     },
-    jobs: [],
+    jobs: [
+      {
+        "id": "job-1753249533581-t8lcig7",
+        "jobTitle": "Real Estate Sales",
+        "jobDescription": "Sell properties in a fast-paced real estate market.",
+        "employmentTypes": [
+          "full-time"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": true,
+          "custom": "Flexible weekends"
+        },
+        "salaryType": "hourly",
+        "salaryAmount": "80,000 + Commission",
+        "salaryFrequency": "Weekly",
+        "hiringMultiple": true,
+        "location": "Bangalore",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249534307-7iy01jw",
+        "jobTitle": "Channel Partners",
+        "jobDescription": "Develop B2B networks and alliances.",
+        "employmentTypes": [
+          "contract",
+          "negotiable"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": false,
+          "custom": ""
+        },
+        "salaryType": "fixed",
+        "salaryAmount": "75,000",
+        "salaryFrequency": "Yearly",
+        "hiringMultiple": true,
+        "location": "Remote",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249535004-injnu4q",
+        "jobTitle": "Tele Caller",
+        "jobDescription": "Engage prospects over phone and pitch services.",
+        "employmentTypes": [
+          "contract",
+          "negotiable"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": false,
+          "custom": ""
+        },
+        "salaryType": "custom",
+        "salaryAmount": "25",
+        "salaryFrequency": "Weekly",
+        "hiringMultiple": false,
+        "location": "Mumbai",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249535684-rwlhae1",
+        "jobTitle": "HR & Operations",
+        "jobDescription": "Join our team as a HR & Operations specialist.",
+        "employmentTypes": [
+          "full-time",
+          "remote"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": true,
+          "custom": "Flexible weekends"
+        },
+        "salaryType": "monthly",
+        "salaryAmount": "60,000",
+        "salaryFrequency": "Yearly",
+        "hiringMultiple": true,
+        "location": "Remote",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249536283-fssr2hj",
+        "jobTitle": "Accounts & Auditing",
+        "jobDescription": "Join our team as a Accounts & Auditing specialist.",
+        "employmentTypes": [
+          "full-time",
+          "remote"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": false,
+          "custom": ""
+        },
+        "salaryType": "monthly",
+        "salaryAmount": "55,000",
+        "salaryFrequency": "Weekly",
+        "hiringMultiple": false,
+        "location": "Bangalore",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249536835-3l7uypm",
+        "jobTitle": "Digital Marketing",
+        "jobDescription": "This is an auto-generated description for a Digital Marketing role.",
+        "employmentTypes": [
+          "contract",
+          "negotiable"
+        ],
+        "workingSchedule": {
+          "dayShift": false,
+          "nightShift": true,
+          "weekendAvailability": true,
+          "custom": "Night shift only"
+        },
+        "salaryType": "monthly",
+        "salaryAmount": "70,000",
+        "salaryFrequency": "Monthly",
+        "hiringMultiple": true,
+        "location": "Mumbai",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249537460-tuhp7e9",
+        "jobTitle": "Web Development",
+        "jobDescription": "Join our team as a Web Development specialist.",
+        "employmentTypes": [
+          "part-time"
+        ],
+        "workingSchedule": {
+          "dayShift": false,
+          "nightShift": true,
+          "weekendAvailability": true,
+          "custom": "Night shift only"
+        },
+        "salaryType": "fixed",
+        "salaryAmount": "85,000",
+        "salaryFrequency": "Monthly",
+        "hiringMultiple": false,
+        "location": "Mumbai",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249538068-lrp0fzr",
+        "jobTitle": "CRM Executive",
+        "jobDescription": "Join our team as a CRM Executive specialist.",
+        "employmentTypes": [
+          "on-demand"
+        ],
+        "workingSchedule": {
+          "dayShift": false,
+          "nightShift": true,
+          "weekendAvailability": true,
+          "custom": "Night shift only"
+        },
+        "salaryType": "monthly",
+        "salaryAmount": "48,000",
+        "salaryFrequency": "Yearly",
+        "hiringMultiple": false,
+        "location": "Mumbai",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249541371-lwyxixx",
+        "jobTitle": "HR & Operations",
+        "jobDescription": "This is an auto-generated description for a HR & Operations role.",
+        "employmentTypes": [
+          "on-demand"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": true,
+          "custom": "Flexible weekends"
+        },
+        "salaryType": "custom",
+        "salaryAmount": "60,000",
+        "salaryFrequency": "Monthly",
+        "hiringMultiple": true,
+        "location": "Hyderabad",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249541981-njwzbnq",
+        "jobTitle": "Tele Caller",
+        "jobDescription": "Contact and follow up with clients effectively.",
+        "employmentTypes": [
+          "full-time",
+          "remote"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": false,
+          "custom": ""
+        },
+        "salaryType": "hourly",
+        "salaryAmount": "25",
+        "salaryFrequency": "Monthly",
+        "hiringMultiple": false,
+        "location": "Bangalore",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249542619-jsrp8je",
+        "jobTitle": "Channel Partners",
+        "jobDescription": "Manage and grow channel partnerships.",
+        "employmentTypes": [
+          "part-time"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": false,
+          "custom": ""
+        },
+        "salaryType": "fixed",
+        "salaryAmount": "70,000",
+        "salaryFrequency": "Monthly",
+        "hiringMultiple": true,
+        "location": "Pune",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249543262-4nto179",
+        "jobTitle": "Real Estate Sales",
+        "jobDescription": "Help clients buy dream homes while achieving sales goals.",
+        "employmentTypes": [
+          "part-time"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": false,
+          "custom": ""
+        },
+        "salaryType": "monthly",
+        "salaryAmount": "80,000 + Commission",
+        "salaryFrequency": "Yearly",
+        "hiringMultiple": false,
+        "location": "Hyderabad",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249546435-2guuuxp",
+        "jobTitle": "CRM Executive",
+        "jobDescription": "This is an auto-generated description for a CRM Executive role.",
+        "employmentTypes": [
+          "part-time"
+        ],
+        "workingSchedule": {
+          "dayShift": false,
+          "nightShift": true,
+          "weekendAvailability": true,
+          "custom": "Night shift only"
+        },
+        "salaryType": "custom",
+        "salaryAmount": "48,000",
+        "salaryFrequency": "Weekly",
+        "hiringMultiple": false,
+        "location": "Hyderabad",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249547108-38wh0ug",
+        "jobTitle": "Web Development",
+        "jobDescription": "This is an auto-generated description for a Web Development role.",
+        "employmentTypes": [
+          "contract",
+          "negotiable"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": false,
+          "custom": ""
+        },
+        "salaryType": "fixed",
+        "salaryAmount": "95,000",
+        "salaryFrequency": "Yearly",
+        "hiringMultiple": true,
+        "location": "Mumbai",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249547661-rpol9gb",
+        "jobTitle": "Digital Marketing",
+        "jobDescription": "Join our team as a Digital Marketing specialist.",
+        "employmentTypes": [
+          "contract",
+          "negotiable"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": true,
+          "custom": "Flexible weekends"
+        },
+        "salaryType": "custom",
+        "salaryAmount": "70,000",
+        "salaryFrequency": "Weekly",
+        "hiringMultiple": true,
+        "location": "Hyderabad",
+        "postedOn": "2025-07-23"
+      },
+      {
+        "id": "job-1753249548235-h4d4dda",
+        "jobTitle": "Accounts & Auditing",
+        "jobDescription": "Join our team as a Accounts & Auditing specialist.",
+        "employmentTypes": [
+          "full-time",
+          "remote"
+        ],
+        "workingSchedule": {
+          "dayShift": true,
+          "nightShift": false,
+          "weekendAvailability": false,
+          "custom": ""
+        },
+        "salaryType": "custom",
+        "salaryAmount": "50,000",
+        "salaryFrequency": "Yearly",
+        "hiringMultiple": true,
+        "location": "Remote",
+        "postedOn": "2025-07-23"
+      }
+    ],
     notification: false,
-    tasks: []
+    tasks: [
+      { percent: 40, title: "Resume Screening", stage: "Evaluation", date: "May 27, 2027" },
+      { percent: 60, title: "Interview Scheduling", stage: "Engagement", date: "May 20, 2027" },
+      { percent: 30, title: "Candidate Communication", stage: "Relationship", date: "May 23, 2027" },
+      { percent: 50, title: "Offer Management", stage: "Selection", date: "May 25, 2027" },
+    ]
   });
 
   useEffect(() => {
@@ -209,14 +544,16 @@ export default function RootLayout({ children }) {
       </div>
 
       <div className="flex-1 flex items-center justify-between sm:justify-end gap-4 mt-2 sm:mt-0">
-        {showLoader ? (
-          // Use the new AnimatedBorderLoader here
-          <AnimatedBorderLoader />
-        ) : (
-          <button onClick={() => setIsOpen(!isOpen)} className="bg-gray-900 border-1.5 border-gray-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
-            POST NEW JOB
-          </button>
-        )}
+        {pathName !== "/applications" && <div>
+          {showLoader ? (
+            // Use the new AnimatedBorderLoader here
+            <AnimatedBorderLoader />
+          ) : (
+            <button onClick={() => setIsOpen(!isOpen)} className="bg-gray-900 border-1.5 border-gray-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
+              POST NEW JOB
+            </button>
+          )}
+        </div>}
         <input
           type="text"
           placeholder="Search candidate, vacancy, etc"

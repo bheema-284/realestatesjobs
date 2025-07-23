@@ -4,17 +4,15 @@ import { Dialog, Transition, RadioGroup, Switch } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid'; // For the dropdown icon
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import RootContext from '@/components/config/rootcontext';
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import JobPostingModal from '@/components/createjob';
-// Assuming jobs data is imported from a config file.
-// If '../../components/config/data' is not available or empty,
-// we'll use a default empty array.
-// Example: import { jobs as initialJobsData } from '../../components/config/data';
-// Inline SVG Icons for each category with enhanced designs
+import ButtonTab from '@/components/common/buttontab';
+import JobList from '@/components/jobslist';
+
+
 const Icons = {
     RealEstateSales: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-blue-600">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-blue-600">
             <defs>
                 <linearGradient id="salesHouseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#60A5FA" />
@@ -32,7 +30,7 @@ const Icons = {
         </svg>
     ),
     ChannelPartners: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-green-600">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-green-600">
             <defs>
                 <linearGradient id="partnersPersonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#34D399" />
@@ -52,7 +50,7 @@ const Icons = {
         </svg>
     ),
     TeleCaller: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-red-600">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-red-600">
             <defs>
                 <linearGradient id="callerPhoneGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#EF4444" />
@@ -71,7 +69,7 @@ const Icons = {
         </svg>
     ),
     HROperations: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-purple-600">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-purple-600">
             <defs>
                 <linearGradient id="hrGearGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#A855F7" />
@@ -90,7 +88,7 @@ const Icons = {
         </svg>
     ),
     CRMExecutive: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-teal-600">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-teal-600">
             <defs>
                 <linearGradient id="crmChartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#2DD4BF" />
@@ -109,7 +107,7 @@ const Icons = {
         </svg>
     ),
     WebDevelopment: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-yellow-600">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-yellow-600">
             <defs>
                 <linearGradient id="webMonitorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#FCD34D" />
@@ -129,7 +127,7 @@ const Icons = {
         </svg>
     ),
     DigitalMarketing: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-orange-600">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-orange-600">
             <defs>
                 <linearGradient id="marketingMegaphoneGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#FB923C" />
@@ -147,7 +145,7 @@ const Icons = {
         </svg>
     ),
     AccountsAuditing: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-gray-600">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-gray-600">
             <defs>
                 <linearGradient id="accountsDocGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#D1D5DB" />
@@ -164,74 +162,60 @@ const Icons = {
         </svg>
     ),
     Default: (
-        <ExclamationTriangleIcon className="w-16 h-16 text-gray-400" />
+        <ExclamationTriangleIcon className="w-6 h-6 text-gray-400" />
     ),
 };
 
 // Data for the job category cards
 const jobCategories = [
     {
-        title: 'Real Estate Sales',
-        description: 'Sell Property Faster',
+        title: "Real Estate Sales",
+        description: "Sell Property Faster",
         icon: Icons.RealEstateSales,
     },
     {
-        title: 'Channel Partners',
-        description: 'Collaborate & Earn',
+        title: "Channel Partners",
+        description: "Collaborate & Earn",
         icon: Icons.ChannelPartners,
     },
     {
-        title: 'Tele Caller',
-        description: 'Engage & Convert',
+        title: "Tele Caller",
+        description: "Engage & Convert",
         icon: Icons.TeleCaller,
     },
     {
-        title: 'HR & Operations',
-        description: 'People & Process',
+        title: "HR & Operations",
+        description: "People & Process",
         icon: Icons.HROperations,
     },
     {
-        title: 'CRM Executive',
-        description: 'Manage Client Relations',
+        title: "CRM Executive",
+        description: "Manage Client Relations",
         icon: Icons.CRMExecutive,
     },
     {
-        title: 'Web Development',
-        description: 'Build Real Estate Tech',
+        title: "Web Development",
+        description: "Build Real Estate Tech",
         icon: Icons.WebDevelopment,
     },
     {
-        title: 'Digital Marketing',
-        description: 'Promote & Convert',
+        title: "Digital Marketing",
+        description: "Promote & Convert",
         icon: Icons.DigitalMarketing,
     },
     {
-        title: 'Accounts & Auditing',
-        description: 'Ensure Financial Clarity',
+        title: "Accounts & Auditing",
+        description: "Ensure Financial Clarity",
         icon: Icons.AccountsAuditing,
     },
 ];
 
-const getIconForTitle = (title) => {
-    const normalizedTitle = title.replace(/\s+/g, '').replace(/[^\w]/g, '');
+
+const getIconForTitle = (name) => {
+    const normalizedTitle = name && name.replace(/\s+/g, '').replace(/[^\w]/g, '');
     return Icons[normalizedTitle] || Icons.Default;
 };
 
-// JobCategoryCard component for individual cards
-const JobCategoryCard = ({ title, description, icon, onClick }) => {
-    return (
-        <div
-            className="flex flex-col items-center p-6 bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border border-gray-100"
-            onClick={onClick}
-        >
-            <div className="w-16 h-16 mb-4 flex items-center justify-center">
-                {icon}
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-1 text-center">{title}</h3>
-            <p className="text-sm text-gray-600 text-center">{description}</p>
-        </div>
-    );
-};
 
 // JobModal component (modified to accept props for state management)
 function JobModal({ isOpen, setIsOpen, initialJobTitle = '', onSave }) {
@@ -336,8 +320,8 @@ function JobModal({ isOpen, setIsOpen, initialJobTitle = '', onSave }) {
                                     {/* Job Title */}
                                     <div className="flex flex-col md:flex-row items-start md:items-center">
                                         <label htmlFor="jobTitle" className="w-full md:w-1/3 text-gray-700 font-medium text-sm md:text-base">
-                                            Job title
-                                            <p className="text-xs text-gray-500 mt-1">A job title must describe one position only</p>
+                                            Job name
+                                            <p className="text-xs text-gray-500 mt-1">A job name must describe one position only</p>
                                         </label>
                                         <div className="w-full md:w-2/3 mt-2 md:mt-0">
                                             <input
@@ -364,8 +348,8 @@ function JobModal({ isOpen, setIsOpen, initialJobTitle = '', onSave }) {
                                                     <span className="font-bold">B</span>
                                                     <span className="italic">I</span>
                                                     <span className="underline">U</span>
-                                                    <span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2.75 7.5a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75ZM2 10.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10.25ZM2.75 13a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75ZM2 15.75a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 15.75Z" clipRule="evenodd" /></svg></span>
-                                                    <span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M10 2c-1.716 0-3.405.106-5.07.31C3.807 2.511 3 3.407 3 4.42v10.164a3 3 0 0 0 .807 2.022c.638.63 1.543.994 2.493.994H16.5A1.5 1.5 0 0 0 18 16.5V6.75A.75.75 0 0 0 17.25 6H13.5a.75.75 0 0 1-.75-.75V2.75A.75.75 0 0 0 12 2h-2Zm2.25 1.5v-.25a.75.75 0 0 0-.75-.75H10a.75.75 0 0 0-.75.75v.25h3.75Z" clipRule="evenodd" /></svg></span>
+                                                    <span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2.75 7.5a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75ZM2 10.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10.25ZM2.75 13a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75ZM2 15.75a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 15.75Z" clipRule="evenodd" /></svg></span>
+                                                    <span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M10 2c-1.716 0-3.405.106-5.07.31C3.807 2.511 3 3.407 3 4.42v10.164a3 3 0 0 0 .807 2.022c.638.63 1.543.994 2.493.994H16.5A1.5 1.5 0 0 0 18 16.5V6.75A.75.75 0 0 0 17.25 6H13.5a.75.75 0 0 1-.75-.75V2.75A.75.75 0 0 0 12 2h-2Zm2.25 1.5v-.25a.75.75 0 0 0-.75-.75H10a.75.75 0 0 0-.75.75v.25h3.75Z" clipRule="evenodd" /></svg></span>
                                                 </div>
                                                 <span className="text-gray-500">200 words</span>
                                             </div>
@@ -611,17 +595,15 @@ export default function Jobs() {
     const [isModalOpen, setIsModalOpen] = useState(false); // Keep for potential future manual modal open
     const [currentJobCategory, setCurrentJobCategory] = useState(''); // Still used to identify category
     const { rootContext, setRootContext } = useContext(RootContext);
+    const [activeTab, setActiveTab] = useState(0);
     const jobList = rootContext.jobs || []
-    // const [jobList, setJobList] = useState([]); // Use imported data or default empty
+    const tabName = jobCategories[activeTab].title
+    const filterJobs = jobList.filter((item) => item.jobTitle === tabName);
     const [editData, setEditData] = useState({});
     const [mode, setMode] = useState("create");
     const [isOpen, setIsOpen] = useState(false);
-    // Function to generate dummy job data based on category
-    // useEffect(() => {
-    //     setJobList(rootContext.jobs || [])
-    // }, [rootContext])
+    const [accordionOpen, setAccordionOpen] = useState(null);
     const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
-    const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
     const generateDummyJob = (categoryTitle) => {
         const salaryOptions = {
@@ -638,8 +620,8 @@ export default function Jobs() {
         const employmentTypesList = [
             ['full-time'],
             ['part-time'],
-            ['full-time', 'remote'],
-            ['contract', 'negotiable'],
+            ['full-time', 'part-time'],
+            ['part-time', 'negotiable'],
             ['on-demand'],
             ['full-time', 'negotiable'],
         ];
@@ -732,132 +714,98 @@ export default function Jobs() {
     };
 
     const editForm = (index, mode) => {
-        const jobListToEdit = jobList[index];
+        const jobListToEdit = filterJobs[index];
         setEditData(jobListToEdit);
         setMode(mode)
         setIsOpen(true)
     };
 
-    const deleteItem = (index) => {
+    const deleteItem = (filterIndex) => {
+        // Find the job to delete from the filtered list
+        const jobToDelete = filterJobs[filterIndex];
+
         setRootContext((prevContext) => ({
             ...prevContext,
-            jobs: prevContext.jobs.filter((_, i) => i !== index),
+            jobs: prevContext.jobs.filter((job) => job !== jobToDelete),
         }));
     };
 
 
+    const tabs = jobCategories.map((job, index) => ({
+        name: (
+            <div key={index} className="flex flex-wrap items-center gap-2 text-left">
+                {job.icon}
+                <div className="flex flex-col">
+                    <span className="text-sm font-semibold">{job.title}</span>
+                    <span className="text-xs text-gray-500">{job.description}</span>
+                </div>
+            </div>
+        ),
+    }));
+
     return (
         <>
             {/* Job Categories Section */}
-            <div className="bg-gray-50 flex flex-col items-center justify-center font-sans">
-                <div className="max-w-6xl mx-auto text-center mb-10">
-                    <h1 className="text-2xl sm:text-3xl font-normal text-gray-800 leading-tight">
+            <div className="bg-gray-50 min-h-screen flex flex-col font-sans">
+                {/* Header */}
+                <div className="hidden sm:flex flex-col left-0 right-0 text-sm w-full fixed top-16 z-10 bg-white shadow pl-36 text-center">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl mb-3 sm:mb-5 font-normal text-gray-800 leading-tight">
                         Click to unlock your <span className="font-bold">Dream Real Estate Jobs</span> below
                     </h1>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-6xl">
-                    {jobCategories.map((category, index) => (
-                        <JobCategoryCard
-                            key={index}
-                            title={category.title}
-                            description={category.description}
-                            icon={category.icon}
-                            onClick={() => handleCategoryClick(category.title)} // Pass category title on click
-                        />
-                    ))}
-                </div>
-            </div>
-
-            {/* Job Postings Table Section */}
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-100 pt-8 font-sans antialiased">
-                <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-                    <div className="p-6 border-b border-gray-200">
-                        <h2 className="text-2xl font-bold text-indigo-800">My Job Postings</h2>
-                        <p className="text-gray-600 mt-1">A comprehensive list of all your active and past job advertisements.</p>
+                    <div className="max-w-7xl mx-auto">
+                        <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                     </div>
+                </div>
+                {/* Mobile Accordion */}
+                <div className="sm:hidden">
+                    {tabs.map((tab, index) => {
+                        const Component = JobList;
+                        const isOpen = accordionOpen === index;
+                        return (
+                            <div key={index} className="border-b border-gray-200">
+                                <button
+                                    onClick={() => setAccordionOpen(isOpen ? null : index)}
+                                    className="w-full flex justify-between items-center py-3 px-4 bg-white text-left"
+                                >
+                                    <span className="font-medium text-sm text-gray-800 text-base truncate">{tab.name}</span>
+                                    <ChevronDownIcon
+                                        className={`w-5 h-5 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                                    />
+                                </button>
+                                {isOpen && (
+                                    <div className="p-3 bg-gray-50">
+                                        <Component
+                                            tabName={tabName}
+                                            getIconForTitle={getIconForTitle}
+                                            editForm={editForm}
+                                            deleteItem={deleteItem}
+                                            formatWorkingSchedule={formatWorkingSchedule}
+                                            formatEmploymentTypes={formatEmploymentTypes}
+                                            jobList={filterJobs}
+                                            handleCategoryClick={handleCategoryClick}
+                                            setIsOpen={setIsOpen}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
 
-                    {jobList.length === 0 ? (
-                        <div className="p-6 text-center text-gray-600">
-                            <p>No job postings available. Click a category above to add one!</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-indigo-50">
-                                    <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
-                                            Image
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
-                                            Job Title
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
-                                            Employment Type
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
-                                            Working Schedule
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
-                                            Salary
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
-                                            Hiring Multiple
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {jobList.map((job, index) => (
-                                        <tr key={job.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-indigo-50 transition-colors duration-150`}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900"> {getIconForTitle(job.jobTitle)}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900">{job.jobTitle}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-700">{formatEmploymentTypes(job.employmentTypes)}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-700">{formatWorkingSchedule(job.workingSchedule)}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-700">
-                                                    {(() => {
-                                                        const numericMatch = job.salaryAmount.match(/\d[\d,]*/); // match first number like "80,000"
-                                                        const numericValue = numericMatch ? Number(numericMatch[0].replace(/,/g, '')) : null;
-
-                                                        return numericValue !== null
-                                                            ? `${numericValue.toLocaleString()} ${job.salaryFrequency} (${job.salaryType})`
-                                                            : job.salaryAmount; // fallback to raw if parsing fails
-                                                    })()}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {job.hiringMultiple ? (
-                                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                        Yes
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                                        No
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex justify-center gap-2">
-                                                    <PencilIcon className="h-5 ml-5 fill-yellow-400 hover:fill-yellow-500 hover:cursor-pointer" onClick={() => editForm(index, "update")} />
-                                                    <TrashIcon className="h-5 ml-5 fill-red-400 hover:fill-red-500 hover:cursor-pointer" onClick={() => deleteItem(index)} />
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                {/* Job List Section */}
+                <div className="hidden sm:flex flex-1 mt-40 sm:mt-32 px-4 sm:px-6 md:px-12">
+                    {jobCategories[activeTab] && (
+                        <JobList
+                            tabName={tabName}
+                            getIconForTitle={getIconForTitle}
+                            editForm={editForm}
+                            deleteItem={deleteItem}
+                            formatWorkingSchedule={formatWorkingSchedule}
+                            formatEmploymentTypes={formatEmploymentTypes}
+                            jobList={filterJobs}
+                            handleCategoryClick={handleCategoryClick}
+                            setIsOpen={setIsOpen}
+                        />
                     )}
                 </div>
             </div>
@@ -870,8 +818,7 @@ export default function Jobs() {
                 initialJobTitle={currentJobCategory}
                 onSave={handleNewJobPost}
             />
-
-            {isOpen && <JobPostingModal editData={editData} mode={mode} isOpen={isOpen} setIsOpen={setIsOpen} />}
+            {isOpen && <JobPostingModal title={tabName} editData={editData} mode={mode} isOpen={isOpen} setIsOpen={setIsOpen} />}
         </>
     );
 }

@@ -19,7 +19,7 @@ const getWordCount = (html) => {
     return text.split(/\s+/).filter(word => word.length > 0).length;
 };
 
-export default function JobPostingModal({ editData, mode, isOpen, setIsOpen }) {
+export default function JobPostingModal({ title, editData, mode, isOpen, setIsOpen }) {
     const { rootContext, setRootContext } = useContext(RootContext);
     // State for form fields
     const [jobTitle, setJobTitle] = useState('');
@@ -49,8 +49,8 @@ export default function JobPostingModal({ editData, mode, isOpen, setIsOpen }) {
     }
 
     useEffect(() => {
-        if (editData) {
-            setJobTitle(editData.jobTitle || "")
+        if (editData, title) {
+            setJobTitle(title || editData.jobTitle || "")
             setJobDescription(editData.jobDescription || "")
             setEmploymentTypes(editData.employmentTypes || [])
             setWorkingSchedule(editData.workingSchedule || {
@@ -66,7 +66,7 @@ export default function JobPostingModal({ editData, mode, isOpen, setIsOpen }) {
             setHiringMultiple(editData.hiringMultiple || false)
         }
 
-    }, [editData])
+    }, [editData, title])
 
     // Options for employment type (now treated as checkboxes)
     const employmentOptions = [

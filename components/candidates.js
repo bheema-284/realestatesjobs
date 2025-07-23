@@ -7,7 +7,7 @@ import Applications from './applications';
 import Projects from './projects';
 import Services from './services';
 import Marketing from './marketing';
-import { useRouter } from 'next/navigation';
+import ButtonTab from './common/buttontab';
 
 const tabs = [
     { name: 'About Me', component: AboutMe },
@@ -18,12 +18,7 @@ const tabs = [
 ];
 
 export default function ProfilePage({ userId }) {
-    const router = useRouter();
-    // const [activeTab, setActiveTab] = useState(0);
-    const [activeTab, setActiveTab] = useState(0); // State to manage the active tab (clicked)
-    const [indicatorStyle, setIndicatorStyle] = useState({}); // State for the moving indicator's style
-    const tabRefs = useRef([]); // Ref to store references to each tab button
-    const tabContainerRef = useRef(null); // Ref for the main tab container
+    const [activeTab, setActiveTab] = useState(0);
 
     const [profile, setProfile] = useState({
         name: '', title: '', email: '', image: '', summary: '', experience: [], education: [],
@@ -580,36 +575,6 @@ export default function ProfilePage({ userId }) {
         }
     }, [userId]);
 
-    const handleTabClick = (index) => {
-        const tab = tabRefs.current[index];
-        setActiveTab(index)
-        if (tab) {
-            setIndicatorStyle({
-                width: tab.offsetWidth,
-                left: tab.offsetLeft,
-                opacity: 1,
-            });
-        }
-    };
-
-    const handleMouseEnter = (index) => {
-        const tab = tabRefs.current[index];
-        if (tab) {
-            setIndicatorStyle({
-                width: tab.offsetWidth,
-                left: tab.offsetLeft,
-                opacity: 1,
-            });
-        }
-    };
-
-    const handleMouseLeave = () => {
-        setIndicatorStyle({
-            opacity: 0,
-        });
-    };
-
-
     const ActiveComponent = tabs[activeTab].component;
 
     return (
@@ -693,37 +658,7 @@ export default function ProfilePage({ userId }) {
                 {/* Desktop Tabs */}
                 <div className="hidden sm:flex flex-col text-sm mb-6">
                     {/* Tab Navigation */}
-                    <div
-                        ref={tabContainerRef}
-                        className="flex flex-row justify-between bg-white rounded-t-md relative overflow-hidden"
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        {/* Moving background indicator */}
-                        <span
-                            className="absolute bottom-0 h-full bg-gray-200 rounded-t-md transition-all duration-300 ease-in-out z-0"
-                            style={{
-                                ...indicatorStyle,
-                                transition: 'all 0.3s ease-in-out, opacity 0.2s ease-in-out',
-                            }}
-                        ></span>
-                        {tabs.map((tab, index) => (
-                            <button
-                                key={tab.name}
-                                ref={el => tabRefs.current[index] = el} // Assign ref to each button
-                                className={`py-1 px-3 rounded-t-md transition-colors relative font-medium z-10
-                            transition-colors duration-300 ease-in-out
-                            ${activeTab === index
-                                        ? 'bg-indigo-900 text-white' // Active tab text color (bg handled by indicator)
-                                        : 'text-gray-700' // Non-active tab text color
-                                    }`}
-                                onClick={() => handleTabClick(index)}
-                                onMouseEnter={() => handleMouseEnter(index)}// Listen for mouse entering individual tab
-                            >
-                                {/* Text content */}
-                                {tab.name}
-                            </button>
-                        ))}
-                    </div>
+                    <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
 
                     {/* Tab Content */}
                     <div className="py-1 px-3 rounded-t-md">
