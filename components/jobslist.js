@@ -11,11 +11,11 @@ export default function JobList(props) {
                     <div className="">
                         <div className="flex gap-3 items-center">
                             <div className="text-sm font-medium text-gray-900"> {getIconForTitle(tabName)}</div>
-                            <h2 className="text-2xl font-bold text-indigo-800">{tabName} Job Postings</h2>
+                            <h2 className="text-2xl font-bold text-indigo-800">{tabName}</h2>
                         </div>
                         <p className="text-gray-600 mt-1">A comprehensive list of all your active and past job advertisements.</p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between gap-3">
                         <button onClick={() => handleCategoryClick(tabName)} className="bg-lime-100 border-1.5 border-gray-900 text-black px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
                             AUTO CREATE JOB
                         </button>

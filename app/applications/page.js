@@ -734,7 +734,6 @@ export default function Jobs() {
     const tabs = jobCategories.map((job, index) => ({
         name: (
             <div key={index} className="flex flex-wrap items-center gap-2 text-left">
-                {job.icon}
                 <div className="flex flex-col">
                     <span className="text-sm font-semibold">{job.title}</span>
                     <span className="text-xs text-gray-500">{job.description}</span>
@@ -764,7 +763,7 @@ export default function Jobs() {
                         return (
                             <div key={index} className="border-b border-gray-200">
                                 <button
-                                    onClick={() => setAccordionOpen(isOpen ? null : index)}
+                                    onClick={() => { setAccordionOpen(isOpen ? null : index); setActiveTab(index) }}
                                     className="w-full flex justify-between items-center py-3 px-4 bg-white text-left"
                                 >
                                     <span className="font-medium text-sm text-gray-800 text-base truncate">{tab.name}</span>
@@ -772,7 +771,7 @@ export default function Jobs() {
                                         className={`w-5 h-5 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}
                                     />
                                 </button>
-                                {isOpen && (
+                                {isOpen && jobCategories[index] && (
                                     <div className="p-3 bg-gray-50">
                                         <Component
                                             tabName={tabName}
@@ -793,7 +792,7 @@ export default function Jobs() {
                 </div>
 
                 {/* Job List Section */}
-                <div className="hidden sm:flex flex-1 mt-40 sm:mt-32 px-4 sm:px-6 md:px-12">
+                <div className="hidden sm:flex w-full sm:mt-32">
                     {jobCategories[activeTab] && (
                         <JobList
                             tabName={tabName}

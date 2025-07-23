@@ -726,23 +726,32 @@ const Dashboard = () => {
                             <div className="flex justify-between items-center pt-4 px-4">
                                 <h3 className="text-md font-semibold">{selectedStatType}</h3>
                                 <Popover className="relative">
-                                    <Popover.Button className="w-auto h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px] gap-1">
-                                        <CalendarIcon className="w-4 h-4" />
-                                        <span className="font-semibold">{display1Date}</span>
-                                        <ChevronDownIcon className="w-4 h-4" />
-                                    </Popover.Button>
+                                    {({ open, close }) => (
+                                        <>
+                                            <Popover.Button className="w-auto h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px] gap-1">
+                                                <CalendarIcon className="w-4 h-4" />
+                                                <span className="font-semibold">{display1Date}</span>
+                                                <ChevronDownIcon className="w-4 h-4" />
+                                            </Popover.Button>
 
-                                    <Popover.Panel className="absolute z-10 mt-2 right-0">
-                                        <div className="bg-white p-2 rounded shadow-lg">
-                                            <DatePicker
-                                                selectsRange
-                                                startDate={startDate}
-                                                endDate={endDate}
-                                                onChange={(update) => setDateRange(update)}
-                                                inline
-                                            />
-                                        </div>
-                                    </Popover.Panel>
+                                            <Popover.Panel className="absolute z-10 mt-2 right-0">
+                                                <div className="bg-white p-2 rounded shadow-lg">
+                                                    <DatePicker
+                                                        selectsRange
+                                                        startDate={startDate}
+                                                        endDate={endDate}
+                                                        onChange={(update) => {
+                                                            setDateRange(update);
+                                                            if (update[0] && update[1]) {
+                                                                close();
+                                                            }
+                                                        }}
+                                                        inline
+                                                    />
+                                                </div>
+                                            </Popover.Panel>
+                                        </>
+                                    )}
                                 </Popover>
                             </div>
                             <div className="w-full h-64 bg-white rounded-xl mt-5">
@@ -883,21 +892,25 @@ const Dashboard = () => {
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-md font-semibold">{selectedStatType} by Deportment</h3>
                                 <Popover className="relative ">
-                                    <Popover.Button className="w-26 h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px]">
-                                        <CalendarIcon className="w-4 h-4" />
-                                        <span className="font-semibold">{display2Date}</span>
-                                        <ChevronDownIcon className="w-4 h-4" />
-                                    </Popover.Button>
+                                    {({ open, close }) => (
+                                        <>
+                                            <Popover.Button className="w-26 h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px]">
+                                                <CalendarIcon className="w-4 h-4" />
+                                                <span className="font-semibold">{display2Date}</span>
+                                                <ChevronDownIcon className="w-4 h-4" />
+                                            </Popover.Button>
 
-                                    <Popover.Panel className="absolute z-10 mt-2 right-0">
-                                        <div className="bg-white p-2 rounded shadow-lg">
-                                            <DatePicker
-                                                selected={selectedDate}
-                                                onChange={(date) => setSelectedDate(date)}
-                                                inline
-                                            />
-                                        </div>
-                                    </Popover.Panel>
+                                            <Popover.Panel className="absolute z-10 mt-2 right-0">
+                                                <div className="bg-white p-2 rounded shadow-lg">
+                                                    <DatePicker
+                                                        selected={selectedDate}
+                                                        onChange={(date) => { setSelectedDate(date); close() }}
+                                                        inline
+                                                    />
+                                                </div>
+                                            </Popover.Panel>
+                                        </>
+                                    )}
                                 </Popover>
                             </div>
                             <div className="flex flex-col sm:flex-row justify-between w-full bg-white rounded-xl">
@@ -1056,22 +1069,29 @@ const Dashboard = () => {
                     <div className="bg-white p-4 rounded-xl shadow w-full">
                         <div className="flex justify-between mb-3">
                             <h3 className="text-sm font-semibold">Daily Schedule</h3>
-                            <Popover className="relative ">
-                                <Popover.Button className="w-26 h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px]">
-                                    <CalendarIcon className="w-4 h-4" />
-                                    <span className="font-semibold">{displayScheduleDateDate}</span>
-                                    <ChevronDownIcon className="w-4 h-4" />
-                                </Popover.Button>
+                            <Popover className="relative">
+                                {({ open, close }) => (
+                                    <>
+                                        <Popover.Button className="w-26 h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px]">
+                                            <CalendarIcon className="w-4 h-4" />
+                                            <span className="font-semibold">{displayScheduleDateDate}</span>
+                                            <ChevronDownIcon className="w-4 h-4" />
+                                        </Popover.Button>
 
-                                <Popover.Panel className="absolute z-10 mt-2 right-0">
-                                    <div className="bg-white p-2 rounded shadow-lg">
-                                        <DatePicker
-                                            selected={selectScheduleDate}
-                                            onChange={(date) => setSelectScheduleDate(date)}
-                                            inline
-                                        />
-                                    </div>
-                                </Popover.Panel>
+                                        <Popover.Panel className="absolute z-30 mt-2 right-0">
+                                            <div className="bg-white p-2 rounded shadow-lg">
+                                                <DatePicker
+                                                    selected={selectScheduleDate}
+                                                    onChange={(date) => {
+                                                        setSelectScheduleDate(date);
+                                                        close(); // 🔒 Close the popover after date is selected
+                                                    }}
+                                                    inline
+                                                />
+                                            </div>
+                                        </Popover.Panel>
+                                    </>
+                                )}
                             </Popover>
                         </div>
                         <div className="relative h-[300px] overflow-y-auto"> {/* Main container for the timeline */}
