@@ -52,18 +52,15 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate }) => {
                 />
                 <div>
                     <div className="flex items-center gap-2 font-semibold text-base sm:text-lg flex-wrap sm:flex-row">
-                        {candidate.name.toUpperCase()}
-                        <span className="text-blue-500">
-                            <FaCheckCircle />
-                        </span>
+                        <span className="text-md text-black">{candidate.name.toUpperCase()}</span> {" | "}
+                        <span className="text-sm text-gray-500">{candidate.location}</span>
+                        <FaCheckCircle className='w-3 h-3 text-blue-600' />
                     </div>
-                    <div className="text-sm text-gray-600">{candidate.location}</div>
-
-                    <div className="flex flex-wrap sm:flex-row gap-2 mt-2 text-blue-600 text-xs items-center">
-                        <FaGraduationCap />
-                        <FaHandshake />
-                        <FaChartLine />
-                        <FaMoneyBillAlt />
+                    <div className="flex flex-wrap sm:flex-row gap-2 mt-2 text-xs items-center">
+                        <FaGraduationCap className='w-5 h-5 text-gray-700' />
+                        <FaHandshake className='w-5 h-5 text-gray-700' />
+                        <FaChartLine className='w-5 h-5 text-gray-700' />
+                        <FaMoneyBillAlt className='w-5 h-5 text-gray-700' />
 
                         <div className="border border-gray-600 px-3 h-6 rounded flex gap-2 items-center">
                             <div className="bg-yellow-900 text-yellow-500 w-6 h-6 flex flex-col items-center justify-center rounded text-[8px] leading-tight text-center overflow-hidden">
@@ -84,7 +81,8 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate }) => {
                 <select className="border rounded px-2 py-1 text-xs sm:text-sm">
                     <option>Interested</option>
                     <option>Shortlisted</option>
-                    <option>Rejected</option>
+                    <option>Selected</option>
+                    <option>Not Selected</option>
                 </select>
 
                 {/* This button will open the global chat for this specific candidate */}

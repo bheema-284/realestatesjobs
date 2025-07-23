@@ -751,7 +751,7 @@ export default function Jobs() {
                     <h1 className="text-xl sm:text-2xl md:text-3xl mb-3 sm:mb-5 font-normal text-gray-800 leading-tight">
                         Click to unlock your <span className="font-bold">Dream Real Estate Jobs</span> below
                     </h1>
-                    <div className="max-w-7xl mx-auto">
+                    <div className="w-full px-1 mx-auto">
                         <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                     </div>
                 </div>
