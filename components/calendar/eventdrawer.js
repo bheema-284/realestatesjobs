@@ -1,10 +1,11 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { Switch } from '@headlessui/react';
 import { Listbox } from '@headlessui/react';
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
 import Input from '../common/input';
 import { XMarkIcon } from '@heroicons/react/24/solid';
+import RootContext from '../config/rootcontext';
 const categoryColors = {
     Personal: '#dc2626',
     Business: '#e0193a',
@@ -14,6 +15,7 @@ const categoryColors = {
 };
 
 export default function EventDrawer({ show, onClose, onSave, categories }) {
+    const { rootContext, setRootContext } = useContext(RootContext);
     const [title, setTitle] = useState('');
     const [category, setCategory] = useState('');
     const [startDate, setStartDate] = useState('');
@@ -44,6 +46,25 @@ export default function EventDrawer({ show, onClose, onSave, categories }) {
             location,
             description,
         };
+        setRootContext((prevContext) => {
+            const newEvent = {
+                id: `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                title,
+                category,
+                startDate,
+                endDate,
+                allDay,
+                url,
+                guests,
+                location,
+                description,
+            };
+
+            return {
+                ...prevContext,
+                schedule: [...prevContext.schedule, newEvent],
+            };
+        });
         onSave(event);
         onClose(); // Optionally close after save
     };
@@ -53,7 +74,7 @@ export default function EventDrawer({ show, onClose, onSave, categories }) {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3">
                 <h2 className="text-lg font-semibold">Add Event</h2>
-                <button onClick={onClose} className="text-gray-600 hover:text-black hover:bg-gray-200 h-7 w-7 rounded-full text-xl"><XMarkIcon className='h-5 w-5 pl-1.5'/></button>
+                <button onClick={onClose} className="text-gray-600 hover:text-black hover:bg-gray-200 h-7 w-7 rounded-full text-xl"><XMarkIcon className='h-5 w-5 pl-1.5' /></button>
             </div>
 
             {/* Form */}
@@ -207,12 +228,12 @@ export default function EventDrawer({ show, onClose, onSave, categories }) {
                 </div>
 
                 {/* Description */}
-                <div className={`relative border border-gray-300 rounded-md px-3 py-2 shadow-sm focus-within:ring-1 ${"focus-within:ring-purple-600 focus-within:border-purple-600"} opacity-50 bg-white `}>
+                <div className={`relative border border-gray-300 rounded-md px-3 py-2 shadow-sm focus-within:ring-1 focus-within:ring-purple-600 focus-within:border-purple-600 bg-white`}>
                     <label htmlFor="name" className={`label capitalize text-gray-700`}>Description</label>
                     <textarea
                         rows={3}
                         placeholder="Enter description"
-                        className="block w-full border-0 p-0 text-gray-900 placeholder-gray-500 focus:ring-0 text-[1.125rem] mt-[0.188rem]"
+                        className="block w-full border-0 p-0 text-gray-900 focus:ring-0 text-[1.125rem] mt-[0.188rem]"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                     />

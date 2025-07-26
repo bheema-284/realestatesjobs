@@ -1,7 +1,8 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
-  addMonths, addDays
+  addMonths, addDays,
+  format
 } from 'date-fns';
 import Sidebar from '@/components/calendar/sidebar';
 import CalendarHeader from '@/components/calendar/calendarheader';
@@ -10,6 +11,7 @@ import WeekView from '@/components/calendar/weekview';
 import DayView from '@/components/calendar/dayview';
 import ListView from '@/components/calendar/listview';
 import EventDrawer from '@/components/calendar/eventdrawer';
+import RootContext from '@/components/config/rootcontext';
 
 const categories = ['View all', 'Personal', 'Family', 'Business', 'Holiday', 'ETC'];
 
@@ -22,38 +24,16 @@ const categoryColors = {
   ETC: '#38bdf8',
 };
 
-const dummyEvents = [
-  { title: 'Property Listing Review', date: '2025-07-05', category: 'Business' },
-  { title: 'Client Site Visit - Downtown Flats', date: '2025-07-06', category: 'Personal' },
-  { title: 'Photography Session - Villa Bella', date: '2025-07-07', category: 'Business' },
-  { title: 'Design Brochure for Metro Heights', date: '2025-07-08', category: 'ETC' },
-  { title: 'Team Meeting: Sales Strategy', date: '2025-07-09', category: 'Business' },
-  { title: 'Client Call - NRI Investment Inquiry', date: '2025-07-10', category: 'Family' },
-  { title: 'Office Holiday - Real Estate Summit', date: '2025-07-11', category: 'Holiday' },
-  { title: 'Follow Up - Landlord Agreement', date: '2025-07-12', category: 'Business' },
-  { title: 'Marketing Campaign Launch', date: '2025-07-13', category: 'ETC' },
-  { title: 'Open House - Green View Apartments', date: '2025-07-14', category: 'Business' },
-  { title: 'Lunch with Partner Broker', date: '2025-07-15', category: 'Personal' },
-  { title: 'Client Visit - Commercial Complex', date: '2025-07-16', category: 'Business' },
-  { title: 'Budget Planning for Next Quarter', date: '2025-07-17', category: 'Business' },
-  { title: 'Listing Update - New Launches', date: '2025-07-18', category: 'Business' },
-  { title: 'Team Outing - Beach Resort', date: '2025-07-19', category: 'Holiday' },
-  { title: 'Prepare Legal Documents', date: '2025-07-20', category: 'ETC' },
-  { title: 'Final Walkthrough - Riverside Homes', date: '2025-07-21', category: 'Personal' },
-  { title: 'Social Media Ad Boost', date: '2025-07-22', category: 'Business' },
-  { title: 'Investor Call - Land Deal', date: '2025-07-23', category: 'Business' },
-  { title: 'Meet Architect - Skyline Towers', date: '2025-07-24', category: 'Business' }
-];
-
-
 export default function Calendar() {
   const [view, setView] = useState('month');
-  const [currentDate, setCurrentDate] = useState(new Date('2025-07-18'));
-  const [events, setEvents] = useState(dummyEvents);
+  const { rootContext, setRootContext } = useContext(RootContext);
+  const myDate = new Date(); // This would be today's date and time
+  const formattedDate = format(myDate, 'yyyy-MM-dd'); // Result: "2025-07-26" (for today)
+  const [currentDate, setCurrentDate] = useState(new Date(formattedDate));
+  const [events, setEvents] = useState(rootContext.schedule);
   const [filters, setFilters] = useState(categories);
   const [showDrawer, setShowDrawer] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // NEW
-
+  const [sidebarOpen, setSidebarOpen] = useState(false); // NEW 
   const filteredEvents = events.filter(evt => filters.includes(evt.category));
 
   const nav = (dir, viewMode) => {

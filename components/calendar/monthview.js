@@ -1,7 +1,7 @@
 // MonthView.jsx
 import React, { useState, useRef } from 'react';
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, format, isToday } from 'date-fns';
-import EventPopup from './eventpopup'; // This will be your popover component
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, format, isToday, isWithinInterval, parseISO } from 'date-fns'; // Added parseISO
+import EventPopup from './eventpopup';
 
 export default function MonthView({ date, events, categoryColors }) {
   const [showPopup, setShowPopup] = useState(false);
@@ -14,21 +14,18 @@ export default function MonthView({ date, events, categoryColors }) {
   const startDate = startOfWeek(monthStart, { weekStartsOn: 0 }); // Sunday is 0
   const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 }); // Sunday is 0
 
-  const calendarRef = useRef(null); // Ref to the main calendar container
+  const calendarRef = useRef(null);
 
-  // No longer need dayRefs for getting the clicked element's position
-  // const dayRefs = useRef({}); // We can remove this line if it's not used elsewhere
-
-  const openPopup = (clickedElement, dayDate, eventsForDay) => { // Renamed dayNode to clickedElement for clarity
+  const openPopup = (clickedElement, dayDate, eventsForDay) => {
     if (!clickedElement || !calendarRef.current) return;
 
-    const dayRect = clickedElement.getBoundingClientRect(); // Use clickedElement directly
+    const dayRect = clickedElement.getBoundingClientRect();
     const calendarRect = calendarRef.current.getBoundingClientRect();
 
-    const popupWidth = 280; // Estimate or get from EventPopup.jsx (adjust as needed)
-    const popupHeight = Math.min(eventsForDay.length * 30 + 100, 300); // Dynamic height estimate, capped at 300
-    const horizontalOffset = 10; // Pixels offset from the day box horizontally
-    const verticalOffset = 10;   // Pixels offset from the day box vertically
+    const popupWidth = 280;
+    const popupHeight = Math.min(eventsForDay.length * 30 + 100, 300);
+    const horizontalOffset = 10;
+    const verticalOffset = 10;
 
     let top = dayRect.top - calendarRect.top;
     let left = dayRect.left - calendarRect.left;
@@ -44,7 +41,7 @@ export default function MonthView({ date, events, categoryColors }) {
     }
 
     // --- Vertical Positioning (Prefer aligning top, fallback to aligning bottom) ---
-    let calculatedTop = top; // Align with the top of the day cell
+    let calculatedTop = top;
 
     if (calculatedTop + popupHeight > calendarRect.height) {
       calculatedTop = (dayRect.bottom - calendarRect.top) - popupHeight - verticalOffset;
@@ -73,7 +70,13 @@ export default function MonthView({ date, events, categoryColors }) {
   while (day <= endDate) {
     for (let i = 0; i < 7; i++) {
       const formattedDate = format(day, 'yyyy-MM-dd');
-      const dayEvents = events.filter(event => event.date === formattedDate);
+      // Filter events that either start on this day OR span across this day
+      const dayEvents = events.filter(event => {
+        const eventStartDate = parseISO(event.startDate);
+        const eventEndDate = event.endDate ? parseISO(event.endDate) : eventStartDate;
+        return isWithinInterval(day, { start: eventStartDate, end: eventEndDate });
+      });
+
       const isCurrentMonth = isSameMonth(day, monthStart);
       const isTodayDate = isToday(day);
 
@@ -82,17 +85,15 @@ export default function MonthView({ date, events, categoryColors }) {
 
       days.push(
         <div
-          // Removed `ref={el => (dayRefs.current[formattedDate] = el)}` as it's no longer strictly needed for this
           className={`border border-gray-200 p-1 h-28 text-xs align-top relative flex flex-col ${!isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'}
-                    ${isTodayDate ? 'border-yellow-500 ring-1 ring-yellow-500' : ''}
+                     ${isTodayDate ? 'border-yellow-500 ring-1 ring-yellow-500' : ''}
                     `}
           key={formattedDate}
-          onClick={(e) => { // Pass the event object directly
-            // Close if same day is clicked, otherwise open
+          onClick={(e) => {
             if (popupDate === format(day, 'PPP') && showPopup) {
               closePopup();
             } else {
-              openPopup(e.currentTarget, day, dayEvents); // Use e.currentTarget
+              openPopup(e.currentTarget, day, dayEvents);
             }
           }}
         >
@@ -100,23 +101,37 @@ export default function MonthView({ date, events, categoryColors }) {
             {format(day, 'd')}
           </div>
           <div className="space-y-1 mt-1 overflow-hidden flex-grow">
-            {displayEvents.map((event, idx) => (
-              <div
-                key={idx}
-                style={{
-                  backgroundColor: hexToRgba(categoryColors[event.category], 0.1),
-                  color: categoryColors[event.category]
-                }}
-                className={`truncate rounded px-1 py-0.5 text-sm`}
-              >
-                {event.title}
-              </div>
-            ))}
+            {displayEvents.map((event, idx) => {
+              const eventStartDate = parseISO(event.startDate);
+              const eventEndDate = event.endDate ? parseISO(event.endDate) : eventStartDate;
+              let eventDisplayTitle = event.title;
+
+              // If the event spans multiple days
+              if (!isSameMonth(eventStartDate, eventEndDate) || !isSameMonth(eventEndDate, eventStartDate)) {
+                // If event starts and ends on different days
+                if (format(eventStartDate, 'd') !== format(eventEndDate, 'd')) {
+                  eventDisplayTitle = `${format(eventStartDate, 'd')}-${format(eventEndDate, 'd')} ${event.title}`;
+                }
+              }
+
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    backgroundColor: hexToRgba(categoryColors[event.category], 0.1),
+                    color: categoryColors[event.category]
+                  }}
+                  className={`truncate rounded px-1 py-0.5 text-sm`}
+                >
+                  {eventDisplayTitle}
+                </div>
+              );
+            })}
             {remainingEventsCount > 0 && (
               <button
                 onClick={(e) => {
-                  e.stopPropagation(); // Prevent opening popup from parent day click
-                  openPopup(e.currentTarget.closest('.border.border-gray-200'), day, dayEvents); // Get the day cell
+                  e.stopPropagation();
+                  openPopup(e.currentTarget.closest('.border.border-gray-200'), day, dayEvents);
                 }}
                 className="w-full text-center hover:bg-gray-200 text-sm text-gray-600 hover:text-gray-800 focus:outline-none mt-0.5"
               >

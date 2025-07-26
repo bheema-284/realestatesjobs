@@ -12,7 +12,7 @@ import RootContext from "../components/config/rootcontext";
 import { Popover } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays } from "date-fns";
+import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays, parseISO, isWithinInterval } from "date-fns";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import TaskModal from "./createtasks";
 
@@ -32,83 +32,58 @@ const Dashboard = () => {
     const displayScheduleDateDate = (normalizedSelectScheduleDate.getTime() === today.getTime())
         ? "Today"
         : format(selectScheduleDate, "dd MMM yyyy");
-
-    const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
-    const generateRandomSchedule = (date) => {
-        const departments = ["Marketing", "Human Resources", "Customer Support", "Finance", "Product Development", "Sales", "IT"];
-        const marketingTitles = ["Market Trend Analysis", "Competitor Review", "Campaign Brainstorm", "SEO Workshop"];
-        const hrTitles = ["Recruitment Strategy", "Onboarding Session", "Employee Engagement Talk", "Performance Review Guidelines"];
-        const csTitles = ["Service Improvement", "Troubleshooting Session", "FAQ Update", "Customer Retention Ideas"];
-        const financeTitles = ["Budget Review", "Expense Reconciliation", "Investment Planning", "Quarterly Projections"];
-        const productTitles = ["Feature Ideation", "Roadmap Discussion", "Bug Prioritization", "User Testing Feedback"];
-        const salesTitles = ["Client Outreach Strategy", "Pipeline Review", "Negotiation Skills Workshop", "Sales Target Discussion"];
-        const itTitles = ["System Maintenance Plan", "Security Audit", "Software Update Review", "Network Optimization"];
-
-        const colors = [
-            "bg-lime-200 text-lime-900", "bg-lime-100 text-lime-800",
-            "bg-indigo-100 text-indigo-800", "bg-indigo-200 text-indigo-900",
-            "bg-teal-100 text-teal-800", "bg-purple-100 text-purple-800",
-            "bg-red-100 text-red-800", "bg-blue-100 text-blue-800"
-        ];
-
-        const possibleTimes = ["9:00 AM", "10:30 AM", "11:00 AM", "1:00 PM", "2:30 PM", "3:00 PM", "4:00 PM", "5:30 PM"];
-
-        const numEvents = Math.floor(Math.random() * 4) + 2; // Generate between 2 and 5 events
-
-        const newSchedule = [];
-        for (let i = 0; i < numEvents; i++) {
-            const dept = getRandomElement(departments);
-            let title = "";
-
-            switch (dept) {
-                case "Marketing":
-                    title = getRandomElement(marketingTitles);
-                    break;
-                case "Human Resources":
-                    title = getRandomElement(hrTitles);
-                    break;
-                case "Customer Support":
-                    title = getRandomElement(csTitles);
-                    break;
-                case "Finance":
-                    title = getRandomElement(financeTitles);
-                    break;
-                case "Product Development":
-                    title = getRandomElement(productTitles);
-                    break;
-                case "Sales":
-                    title = getRandomElement(salesTitles);
-                    break;
-                case "IT":
-                    title = getRandomElement(itTitles);
-                    break;
-                default:
-                    title = "General Meeting";
-            }
-
-            newSchedule.push({
-                time: getRandomElement(possibleTimes),
-                title: title,
-                dept: dept,
-                color: getRandomElement(colors),
-                date: date.toDateString() // Add the date to the entry for clarity
-            });
-        }
-
-        // Sort schedule by time for better readability
-        newSchedule.sort((a, b) => new Date(`2000/01/01 ${a.time}`) - new Date(`2000/01/01 ${b.time}`));
-
-        return newSchedule;
+    const categoryColors = {
+        Personal: 'bg-red-600',
+        Business: 'bg-rose-600',
+        Family: 'bg-yellow-400',
+        Holiday: 'bg-green-400',
+        ETC: 'bg-sky-400',
     };
+    const scheduleData = rootContext.schedule || [
+        { title: 'Property Listing Review', date: '2025-07-05', category: 'Business' },
+        { title: 'Client Site Visit - Downtown Flats', date: '2025-07-06', category: 'Personal' },
+        { title: 'Photography Session - Villa Bella', date: '2025-07-07', category: 'Business' },
+        { title: 'Design Brochure for Metro Heights', date: '2025-07-08', category: 'ETC' },
+        { title: 'Team Meeting: Sales Strategy', date: '2025-07-09', category: 'Business' },
+        { title: 'Client Call - NRI Investment Inquiry', date: '2025-07-10', category: 'Family' },
+        { title: 'Office Holiday - Real Estate Summit', date: '2025-07-11', category: 'Holiday' },
+        { title: 'Follow Up - Landlord Agreement', date: '2025-07-12', category: 'Business' },
+        { title: 'Marketing Campaign Launch', date: '2025-07-13', category: 'ETC' },
+        { title: 'Open House - Green View Apartments', date: '2025-07-14', category: 'Business' },
+        { title: 'Lunch with Partner Broker', date: '2025-07-15', category: 'Personal' },
+        { title: 'Client Visit - Commercial Complex', date: '2025-07-16', category: 'Business' },
+        { title: 'Budget Planning for Next Quarter', date: '2025-07-09', category: 'Business' },
+        { title: 'Listing Update - New Launches', date: '2025-07-09', category: 'Business' },
+        { title: 'Team Outing - Beach Resort', date: '2025-07-09', category: 'Holiday' },
+        { title: 'Prepare Legal Documents', date: '2025-07-20', category: 'ETC' },
+        { title: 'Final Walkthrough - Riverside Homes', date: '2025-07-21', category: 'Personal' },
+        { title: 'Social Media Ad Boost', date: '2025-07-22', category: 'Business' },
+        { title: 'Investor Call - Land Deal', date: '2025-07-23', category: 'Business' },
+        { title: 'Meet Architect - Skyline Towers', date: '2025-07-24', category: 'Business' }
+    ];
 
-    const [scheduleData, setScheduleData] = useState(() =>
-        generateRandomSchedule(selectScheduleDate)
-    );
 
-    useEffect(() => {
-        setScheduleData(generateRandomSchedule(selectScheduleDate));
-    }, [selectScheduleDate]);
+    const filteredData = useMemo(() => {
+        return scheduleData
+            .filter(item => {
+                const eventStartDate = parseISO(item.startDate);
+                // If endDate is not provided, treat it as a single-day event
+                const eventEndDate = item.endDate ? parseISO(item.endDate) : eventStartDate;
+
+                // Check if selectScheduleDate is within the event's start and end date (inclusive)
+                return isWithinInterval(selectScheduleDate, { start: eventStartDate, end: eventEndDate });
+            })
+            .map(item => ({
+                ...item,
+                // You might want to adjust how 'time' is handled for multi-day events
+                // If it's an all-day event, 'time' should probably be null or undefined
+                time: item.time ? format(parseISO(`2000-01-01T${item.time}`), 'hh:mm a') : undefined,
+                // original 'item.time' is a string like "HH:mm" (e.g., "10:00")
+                // To format it, we need a full Date object. Using a dummy date '2000-01-01T' works.
+                dept: item.category,
+                color: categoryColors[item.category] || 'bg-gray-400'
+            }));
+    }, [selectScheduleDate, scheduleData, categoryColors]); // Add scheduleData and categoryColors to dependencies
 
     const formatDateRange = () => {
         const endDate = new Date(); // today
@@ -639,35 +614,11 @@ const Dashboard = () => {
 
 
     const tailwindBgToHex = {
-        // Lime colors
-        "bg-lime-200": "#e6ee9c", // Official hex for lime-200
-        "text-lime-900": "#827717", // Official hex for text-lime-900
-
-        "bg-lime-100": "#f0f4c3", // Official hex for lime-100
-        "text-lime-800": "#9e9d24", // Official hex for text-lime-800
-
-        // Indigo colors
-        "bg-indigo-100": "#e0e7ff", // Official hex for indigo-100
-        "text-indigo-800": "#3730a3", // Official hex for text-indigo-800
-
-        "bg-indigo-200": "#c7d2fe", // Official hex for indigo-200
-        "text-indigo-900": "#312e81", // Official hex for text-indigo-900
-
-        // Teal colors
-        "bg-teal-100": "#b2dfdb", // Official hex for teal-100
-        "text-teal-800": "#00695c", // Official hex for text-teal-800
-
-        // Purple colors
-        "bg-purple-100": "#e1bee7", // Official hex for purple-100
-        "text-purple-800": "#6a1b9a", // Official hex for text-purple-800
-
-        // Red colors
-        "bg-red-100": "#ffcdd2", // Official hex for red-100
-        "text-red-800": "#c62828", // Official hex for text-red-800
-
-        // Blue colors
-        "bg-blue-100": "#bbdefb", // Official hex for blue-100
-        "text-blue-800": "#1565c0", // Official hex for text-blue-800
+        'bg-red-600': '#dc2626',
+        'bg-rose-600': '#e0193a',
+        'bg-yellow-400': '#facc15',
+        'bg-green-400': '#4ade80',
+        'bg-sky-400': '#38bdf8',
     };
 
     return (
@@ -1072,19 +1023,18 @@ const Dashboard = () => {
                             <Popover className="relative">
                                 {({ open, close }) => (
                                     <>
-                                        <Popover.Button className="w-26 h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px]">
+                                        <Popover.Button className="w-32 h-6 bg-gray-200 text-gray-500 px-2 rounded flex items-center justify-between text-[9px]">
                                             <CalendarIcon className="w-4 h-4" />
-                                            <span className="font-semibold">{displayScheduleDateDate}</span>
+                                            <span className="font-semibold text-[10px]">{displayScheduleDateDate}</span>
                                             <ChevronDownIcon className="w-4 h-4" />
                                         </Popover.Button>
-
                                         <Popover.Panel className="absolute z-30 mt-2 right-0">
                                             <div className="bg-white p-2 rounded shadow-lg">
                                                 <DatePicker
                                                     selected={selectScheduleDate}
                                                     onChange={(date) => {
                                                         setSelectScheduleDate(date);
-                                                        close(); // 🔒 Close the popover after date is selected
+                                                        close(); // close popover
                                                     }}
                                                     inline
                                                 />
@@ -1094,53 +1044,40 @@ const Dashboard = () => {
                                 )}
                             </Popover>
                         </div>
-                        <div className="relative h-[300px] overflow-y-auto"> {/* Main container for the timeline */}
-                            {scheduleData.map((item, index) => {
-                                const bgColorClassMatch = item.color.match(/bg-[a-z]+-[0-9]+/);
-                                const bgColorClass = bgColorClassMatch ? bgColorClassMatch[0] : '';
-                                const borderColorHex = tailwindBgToHex[bgColorClass] || 'gray';
 
-                                return (
-                                    <div key={index} className="flex items-start gap-4 relative mt-2">
-                                        <div className="w-[18%] text-xs font-medium text-gray-500">{item.time}</div>
+                        <div className="relative h-[300px] overflow-y-auto">
+                            {filteredData.length === 0 ? (
+                                <p className="text-center text-xs text-gray-400">No events for this day.</p>
+                            ) : (
+                                filteredData.map((item, index) => {
+                                    const bgColorClass = item.color;
+                                    const borderColorHex = tailwindBgToHex[bgColorClass] || 'gray';
 
-                                        {/* Dot and Line Column */}
-                                        <div className="flex flex-col items-center relative">
-                                            {/* The dot */}
-                                            <span className={`w-3 h-3 rounded-full ${item.color.split(' ')[0]} z-10`} />
+                                    return (
+                                        <div key={index} className="flex items-start gap-4 relative mt-2">
+                                            <div className="w-[18%] text-xs font-medium text-gray-500">{item.time}</div>
 
-                                            {/* Vertical line: Only for items that are *not* the last one */}
-                                            {index < scheduleData.length - 1 && (
+                                            <div className="flex flex-col items-center relative">
+                                                <span className={`w-3 h-3 rounded-full ${bgColorClass} z-10`} />
+
                                                 <div
                                                     className="absolute left-1/2 transform -translate-x-1/2 w-px border-l-2 border-dashed"
                                                     style={{
                                                         borderColor: borderColorHex,
                                                         top: '6px',
-                                                        height: `calc(100% + 4.3rem)`, // Connects to the top of the next item's container
+                                                        height: index === filteredData.length - 1 ? '3rem' : '4.3rem'
                                                     }}
                                                 />
-                                            )}
-                                            {index === scheduleData.length - 1 && (
-                                                <div
-                                                    className="absolute left-1/2 transform -translate-x-1/2 w-px border-l-2 border-dashed"
-                                                    style={{
-                                                        borderColor: borderColorHex,
-                                                        top: '6px',
-                                                        height: '3rem', // A fixed length for the last line to trail off
-                                                    }}
-                                                />
-                                            )}
-                                        </div>
+                                            </div>
 
-                                        {/* Content Box */}
-                                        {/* The height of this box largely dictates how long the line needs to be */}
-                                        <div className={`w-[75%] flex flex-col gap-1 p-2 rounded-xl ${item.color}`}>
-                                            <span className="text-xs font-semibold text-gray-900">{item.title}</span>
-                                            <span className="text-xs text-gray-700">{item.dept}</span>
+                                            <div className="w-[75%] flex flex-col gap-1 p-2 rounded-xl bg-gray-100">
+                                                <span className="text-xs font-semibold text-gray-900">{item.title}</span>
+                                                <span className="text-xs text-gray-600">{item.dept}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })
+                            )}
                         </div>
                     </div>
                 </div>

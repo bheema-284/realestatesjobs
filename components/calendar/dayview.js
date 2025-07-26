@@ -1,6 +1,6 @@
 // DayView.jsx
 import React from 'react';
-import { format, startOfDay, addHours, isSameHour, parseISO } from 'date-fns';
+import { format, startOfDay, addHours, isSameHour, parseISO, isWithinInterval, parse } from 'date-fns';
 
 // Helper function to convert hex to RGBA for consistency
 const hexToRgba = (hex, alpha = 1) => {
@@ -20,12 +20,25 @@ const hexToRgba = (hex, alpha = 1) => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-export default function DayView({ date, events, categoryColors }) { // Added categoryColors prop
-    const dayStr = format(date, 'yyyy-MM-dd');
-    const todayEvents = events.filter(e => e.date === dayStr);
+export default function DayView({ date, events, categoryColors }) {
+    const currentDayStart = startOfDay(date);
+    // Define the end of the current day for interval checking
+    const currentDayEnd = addHours(currentDayStart, 23); // Roughly end of the day
 
-    // Filter all-day events
-    const allDayEvents = todayEvents.filter(event => !event.time);
+    // Filter events that span or occur on the current day
+    const relevantEvents = events.filter(e => {
+        const eventStartDate = parse(e.startDate, 'yyyy-MM-dd', new Date());
+        // If endDate is not provided, assume it's a single-day event ending on startDate
+        const eventEndDate = e.endDate ? parse(e.endDate, 'yyyy-MM-dd', new Date()) : eventStartDate;
+
+        // Check if the current day falls within the event's start and end dates (inclusive)
+        return isWithinInterval(currentDayStart, { start: startOfDay(eventStartDate), end: startOfDay(eventEndDate) });
+    });
+
+    // Separate all-day and timed events from the relevant events
+    const allDayEvents = relevantEvents.filter(event => !event.time);
+    const timedEvents = relevantEvents.filter(event => event.time);
+
 
     // Generate time slots from 6 AM to 11 PM
     const timeSlots = [];
@@ -38,9 +51,9 @@ export default function DayView({ date, events, categoryColors }) { // Added cat
 
     return (
         <div className="border border-gray-200 rounded overflow-hidden shadow-sm bg-white">
-            {/* Date Header - Already present in the design implicitly above the time grid */}
+            {/* Date Header */}
             <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
-                 <h3 className="text-md font-semibold text-gray-800">
+                <h3 className="text-md font-semibold text-gray-800">
                     {format(date, 'MMMM d, yyyy')}
                 </h3>
                 <span className="text-sm text-gray-600">
@@ -49,7 +62,7 @@ export default function DayView({ date, events, categoryColors }) { // Added cat
             </div>
 
             {/* Main Day View Grid */}
-            <div className="grid grid-cols-[80px_1fr] divide-x divide-gray-200"> {/* Fixed width for time column */}
+            <div className="grid grid-cols-[80px_1fr] divide-x divide-gray-200">
                 {/* All-Day Row */}
                 <div className="col-span-2 border-b border-gray-200">
                     <div className="grid grid-cols-[80px_1fr] divide-x divide-gray-200 min-h-[40px] items-center">
@@ -77,8 +90,10 @@ export default function DayView({ date, events, categoryColors }) { // Added cat
 
                 {/* Time Slots */}
                 {timeSlots.map((slot, index) => {
-                    const slotEvents = todayEvents.filter(event =>
-                        event.time && isSameHour(parseISO(`${dayStr}T${event.time}:00`), slot)
+                    const slotEvents = timedEvents.filter(event =>
+                        // Ensure the event's start date matches the current day AND it falls into this specific hour slot
+                        format(parse(event.startDate, 'yyyy-MM-dd', new Date()), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd') &&
+                        isSameHour(parseISO(`${event.startDate}T${event.time}:00`), slot)
                     );
 
                     return (

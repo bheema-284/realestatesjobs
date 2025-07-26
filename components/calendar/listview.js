@@ -1,8 +1,8 @@
 // ListView.jsx
 import React from 'react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, eachDayOfInterval } from 'date-fns'; // Import eachDayOfInterval
 
-// Helper function to convert hex to RGBA for consistency (optional, but good practice)
+// Helper function to convert hex to RGBA for consistency
 const hexToRgba = (hex, alpha = 1) => {
     let r = 0, g = 0, b = 0;
     if (hex.startsWith('#')) {
@@ -20,14 +20,37 @@ const hexToRgba = (hex, alpha = 1) => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+export default function ListView({ events, categoryColors }) {
+    // Use a temporary array to store all event instances (including expanded multi-day ones)
+    const allEventsForDisplay = [];
 
-export default function ListView({ events, categoryColors }) { // Added categoryColors prop
-    // Group events by date
-    const eventsByDate = events.reduce((acc, event) => {
-        const dateKey = event.date; // event.date is already 'yyyy-MM-dd'
+    events.forEach(event => {
+        // Parse start and end dates for date-fns operations
+        const startDate = parseISO(event.startDate);
+        // If no endDate, it's a single-day event, so endDate is the same as startDate
+        const endDate = event.endDate ? parseISO(event.endDate) : startDate;
+
+        // Get all days within the event's interval
+        const daysInEvent = eachDayOfInterval({ start: startDate, end: endDate });
+
+        daysInEvent.forEach(day => {
+            // Create a "display" event object for each day it spans
+            // We pass the original event details along, but associate it with 'day'
+            allEventsForDisplay.push({
+                ...event,
+                displayDate: format(day, 'yyyy-MM-dd'), // The date this instance should be displayed under
+                isMultiDay: event.endDate && event.startDate !== event.endDate, // Flag for styling/info if needed
+            });
+        });
+    });
+
+    // Group the expanded events by their displayDate
+    const eventsByDate = allEventsForDisplay.reduce((acc, event) => {
+        const dateKey = event.displayDate;
         if (!acc[dateKey]) {
             acc[dateKey] = [];
         }
+        // Sort events within each day: all-day first, then by time
         acc[dateKey].push(event);
         return acc;
     }, {});
@@ -37,8 +60,28 @@ export default function ListView({ events, categoryColors }) { // Added category
         parseISO(a).getTime() - parseISO(b).getTime()
     );
 
+    // Sort events within each day: all-day first, then by time
+    // This sorting happens AFTER grouping for better control
+    sortedDates.forEach(dateKey => {
+        eventsByDate[dateKey].sort((a, b) => {
+            // Prioritize all-day events
+            if (!a.time && b.time) return -1;
+            if (a.time && !b.time) return 1;
+
+            // Then sort by time if both have times
+            if (a.time && b.time) {
+                const timeA = parseISO(`2000-01-01T${a.time}:00`); // Use a dummy date for time comparison
+                const timeB = parseISO(`2000-01-01T${b.time}:00`);
+                return timeA.getTime() - timeB.getTime();
+            }
+
+            // Otherwise, maintain original order (e.g., if both are all-day)
+            return 0;
+        });
+    });
+
     return (
-        <div className="space-y-4"> {/* Increased space between date groups */}
+        <div className="space-y-4">
             {sortedDates.length === 0 ? (
                 <p className="text-sm text-gray-500">No upcoming events.</p>
             ) : (
@@ -50,16 +93,16 @@ export default function ListView({ events, categoryColors }) { // Added category
                                 {format(parseISO(dateKey), 'MMMM d, yyyy')}
                             </h3>
                             <span className="text-sm text-gray-600">
-                                {format(parseISO(dateKey), 'EEEE')} {/* Day of the week */}
+                                {format(parseISO(dateKey), 'EEEE')}
                             </span>
                         </div>
 
                         {/* Events for the day */}
                         <div>
                             {eventsByDate[dateKey].map((event, idx) => (
-                                <div key={idx} className="flex items-center border-b border-gray-100 last:border-b-0 px-4 py-3">
+                                <div key={`${event.title}-${event.startDate}-${idx}`} className="flex items-center border-b border-gray-100 last:border-b-0 px-4 py-3">
                                     <div className="text-gray-600 text-sm w-20 flex-shrink-0">
-                                        {event.time || 'all-day'} {/* Display time if available, otherwise 'all-day' */}
+                                        {event.time ? format(parseISO(`2000-01-01T${event.time}:00`), 'h:mm a') : 'all-day'}
                                     </div>
                                     <div className="flex items-center flex-grow ml-4">
                                         {/* Colored Dot */}
@@ -67,7 +110,14 @@ export default function ListView({ events, categoryColors }) { // Added category
                                             className="w-2 h-2 rounded-full mr-2"
                                             style={{ backgroundColor: categoryColors[event.category] }}
                                         ></div>
-                                        <p className="text-gray-800 text-sm font-medium">{event.title}</p>
+                                        <p className="text-gray-800 text-sm font-medium">
+                                            {event.title}
+                                            {event.isMultiDay && (
+                                                <span className="ml-2 text-xs text-gray-500">
+                                                    ({format(parseISO(event.startDate), 'MMM d')} - {format(parseISO(event.endDate), 'MMM d')})
+                                                </span>
+                                            )}
+                                        </p>
                                     </div>
                                 </div>
                             ))}

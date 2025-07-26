@@ -356,5 +356,27 @@ export const contextObject = {
         { percent: 30, title: "Candidate Communication", stage: "Relationship", date: "May 23, 2027" },
         { percent: 50, title: "Offer Management", stage: "Selection", date: "May 25, 2027" },
     ],
-    searchQuery: ""
+    searchQuery: "",
+    schedule: [
+        { title: 'Property Listing Review', startDate: '2025-07-05', endDate: '2025-07-05', category: 'Business' },
+        { title: 'Client Site Visit - Downtown Flats', startDate: '2025-07-06', endDate: '2025-07-06', category: 'Personal' },
+        { title: 'Photography Session - Villa Bella', startDate: '2025-07-07', endDate: '2025-07-07', category: 'Business' },
+        { title: 'Design Brochure for Metro Heights', startDate: '2025-07-08', endDate: '2025-07-08', category: 'ETC' },
+        { title: 'Team Meeting: Sales Strategy', startDate: '2025-07-09', endDate: '2025-07-09', category: 'Business' },
+        { title: 'Client Call - NRI Investment Inquiry', startDate: '2025-07-10', endDate: '2025-07-10', category: 'Family' },
+        { title: 'Office Holiday - Real Estate Summit', startDate: '2025-07-11', endDate: '2025-07-11', category: 'Holiday' },
+        { title: 'Follow Up - Landlord Agreement', startDate: '2025-07-12', endDate: '2025-07-12', category: 'Business' },
+        { title: 'Marketing Campaign Launch', startDate: '2025-07-13', endDate: '2025-07-13', category: 'ETC' },
+        { title: 'Open House - Green View Apartments', startDate: '2025-07-14', endDate: '2025-07-14', category: 'Business' },
+        { title: 'Lunch with Partner Broker', startDate: '2025-07-15', endDate: '2025-07-15', category: 'Personal' },
+        { title: 'Client Visit - Commercial Complex', startDate: '2025-07-16', endDate: '2025-07-16', category: 'Business' },
+        { title: 'Budget Planning for Next Quarter', startDate: '2025-07-09', endDate: '2025-07-09', category: 'Business' },
+        { title: 'Listing Update - New Launches', startDate: '2025-07-09', endDate: '2025-07-09', category: 'Business' },
+        { title: 'Team Outing - Beach Resort', startDate: '2025-07-09', endDate: '2025-07-09', category: 'Holiday' },
+        { title: 'Prepare Legal Documents', startDate: '2025-07-20', endDate: '2025-07-20', category: 'ETC' },
+        { title: 'Final Walkthrough - Riverside Homes', startDate: '2025-07-21', endDate: '2025-07-21', category: 'Personal' },
+        { title: 'Social Media Ad Boost', startDate: '2025-07-22', endDate: '2025-07-22', category: 'Business' },
+        { title: 'Investor Call - Land Deal', startDate: '2025-07-23', endDate: '2025-07-23', category: 'Business' },
+        { title: 'Meet Architect - Skyline Towers', startDate: '2025-07-24', endDate: '2025-07-24', category: 'Business' }
+    ]
 }
