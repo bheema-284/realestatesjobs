@@ -5,7 +5,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import Underline from '@tiptap/extension-underline'; // Make sure this is imported if you want underline functionality
+import Underline from '@tiptap/extension-underline';
 
 import {
   ListBulletIcon,
@@ -36,7 +36,7 @@ const TiptapEditor = forwardRef(({ initialContent, onContentChange, className },
         autolink: true,
       }),
       Image,
-      Underline, // Ensure this is present if you want underline functionality
+      Underline,
     ],
     immediatelyRender: false,
     content: initialContent,
@@ -45,7 +45,7 @@ const TiptapEditor = forwardRef(({ initialContent, onContentChange, className },
       // Also update state on content change to ensure toolbar is always in sync
       setEditorState(prev => prev + 1);
     },
-    // *** Crucial addition for selection-based active state updates ***
+    // Crucial addition for selection-based active state updates
     onSelectionUpdate: () => {
       setEditorState(prev => prev + 1); // Increment state to force re-render of buttons
     },
@@ -88,10 +88,6 @@ const TiptapEditor = forwardRef(({ initialContent, onContentChange, className },
   return (
     <>
       <div className="border border-gray-300 rounded-md rounded-b-none p-2 flex flex-wrap gap-2 bg-gray-50">
-        {/*
-          Your buttons here. They will now re-evaluate their 'isActive' state
-          whenever editorState changes, which is triggered by onSelectionUpdate.
-        */}
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -198,5 +194,8 @@ const TiptapEditor = forwardRef(({ initialContent, onContentChange, className },
     </>
   );
 });
+
+// Add the displayName property here
+TiptapEditor.displayName = 'TiptapEditor';
 
 export default TiptapEditor;
