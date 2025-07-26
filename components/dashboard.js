@@ -12,7 +12,7 @@ import RootContext from "../components/config/rootcontext";
 import { Popover } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays, parseISO, isWithinInterval } from "date-fns";
+import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays, parseISO, isWithinInterval, startOfDay } from "date-fns";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import TaskModal from "./createtasks";
 
@@ -66,24 +66,27 @@ const Dashboard = () => {
     const filteredData = useMemo(() => {
         return scheduleData
             .filter(item => {
-                const eventStartDate = parseISO(item.startDate);
-                // If endDate is not provided, treat it as a single-day event
-                const eventEndDate = item.endDate ? parseISO(item.endDate) : eventStartDate;
+                // Normalize event start and end dates to the beginning of the day
+                const eventStartDate = startOfDay(parseISO(item.startDate));
+                // If endDate is not provided, treat it as a single-day event, normalized to start of day
+                const eventEndDate = item.endDate ? startOfDay(parseISO(item.endDate)) : eventStartDate;
 
-                // Check if selectScheduleDate is within the event's start and end date (inclusive)
-                return isWithinInterval(selectScheduleDate, { start: eventStartDate, end: eventEndDate });
+                // Normalize selectScheduleDate to the beginning of the day for consistent comparison
+                const normalizedSelectDate = startOfDay(selectScheduleDate);
+
+                // Check if normalizedSelectDate is within the event's normalized start and end date (inclusive)
+                // This will correctly filter events where startDate and endDate are the same,
+                // as long as normalizedSelectDate is also that same day.
+                return isWithinInterval(normalizedSelectDate, { start: eventStartDate, end: eventEndDate });
             })
             .map(item => ({
                 ...item,
-                // You might want to adjust how 'time' is handled for multi-day events
-                // If it's an all-day event, 'time' should probably be null or undefined
+                // Format time only if it exists; otherwise, it's an all-day event
                 time: item.time ? format(parseISO(`2000-01-01T${item.time}`), 'hh:mm a') : undefined,
-                // original 'item.time' is a string like "HH:mm" (e.g., "10:00")
-                // To format it, we need a full Date object. Using a dummy date '2000-01-01T' works.
                 dept: item.category,
                 color: categoryColors[item.category] || 'bg-gray-400'
             }));
-    }, [selectScheduleDate, scheduleData, categoryColors]); // Add scheduleData and categoryColors to dependencies
+    }, [selectScheduleDate, scheduleData, categoryColors]); // Ensure all dependencies are listed
 
     const formatDateRange = () => {
         const endDate = new Date(); // today
