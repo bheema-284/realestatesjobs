@@ -46,6 +46,20 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
 
     function closeModal() {
         setIsOpen(false);
+        setJobTitle("")
+        setJobDescription("")
+        setEmploymentTypes([])
+        setWorkingSchedule({
+            dayShift: false,
+            nightShift: false,
+            weekendAvailability: false,
+            custom: '',
+        })
+        setSalaryType("hourly")
+        setSalaryAmount("")
+        setSalaryFrequency("Yearly")
+        setSalaryNegotiable(false)
+        setHiringMultiple(false)
     }
 
     useEffect(() => {
@@ -88,33 +102,51 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        const newJob = {
-            id: editData?.id || `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // use existing `jobId` if updating
-            jobTitle,
-            jobDescription,
-            employmentTypes,
-            workingSchedule,
-            salaryType,
-            salaryAmount,
-            salaryFrequency,
-            salaryNegotiable,
-            hiringMultiple,
-        };
-
         setRootContext((prevContext) => {
-            const existingIndex = prevContext.jobs.findIndex(job => job.id === newJob.id);
+            const existingIndex = prevContext.jobs.findIndex(job => job.id === (editData?.id || ''));
 
             if (existingIndex !== -1) {
-                // Update existing job
+                // Merge with existing job data (preserve untouched fields)
+                const existingJob = prevContext.jobs[existingIndex];
+
+                const updatedJob = {
+                    ...existingJob, // retain other fields like location, postedOn, etc.
+                    jobTitle,
+                    jobDescription,
+                    employmentTypes,
+                    workingSchedule,
+                    salaryType,
+                    salaryAmount,
+                    salaryFrequency,
+                    salaryNegotiable,
+                    hiringMultiple,
+                };
+
                 const updatedJobs = [...prevContext.jobs];
-                updatedJobs[existingIndex] = newJob;
+                updatedJobs[existingIndex] = updatedJob;
 
                 return {
                     ...prevContext,
                     jobs: updatedJobs,
                 };
             } else {
-                // Add new job
+                // New job post
+                const newJob = {
+                    id: `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                    jobTitle,
+                    jobDescription,
+                    employmentTypes,
+                    workingSchedule,
+                    salaryType,
+                    salaryAmount,
+                    salaryFrequency,
+                    salaryNegotiable,
+                    hiringMultiple,
+                    postedOn: new Date().toISOString().split("T")[0], // set postedOn for new
+                    location: "", // or any default
+                    // add more defaults if needed
+                };
+
                 return {
                     ...prevContext,
                     jobs: [...prevContext.jobs, newJob],
@@ -196,25 +228,6 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                             </label>
                                             <div className="w-full md:w-2/3 mt-2 md:mt-0 relative">
                                                 {/* Simplified rich text editor placeholder */}
-                                                {/* <div className="flex justify-between items-center border border-gray-300 rounded-t-md p-2 bg-gray-50 text-gray-600 text-sm">
-                                                    <div className="flex space-x-2">
-                                                        <span className="font-bold">B</span>
-                                                        <span className="italic">I</span>
-                                                        <span className="underline">U</span>
-                                                        <span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2.75 7.5a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75ZM2 10.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10.25ZM2.75 13a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75ZM2 15.75a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 15.75Z" clipRule="evenodd" /></svg></span>
-                                                        <span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M10 2c-1.716 0-3.405.106-5.07.31C3.807 2.511 3 3.407 3 4.42v10.164a3 3 0 0 0 .807 2.022c.638.63 1.543.994 2.493.994H16.5A1.5 1.5 0 0 0 18 16.5V6.75A.75.75 0 0 0 17.25 6H13.5a.75.75 0 0 1-.75-.75V2.75A.75.75 0 0 0 12 2h-2Zm2.25 1.5v-.25a.75.75 0 0 0-.75-.75H10a.75.75 0 0 0-.75.75v.25h3.75Z" clipRule="evenodd" /></svg></span>
-                                                    </div>
-                                                    <span className="text-gray-500">200 words</span>
-                                                </div>
-                                                <textarea
-                                                    id="jobDescription"
-                                                    value={jobDescription}
-                                                    onChange={(e) => setJobDescription(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-b-md focus:ring-blue-500 focus:border-blue-500 text-sm min-h-[120px]"
-                                                    placeholder="Description"
-                                                    required
-                                                /> */}
-
                                                 <DynamicTiptapEditor
                                                     ref={tiptapEditorRef}
                                                     initialContent={jobDescription}

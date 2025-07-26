@@ -248,7 +248,7 @@ export const contextObject = {
         {
             "id": "job-1753249543262-4nto179",
             "jobTitle": "Real Estate Sales",
-            "jobDescription": "Help clients buy dream homes while achieving sales goals.",
+            "jobDescription": "<p><em>Help clients buy dream homes while achieving sales goals.</em></p>",
             "employmentTypes": [
                 "part-time"
             ],
@@ -300,7 +300,7 @@ export const contextObject = {
                 "custom": ""
             },
             "salaryType": "fixed",
-            "salaryAmount": "95,000",
+            "salaryAmount": "25,000",
             "salaryFrequency": "Yearly",
             "hiringMultiple": true,
             "location": "Mumbai",
@@ -355,5 +355,6 @@ export const contextObject = {
         { percent: 60, title: "Interview Scheduling", stage: "Engagement", date: "May 20, 2027" },
         { percent: 30, title: "Candidate Communication", stage: "Relationship", date: "May 23, 2027" },
         { percent: 50, title: "Offer Management", stage: "Selection", date: "May 25, 2027" },
-    ]
+    ],
+    searchQuery: ""
 }

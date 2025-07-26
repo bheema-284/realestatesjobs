@@ -129,7 +129,7 @@ const ApplicationList = () => {
     };
 
     return (
-        <div className="max-w-6xl mx-auto p-4">
+        <div className="w-full mx-auto p-4">
             <div className="mb-4">
                 <select className="bg-blue-500 w-full text-white font-semibold px-4 py-2 rounded text-sm sm:text-base">
                     <option>
