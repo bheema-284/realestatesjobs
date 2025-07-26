@@ -10,13 +10,15 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 export default function Sidebar({ filters, setFilters, onAdd, categoryColors }) {
     const today = new Date();
 
-    const [currentDate, setCurrentDate] = useState(addMonths(today, 1));
-    const [selectedMonth, setSelectedMonth] = useState(getMonth(addMonths(today, 1)));
-    const [selectedYear, setSelectedYear] = useState(getYear(addMonths(today, 1)));
+    const [currentDate, setCurrentDate] = useState(today);
+    const [selectedMonth, setSelectedMonth] = useState(getMonth(today));
+    const [selectedYear, setSelectedYear] = useState(getYear(today));
 
     const updateCalendarDate = (month, year) => {
-        const updated = setMonth(setYear(new Date(), year), month);
-        setCurrentDate(updated);
+        // If year is NaN (e.g., from an empty input), default to the current year from 'today'
+        const effectiveYear = isNaN(year) ? getYear(today) : year;
+        const newDate = setMonth(setYear(new Date(), effectiveYear), month);
+        setCurrentDate(newDate);
     };
 
     const handleMonthChange = (e) => {
@@ -26,10 +28,20 @@ export default function Sidebar({ filters, setFilters, onAdd, categoryColors }) 
     };
 
     const handleYearChange = (e) => {
-        const newYear = parseInt(e.target.value);
-        if (!isNaN(newYear) && newYear >= 1900 && newYear <= 2100) {
-            setSelectedYear(newYear);
-            updateCalendarDate(selectedMonth, newYear);
+        const inputValue = e.target.value; // Get the raw string value
+        if (inputValue === '') {
+            setSelectedYear(''); // Allow empty string for visual clearing
+            // When year is cleared, you might want to revert to today's year for calculations
+            updateCalendarDate(selectedMonth, getYear(today));
+        } else {
+            const newYear = parseInt(inputValue);
+            if (!isNaN(newYear) && newYear >= 1900 && newYear <= 2100) {
+                setSelectedYear(newYear);
+                updateCalendarDate(selectedMonth, newYear);
+            }
+            // Optionally: if the input is not a valid number but not empty,
+            // you might want to keep the old selectedYear or show an error.
+            // For now, it will just not update the state if it's invalid.
         }
     };
 
@@ -83,7 +95,7 @@ export default function Sidebar({ filters, setFilters, onAdd, categoryColors }) 
                         onClick={() => {
                             const newDate = subMonths(currentDate, 1);
                             setSelectedMonth(getMonth(newDate));
-                            setSelectedYear(getYear(newDate));
+                            setSelectedYear(getYear(newDate)); // Keep the actual number
                             setCurrentDate(newDate);
                         }}
                         className="rounded-md bg-gray-200 p-1"
@@ -104,7 +116,7 @@ export default function Sidebar({ filters, setFilters, onAdd, categoryColors }) 
 
                         <input
                             type="number"
-                            value={selectedYear}
+                            value={selectedYear} // This is key: it can now be a number or an empty string
                             onChange={handleYearChange}
                             min="1900"
                             max="2100"
@@ -116,7 +128,7 @@ export default function Sidebar({ filters, setFilters, onAdd, categoryColors }) 
                         onClick={() => {
                             const newDate = addMonths(currentDate, 1);
                             setSelectedMonth(getMonth(newDate));
-                            setSelectedYear(getYear(newDate));
+                            setSelectedYear(getYear(newDate)); // Keep the actual number
                             setCurrentDate(newDate);
                         }}
                         className="rounded-md bg-gray-200 p-1"

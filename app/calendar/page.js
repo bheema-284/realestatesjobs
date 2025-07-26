@@ -61,7 +61,7 @@ export default function Calendar() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row">
+    <div className="flex flex-col md:flex-row max-w-screen">
       {/* Mobile Sidebar Toggle */}
       <div className="md:hidden flex justify-between items-center p-4 border-b">
         <button
@@ -100,7 +100,7 @@ export default function Calendar() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto px-4 py-2 sm:px-6 md:px-8 bg-white">
+      <main className="flex-1 overflow-y-auto bg-white">
         <CalendarHeader
           view={view}
           setView={setView}
