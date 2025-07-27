@@ -767,7 +767,7 @@ const TasksDashboard = () => {
         )}
 
         {activeTab === 'Task board' && (
-          <KanbanBoard tasks={filteredTasks} />
+          <KanbanBoard tasks={filteredTasks} setTasks={setTasks} />
         )}
 
         {activeTab === 'Timesheet' && <TimesheetView />}
