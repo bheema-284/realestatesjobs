@@ -22,6 +22,14 @@ const TaskItem = ({ task, onToggleBookmark, onEditTask, onDeleteTask, onMarkAsDo
         return 'bg-gray-300';
     };
 
+    const dummyCandidates = Array.from({ length: 26 }, (_, i) => {
+        const letter = String.fromCharCode(65 + i); // A-Z
+        return {
+            name: letter,
+            image: `https://i.pravatar.cc/150?u=${letter}`
+        };
+    });
+
     return (
         <div className="flex items-center py-3 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors duration-150 group relative">
             {/* Checkbox */}
@@ -30,7 +38,7 @@ const TaskItem = ({ task, onToggleBookmark, onEditTask, onDeleteTask, onMarkAsDo
             </div>
 
             {/* Priority Icon / Bookmark */}
-            <div className="w-10 flex justify-center relative">
+            <div className="w-10 flex justify-center relative items-center">
                 {!task.bookmarked && (
                     <span className={`transition-opacity duration-200 ${task.bookmarked || 'group-hover:opacity-0'}`}>
                         {task.priority === 'High' && <span className="text-red-500 text-lg">!</span>}
@@ -73,11 +81,29 @@ const TaskItem = ({ task, onToggleBookmark, onEditTask, onDeleteTask, onMarkAsDo
 
             {/* Assigned To */}
             <div className="w-24 flex -space-x-1 overflow-hidden px-2">
-                {task.assignedTo.map((initial, idx) => (
-                    <span key={idx} className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-500 text-white text-xs font-semibold ring-2 ring-white">
-                        {initial}
-                    </span>
-                ))}
+                {task.assignedTo.map((name, idx) => {
+                    const candidate = dummyCandidates.find(
+                        (c) => c.name.toLowerCase() === name.toLowerCase()
+                    );
+
+                    return candidate ? (
+                        <img
+                            key={idx}
+                            className="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover"
+                            src={candidate.image}
+                            alt={candidate.name}
+                            title={candidate.name}
+                        />
+                    ) : (
+                        <span
+                            key={idx}
+                            className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-500 text-white text-xs font-semibold ring-2 ring-white"
+                            title={name}
+                        >
+                            {name[0]}
+                        </span>
+                    );
+                })}
             </div>
 
             {/* Attachments & Comments */}
@@ -87,7 +113,7 @@ const TaskItem = ({ task, onToggleBookmark, onEditTask, onDeleteTask, onMarkAsDo
             </div>
 
             {/* Hover Actions */}
-            <div className="absolute right-0 top-0 bottom-0 flex justify-end items-center space-x-2 pr-4 pl-8 bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
+            <div className="absolute right-0 top-0 bottom-0 flex justify-end items-center space-x-2 bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
                 <Clock className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer" />
                 <CheckCircle className="h-4 w-4 text-gray-400 hover:text-green-600 cursor-pointer" onClick={() => onMarkAsDone(task.id)} />
                 <Edit className="h-4 w-4 text-gray-400 hover:text-blue-600 cursor-pointer" onClick={() => onEditTask(task)} />

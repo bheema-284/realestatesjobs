@@ -356,14 +356,16 @@ export const contextObject = {
             title: 'Marketing strategy',
             priority: 'High',
             status: 'In progress',
-            progress: 70, // Percentage
-            dueDate: '2025-07-28', // Use full date for better sorting/comparison
+            progress: 70,
+            dueDate: '2025-07-28',
             remaining: '00:30',
             overdue: false,
-            assignedTo: ['P', 'B'], // Initials
+            assignedTo: ['P', 'B'],
             attachments: true,
             comments: false,
             bookmarked: false,
+            duration: '02:00',
+            timeSpent: '01:30'
         },
         {
             id: 2,
@@ -378,6 +380,8 @@ export const contextObject = {
             attachments: false,
             comments: true,
             bookmarked: true,
+            duration: '01:00',
+            timeSpent: '01:00'
         },
         {
             id: 3,
@@ -385,13 +389,15 @@ export const contextObject = {
             priority: 'High',
             status: 'Needs attention',
             progress: 40,
-            dueDate: '2024-12-19', // Past date for overdue
+            dueDate: '2024-12-19',
             remaining: '-03:00',
             overdue: true,
             assignedTo: ['B', 'M'],
             attachments: true,
             comments: true,
             bookmarked: false,
+            duration: '05:00',
+            timeSpent: '08:00'
         },
         {
             id: 4,
@@ -406,6 +412,8 @@ export const contextObject = {
             attachments: false,
             comments: false,
             bookmarked: false,
+            duration: '03:00',
+            timeSpent: '00:40'
         },
         {
             id: 5,
@@ -420,6 +428,8 @@ export const contextObject = {
             attachments: false,
             comments: false,
             bookmarked: true,
+            duration: '04:00',
+            timeSpent: '02:40'
         },
         {
             id: 6,
@@ -434,6 +444,8 @@ export const contextObject = {
             attachments: false,
             comments: false,
             bookmarked: false,
+            duration: '01:30',
+            timeSpent: '00:10'
         },
         {
             id: 7,
@@ -448,20 +460,24 @@ export const contextObject = {
             attachments: true,
             comments: false,
             bookmarked: false,
+            duration: '02:30',
+            timeSpent: '01:50'
         },
         {
             id: 8,
             title: 'Sales pitch script & roleplay',
             priority: 'Medium',
             status: 'Needs attention',
-            progress: 50,
-            dueDate: '2024-12-22', // Past date for overdue
+            progress: 100,
+            dueDate: '2024-12-22',
             remaining: '03:35',
             overdue: true,
             assignedTo: ['P', 'M'],
             attachments: false,
             comments: true,
             bookmarked: false,
+            duration: '04:00',
+            timeSpent: '00:25'
         },
         {
             id: 9,
@@ -476,7 +492,9 @@ export const contextObject = {
             attachments: true,
             comments: false,
             bookmarked: true,
-        },
+            duration: '01:30',
+            timeSpent: '01:15'
+        }
     ],
     schedule: [
         {

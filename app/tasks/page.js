@@ -134,14 +134,46 @@ const TasksDashboard = () => {
     }));
   };
 
+
+  function parseTime(timeStr) {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  const formatMinutes = (mins) => {
+    const hours = Math.floor(mins / 60);
+    const minutes = mins % 60;
+    return `${hours}h ${minutes}min`;
+  };
+
+
   // Summary statistics (now based on filtered/sorted tasks)
   const currentTotalTasks = filteredTasks.length;
+  const totalTimeSpent = filteredTasks.reduce((sum, task) => {
+    return sum + parseTime(task.timeSpent);
+  }, 0); // 75 minutes
+
+  const totalDuration = filteredTasks.reduce((sum, task) => {
+    return sum + parseTime(task.duration);
+  }, 0); // 90 minutes
+
+  const totalRemaining = filteredTasks.reduce((sum, task) => {
+    if (task.status === 'Done') return sum;
+    const total = parseTime(task.duration);
+    const spent = parseTime(task.timeSpent);
+    return sum + Math.max(total - spent, 0);
+  }, 0); // 15 minutes
+
+  const totalTodo = filteredTasks.reduce((sum, task) => {
+    return task.status !== 'Done' ? sum + 1 : sum;
+  }, 0);
+
   const currentOverdueTasks = filteredTasks.filter(task => new Date(task.dueDate) < new Date() && task.status !== 'Done').length;
-  // For timeSpent, duration, to-do, remaining, you'd need to parse and sum actual time values
-  const timeSpent = '75h 30min'; // Placeholder
-  const duration = '87h 23min'; // Placeholder
-  const toDo = '00 min'; // Placeholder
-  const remaining = '25h 36min'; // Placeholder
+  const timeSpent = formatMinutes(totalTimeSpent);
+  const duration = formatMinutes(totalDuration);
+  const toDo = `${totalTodo} task${totalTodo !== 1 ? 's' : ''}`;
+  const remaining = formatMinutes(totalRemaining);
+
 
 
   return (
@@ -233,7 +265,7 @@ const TasksDashboard = () => {
           </div>
 
           {/* Summary Statistics */}
-          <div className="bg-white rounded-lg shadow-md p-4 mb-6 grid grid-cols-6 text-center divide-x divide-gray-200">
+          <div className="bg-white rounded-lg shadow-md p-2 mb-6 grid grid-cols-6 text-center divide-x divide-gray-200">
             <div className="px-4">
               <p className="text-sm text-gray-500">Total</p>
               <p className="text-xl font-semibold text-gray-800">{currentTotalTasks}</p>
@@ -275,9 +307,9 @@ const TasksDashboard = () => {
             <KanbanBoard tasks={filteredTasks} />
           )}
 
-          {activeTab === 'Timesheet' && <TimesheetView />}
-          {activeTab === 'Recurring tasks' && <RecurringTasksView />}
-          {activeTab === 'Task bundles' && <TaskBundlesView />}
+          {activeTab === 'Timesheet' && <TimesheetView tasks={filteredTasks} />}
+          {activeTab === 'Recurring tasks' && <RecurringTasksView tasks={filteredTasks} />}
+          {activeTab === 'Task bundles' && <TaskBundlesView tasks={filteredTasks} />}
 
         </div>
       </div>

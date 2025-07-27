@@ -13,11 +13,7 @@ const TaskListView = ({
         <>
             {/* Task List Header Row */}
             <div className="bg-gray-50 rounded-t-lg border-b border-gray-200 py-3 px-4 flex items-center text-xs font-semibold text-gray-600 uppercase">
-                <div className="w-10 flex justify-center">
-                    <input type="checkbox" className="form-checkbox h-4 w-4 text-blue-600 rounded" />
-                </div>
-                <div className="w-10 flex justify-center"></div>
-                <div className="flex-1 px-2">Task</div>
+                <div className="w-32 flex-1 px-2">Task</div>
                 <div className="w-32 px-2">Status</div>
                 <div className="w-32 px-2">Progress</div>
                 <div className="w-28 px-2">Due date</div>
