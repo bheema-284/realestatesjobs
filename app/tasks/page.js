@@ -83,7 +83,7 @@ const TasksDashboard = () => {
   const handleSaveTask = (newTask) => {
     setRootContext((prev) => {
       const updatedTasks = taskToEdit
-        ? prev.tasks.map((item) => (item.id === id ? v : item)) // update existing
+        ? prev.tasks.map((item) => (item.id === taskToEdit.id ? newTask : item)) // update existing
         : [...prev.tasks, newTask]; // add new
 
       return {
