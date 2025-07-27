@@ -33,11 +33,18 @@ const Dashboard = () => {
         ? "Today"
         : format(selectScheduleDate, "dd MMM yyyy");
     const categoryColors = {
-        Personal: 'bg-red-600',
-        Business: 'bg-rose-600',
-        Family: 'bg-yellow-400',
-        Holiday: 'bg-green-400',
-        ETC: 'bg-sky-400',
+        Personal: 'bg-red-100',
+        Business: 'bg-rose-100',
+        Family: 'bg-yellow-100',
+        Holiday: 'bg-green-100',
+        ETC: 'bg-sky-100',
+    };
+    const tailwindBgToHex = {
+        'bg-red-100': '#dc2626',
+        'bg-rose-100': '#e0193a',
+        'bg-yellow-100': '#facc15',
+        'bg-green-100': '#4ade80',
+        'bg-sky-100': '#38bdf8',
     };
     const scheduleData = rootContext.schedule || [
         { title: 'Property Listing Review', date: '2025-07-05', category: 'Business' },
@@ -615,15 +622,6 @@ const Dashboard = () => {
 
     const xAxisDataKey = differenceInCalendarMonths(endDate, startDate) >= 3 ? 'month' : 'date';
 
-
-    const tailwindBgToHex = {
-        'bg-red-600': '#dc2626',
-        'bg-rose-600': '#e0193a',
-        'bg-yellow-400': '#facc15',
-        'bg-green-400': '#4ade80',
-        'bg-sky-400': '#38bdf8',
-    };
-
     return (
         <div className="text-gray-800 font-sans pb-6 space-y-8">
             {/* Main Section */}
@@ -1073,7 +1071,7 @@ const Dashboard = () => {
                                                 />
                                             </div>
 
-                                            <div className="w-[75%] flex flex-col gap-1 p-2 rounded-xl bg-gray-100">
+                                            <div className={`w-[75%] flex flex-col gap-1 p-2 rounded-xl ${bgColorClass}`}>
                                                 <span className="text-xs font-semibold text-gray-900">{item.title}</span>
                                                 <span className="text-xs text-gray-600">{item.dept}</span>
                                             </div>

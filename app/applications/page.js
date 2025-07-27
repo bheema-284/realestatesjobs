@@ -735,6 +735,7 @@ export default function Jobs() {
         name: (
             <div key={index} className="flex flex-wrap items-center gap-2 text-left">
                 <div className="flex flex-col">
+                    <span className="text-sm font-semibold">{job.icon}</span>
                     <span className="text-sm font-semibold">{job.title}</span>
                     <span className="text-xs text-gray-500">{job.description}</span>
                 </div>

@@ -2,18 +2,19 @@
 import React, { useState, useRef } from 'react';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, format, isToday, isWithinInterval, parseISO } from 'date-fns'; // Added parseISO
 import EventPopup from './eventpopup';
+import EventDrawer from './eventdrawer';
 
 export default function MonthView({ date, events, categoryColors }) {
   const [showPopup, setShowPopup] = useState(false);
   const [popupEvents, setPopupEvents] = useState([]);
   const [popupDate, setPopupDate] = useState('');
   const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
-
+  const [editData, setEditDate] = useState({});
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart, { weekStartsOn: 0 }); // Sunday is 0
   const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 }); // Sunday is 0
-
+  const [showDrawer, setShowDrawer] = useState(false);
   const calendarRef = useRef(null);
 
   const openPopup = (clickedElement, dayDate, eventsForDay) => {
@@ -89,13 +90,6 @@ export default function MonthView({ date, events, categoryColors }) {
                      ${isTodayDate ? 'border-yellow-500 ring-1 ring-yellow-500' : ''}
                     `}
           key={formattedDate}
-          onClick={(e) => {
-            if (popupDate === format(day, 'PPP') && showPopup) {
-              closePopup();
-            } else {
-              openPopup(e.currentTarget, day, dayEvents);
-            }
-          }}
         >
           <div className={`font-semibold text-right pr-1 ${isCurrentMonth ? 'text-gray-700' : 'text-gray-400'}`}>
             {format(day, 'd')}
@@ -106,12 +100,8 @@ export default function MonthView({ date, events, categoryColors }) {
               const eventEndDate = event.endDate ? parseISO(event.endDate) : eventStartDate;
               let eventDisplayTitle = event.title;
 
-              // If the event spans multiple days
-              if (!isSameMonth(eventStartDate, eventEndDate) || !isSameMonth(eventEndDate, eventStartDate)) {
-                // If event starts and ends on different days
-                if (format(eventStartDate, 'd') !== format(eventEndDate, 'd')) {
-                  eventDisplayTitle = `${format(eventStartDate, 'd')}-${format(eventEndDate, 'd')} ${event.title}`;
-                }
+              if (!isSameMonth(eventStartDate, eventEndDate) || format(eventStartDate, 'd') !== format(eventEndDate, 'd')) {
+                eventDisplayTitle = `${format(eventStartDate, 'd')}-${format(eventEndDate, 'd')} ${event.title}`;
               }
 
               return (
@@ -121,17 +111,20 @@ export default function MonthView({ date, events, categoryColors }) {
                     backgroundColor: hexToRgba(categoryColors[event.category], 0.1),
                     color: categoryColors[event.category]
                   }}
-                  className={`truncate rounded px-1 py-0.5 text-sm`}
+                  onClick={() => editForm(event)}
+                  className={`truncate rounded px-1 py-0.5 text-sm cursor-pointer`}
                 >
                   {eventDisplayTitle}
                 </div>
               );
             })}
+
+            {/* +X more button at the bottom */}
             {remainingEventsCount > 0 && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  openPopup(e.currentTarget.closest('.border.border-gray-200'), day, dayEvents);
+                  openPopup(e.currentTarget.closest('.border.border-gray-200'), formattedDate, dayEvents);
                 }}
                 className="w-full text-center hover:bg-gray-200 text-sm text-gray-600 hover:text-gray-800 focus:outline-none mt-0.5"
               >
@@ -147,6 +140,12 @@ export default function MonthView({ date, events, categoryColors }) {
     days = [];
   }
 
+  const editForm = (item) => {
+    setEditDate(item)
+    setShowDrawer(true)
+  }
+
+  const categories = ['View all', 'Personal', 'Family', 'Business', 'Holiday', 'ETC'];
   return (
     <div ref={calendarRef} className="border border-gray-200 mt-5 overflow-hidden relative">
       <div className="grid grid-cols-7 bg-gray-100 text-gray-700 font-semibold text-sm border-b border-gray-200">
@@ -163,8 +162,15 @@ export default function MonthView({ date, events, categoryColors }) {
           position={popupPosition}
           onClose={closePopup}
           categoryColors={categoryColors}
+          editForm={editForm}
         />
       )}
+      {showDrawer && <EventDrawer
+        show={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        categories={categories}
+        editData={editData}
+      />}
     </div>
   );
 }

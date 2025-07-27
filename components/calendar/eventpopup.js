@@ -20,7 +20,7 @@ const hexToRgba = (hex, alpha = 1) => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-export default function EventPopup({ date, events, position, onClose, categoryColors }) {
+export default function EventPopup({ date, events, position, onClose, categoryColors, editForm }) {
     const popupRef = useRef(null);
 
     // Click outside to close logic
@@ -53,7 +53,7 @@ export default function EventPopup({ date, events, position, onClose, categoryCo
             </button>
             <h3 className="font-semibold text-gray-800 mb-3">{date}</h3>
             {events.length > 0 ? (
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 cursor-pointer">
                     {events.map((event, index) => (
                         <div
                             key={index}
@@ -61,11 +61,10 @@ export default function EventPopup({ date, events, position, onClose, categoryCo
                                 backgroundColor: hexToRgba(categoryColors[event.category], 0.1),
                                 color: categoryColors[event.category]
                             }}
+                            onClick={() => editForm(event)}
                             className={`rounded px-2 py-1 text-sm`}
                         >
                             <p className="font-medium">{event.title}</p>
-                            {event.time && <p className="text-xs text-opacity-80">{event.time}</p>}
-                            {event.description && <p className="text-xs text-opacity-80 mt-0.5">{event.description}</p>}
                         </div>
                     ))}
                 </div>

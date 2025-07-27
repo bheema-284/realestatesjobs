@@ -48,8 +48,8 @@ export default function WeekView({ date, events, categoryColors }) {
       </div>
 
       {/* All-Day Row */}
-      <div className="grid grid-cols-[80px_repeat(7,1fr)] divide-x divide-gray-200 border-b border-gray-200">
-        <div className="text-right pr-2 text-sm text-gray-600 py-2">All-Day</div>
+      <div className="grid grid-cols-[80px_repeat(7,1fr)] divide-x divide-gray-200 border-b border-gray-200 text-center">
+        <div className="pr-2 text-sm text-gray-600 py-2 text-center">All-Day</div>
         {days.map((day, dayIndex) => {
           const currentDayStart = startOfDay(day);
           const currentDayEnd = addHours(currentDayStart, 23); // Roughly end of the day
@@ -77,7 +77,7 @@ export default function WeekView({ date, events, categoryColors }) {
                       backgroundColor: hexToRgba(categoryColors[event.category], 0.1),
                       color: categoryColors[event.category]
                     }}
-                    className="rounded px-2 py-1 text-xs truncate"
+                    className="rounded px-2 py-1 text-xs line-clamp-2 text-center"
                   >
                     {event.title}
                   </div>

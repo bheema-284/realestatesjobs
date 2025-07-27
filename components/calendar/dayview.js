@@ -66,7 +66,7 @@ export default function DayView({ date, events, categoryColors }) {
                 {/* All-Day Row */}
                 <div className="col-span-2 border-b border-gray-200">
                     <div className="grid grid-cols-[80px_1fr] divide-x divide-gray-200 min-h-[40px] items-center">
-                        <div className="text-right pr-2 text-sm text-gray-600 py-2">All-Day</div>
+                        <div className="text-right pr-2 text-sm text-gray-600 py-5">All-Day</div>
                         <div className="py-2 pl-3 flex flex-col space-y-1">
                             {allDayEvents.length > 0 ? (
                                 allDayEvents.map((event, idx) => (
