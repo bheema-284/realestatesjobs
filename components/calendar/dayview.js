@@ -1,6 +1,7 @@
 // DayView.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { format, startOfDay, addHours, isSameHour, parseISO, isWithinInterval, parse } from 'date-fns';
+import EventDrawer from './eventdrawer';
 
 // Helper function to convert hex to RGBA for consistency
 const hexToRgba = (hex, alpha = 1) => {
@@ -24,7 +25,12 @@ export default function DayView({ date, events, categoryColors }) {
     const currentDayStart = startOfDay(date);
     // Define the end of the current day for interval checking
     const currentDayEnd = addHours(currentDayStart, 23); // Roughly end of the day
-
+    const [showDrawer, setShowDrawer] = useState(false);
+    const [editData, setEditDate] = useState({});
+    const editForm = (item) => {
+        setEditDate(item)
+        setShowDrawer(true)
+    }
     // Filter events that span or occur on the current day
     const relevantEvents = events.filter(e => {
         const eventStartDate = parse(e.startDate, 'yyyy-MM-dd', new Date());
@@ -48,7 +54,7 @@ export default function DayView({ date, events, categoryColors }) {
     for (let i = startHour; i <= endHour; i++) {
         timeSlots.push(addHours(startOfDay(date), i));
     }
-
+    const categories = ['View all', 'Personal', 'Family', 'Business', 'Holiday', 'ETC'];
     return (
         <div className="border border-gray-200 rounded overflow-hidden shadow-sm bg-white">
             {/* Date Header */}
@@ -76,7 +82,8 @@ export default function DayView({ date, events, categoryColors }) {
                                             backgroundColor: hexToRgba(categoryColors[event.category], 0.1),
                                             color: categoryColors[event.category]
                                         }}
-                                        className="rounded px-2 py-1 text-xs truncate"
+                                        onClick={() => editForm(event)}
+                                        className="rounded px-2 py-1 text-xs truncate cursor-pointer"
                                     >
                                         {event.title}
                                     </div>
@@ -121,6 +128,12 @@ export default function DayView({ date, events, categoryColors }) {
                     );
                 })}
             </div>
+            {showDrawer && <EventDrawer
+                show={showDrawer}
+                onClose={() => setShowDrawer(false)}
+                categories={categories}
+                editData={editData}
+            />}
         </div>
     );
 }

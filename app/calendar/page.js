@@ -31,7 +31,6 @@ export default function Calendar() {
   const formattedDate = format(myDate, 'yyyy-MM-dd'); // Result: "2025-07-26" (for today)
   const [currentDate, setCurrentDate] = useState(new Date(formattedDate));
   const events = rootContext.schedule;
-  console.log("events", events)
   const [filters, setFilters] = useState(categories);
   const [showDrawer, setShowDrawer] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false); // NEW 

@@ -1,6 +1,7 @@
 // ListView.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { format, parseISO, eachDayOfInterval } from 'date-fns'; // Import eachDayOfInterval
+import EventDrawer from './eventdrawer';
 
 // Helper function to convert hex to RGBA for consistency
 const hexToRgba = (hex, alpha = 1) => {
@@ -23,7 +24,12 @@ const hexToRgba = (hex, alpha = 1) => {
 export default function ListView({ events, categoryColors }) {
     // Use a temporary array to store all event instances (including expanded multi-day ones)
     const allEventsForDisplay = [];
-
+    const [showDrawer, setShowDrawer] = useState(false);
+    const [editData, setEditDate] = useState({});
+    const editForm = (item) => {
+        setEditDate(item)
+        setShowDrawer(true)
+    }
     events.forEach(event => {
         // Parse start and end dates for date-fns operations
         const startDate = parseISO(event.startDate);
@@ -79,7 +85,7 @@ export default function ListView({ events, categoryColors }) {
             return 0;
         });
     });
-
+    const categories = ['View all', 'Personal', 'Family', 'Business', 'Holiday', 'ETC'];
     return (
         <div className="space-y-4">
             {sortedDates.length === 0 ? (
@@ -110,7 +116,7 @@ export default function ListView({ events, categoryColors }) {
                                             className="w-2 h-2 rounded-full mr-2"
                                             style={{ backgroundColor: categoryColors[event.category] }}
                                         ></div>
-                                        <p className="text-gray-800 text-sm font-medium">
+                                        <p onClick={() => editForm(event)} className="cursor-pointer text-gray-800 text-sm font-medium">
                                             {event.title}
                                             {event.isMultiDay && (
                                                 <span className="ml-2 text-xs text-gray-500">
@@ -125,6 +131,12 @@ export default function ListView({ events, categoryColors }) {
                     </div>
                 ))
             )}
+            {showDrawer && <EventDrawer
+                show={showDrawer}
+                onClose={() => setShowDrawer(false)}
+                categories={categories}
+                editData={editData}
+            />}
         </div>
     );
 }

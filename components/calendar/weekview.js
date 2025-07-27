@@ -1,6 +1,7 @@
 // WeekView.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { startOfWeek, addDays, format, startOfDay, addHours, isSameHour, parseISO, isWithinInterval, parse } from 'date-fns';
+import EventDrawer from './eventdrawer';
 
 // Helper function to convert hex to RGBA for consistency
 const hexToRgba = (hex, alpha = 1) => {
@@ -25,12 +26,17 @@ const hexToRgba = (hex, alpha = 1) => {
 export default function WeekView({ date, events, categoryColors }) {
   const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // Sunday is 0
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
+  const [showDrawer, setShowDrawer] = useState(false);
+  const [editData, setEditDate] = useState({});
+  const categories = ['View all', 'Personal', 'Family', 'Business', 'Holiday', 'ETC'];
   // Generate time slots from 6 AM to 11 PM
   const timeSlots = [];
   const startHour = 6; // 6 AM
   const endHour = 23; // 11 PM (23:00)
-
+  const editForm = (item) => {
+    setEditDate(item)
+    setShowDrawer(true)
+  }
   for (let i = startHour; i <= endHour; i++) {
     timeSlots.push(addHours(startOfDay(weekStart), i)); // Use weekStart for consistent time obj creation
   }
@@ -77,7 +83,8 @@ export default function WeekView({ date, events, categoryColors }) {
                       backgroundColor: hexToRgba(categoryColors[event.category], 0.1),
                       color: categoryColors[event.category]
                     }}
-                    className="rounded px-2 py-1 text-xs line-clamp-2 text-center"
+                    onClick={() => editForm(event)}
+                    className="rounded px-2 py-1 text-xs line-clamp-2 text-center cursor-pointer"
                   >
                     {event.title}
                   </div>
@@ -126,6 +133,12 @@ export default function WeekView({ date, events, categoryColors }) {
           </React.Fragment>
         ))}
       </div>
+      {showDrawer && <EventDrawer
+        show={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        categories={categories}
+        editData={editData}
+      />}
     </div>
   );
 }
