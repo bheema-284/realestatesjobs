@@ -14,7 +14,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays, parseISO, isWithinInterval, startOfDay } from "date-fns";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import TaskModal from "./createtasks";
+import AddEditTaskModal from "./task/addnewtask";
 
 const Dashboard = () => {
     const { rootContext, setRootContext } = useContext(RootContext);
@@ -407,15 +407,7 @@ const Dashboard = () => {
     // const [startDate, setStartDate] = useState(new Date());
     const [filterType, setFilterType] = useState("Popular");
     const [showTaskForm, setShowTaskForm] = useState(false);
-    const [newTask, setNewTask] = useState({ title: "", stage: "", date: "", percent: 0 });
-
-
-    const taskList = rootContext.tasks || [
-        { percent: 40, title: "Resume Screening", stage: "Evaluation", date: "May 27, 2027" },
-        { percent: 60, title: "Interview Scheduling", stage: "Engagement", date: "May 20, 2027" },
-        { percent: 30, title: "Candidate Communication", stage: "Relationship", date: "May 23, 2027" },
-        { percent: 50, title: "Offer Management", stage: "Selection", date: "May 25, 2027" },
-    ];
+    const taskList = rootContext.tasks || [];
 
     const getNumericSalary = (salaryStr) => {
         const match = salaryStr.replace(/,/g, "").match(/\d+/);
@@ -428,15 +420,6 @@ const Dashboard = () => {
                 .sort((a, b) => getNumericSalary(b.salaryAmount) - getNumericSalary(a.salaryAmount))
                 .slice(0, 5)
             : events;
-
-    function handleAddTask() {
-        setRootContext((prevContext) => ({
-            ...prevContext,
-            tasks: [...prevContext.tasks, newTask],
-        }));
-        setNewTask({ title: "", stage: "", date: "", percent: 0 });
-        setShowTaskForm(false);
-    }
 
     const Icons = {
         RealEstateSales: <FaBuilding className="w-4 h-4 text-gray-800" />,
@@ -621,7 +604,16 @@ const Dashboard = () => {
     }, [dailyRecruitmentData, startDate, endDate]); // Re-calculate when raw data or range changes
 
     const xAxisDataKey = differenceInCalendarMonths(endDate, startDate) >= 3 ? 'month' : 'date';
+    const handleSaveTask = (newTask) => {
+        setRootContext((prev) => {
+            const updatedTasks = [...prev.tasks, newTask]; // add new
 
+            return {
+                ...prev,
+                tasks: updatedTasks,
+            };
+        });
+    }
     return (
         <div className="text-gray-800 font-sans pb-6 space-y-8">
             {/* Main Section */}
@@ -983,7 +975,13 @@ const Dashboard = () => {
                             <h3 className="text-md font-semibold">Tasks</h3>
                             <button className="w-5 h-5 bg-lime-300 p-1 rounded" onClick={() => setShowTaskForm(!showTaskForm)}><PlusIcon /></button>
                         </div>
-                        {showTaskForm && <TaskModal newTask={newTask} setNewTask={setNewTask} handleAddTask={handleAddTask} showTaskForm={showTaskForm} setShowTaskForm={setShowTaskForm} />}
+                        {showTaskForm &&
+                            <AddEditTaskModal
+                                isOpen={showTaskForm}
+                                onClose={() => { setShowTaskForm(false) }}
+                                onSave={handleSaveTask}
+                            />
+                        }
                         <div className="space-y-4  h-[300px] overflow-y-auto">
                             {taskList.map((task, idx) => (
                                 <div key={idx} className="flex text-xs items-center gap-4 bg-gray-200 rounded-lg p-1">
@@ -1000,18 +998,18 @@ const Dashboard = () => {
                                                 className="text-blue-500"
                                                 stroke="currentColor"
                                                 strokeWidth="3"
-                                                strokeDasharray={`${task.percent}, 100`}
+                                                strokeDasharray={`${task.progress}, 100`}
                                                 fill="none"
                                                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                             />
                                         </svg>
                                         <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-700">
-                                            {task.percent}%
+                                            {task.progress}%
                                         </div>
                                     </div>
                                     <div>
                                         <h4 className="text-xs font-semibold text-gray-800">{task.title}</h4>
-                                        <p className="text-xs text-gray-500">{task.stage} — {task.date}</p>
+                                        <p className="text-xs text-gray-500">{task.priority} — {task.dueDate}</p>
                                     </div>
                                 </div>
                             ))}

@@ -13,6 +13,7 @@ export default function Sidebar({ filters, setFilters, onAdd, categoryColors }) 
     const [currentDate, setCurrentDate] = useState(today);
     const [selectedMonth, setSelectedMonth] = useState(getMonth(today));
     const [selectedYear, setSelectedYear] = useState(getYear(today));
+    const [selectedDate, setSelectedDate] = useState(today);
 
     const updateCalendarDate = (month, year) => {
         // If year is NaN (e.g., from an empty input), default to the current year from 'today'
@@ -149,13 +150,16 @@ export default function Sidebar({ filters, setFilters, onAdd, categoryColors }) 
                     {allDays.map((day, i) => (
                         <div
                             key={i}
+                            onClick={() => setSelectedDate(day)}
                             className={`w-7 h-7 text-center leading-7 rounded cursor-pointer
-                ${isToday(day) ? 'bg-yellow-200 text-gray-800 font-bold' : ''}
-                ${isSameMonth(day, currentDate) ? 'text-gray-700' : 'text-gray-400'}
-                hover:bg-gray-200`}
+    ${isToday(day) ? 'bg-yellow-100 hover:bg-yellow-100 text-gray-800 font-bold' : ''}
+    ${isSameMonth(day, currentDate) ? 'text-gray-700' : 'text-gray-300'}
+    ${format(day, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd') ? 'bg-yellow-300 hover:bg-yellow-300' : ''}
+    hover:bg-gray-200`}
                         >
                             {format(day, 'd')}
                         </div>
+
                     ))}
                 </div>
             </div>
