@@ -1,11 +1,10 @@
 'use client'
-import { MessageSquare, Paperclip } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'; // For Kanban board drag-and-drop
 import RootContext from '../config/rootcontext';
 import { useContext } from 'react';
 
 const KanbanBoard = ({ tasks }) => {
-    const statuses = ['Not picked', 'In progress', 'Needs review', 'Needs attention', 'Needs input', 'Planned', 'Done'];
+    const statuses = ['Not picked', 'Needs input', 'Needs attention', 'Planned', 'In progress', 'Needs review', 'Done'];
     const { setRootContext } = useContext(RootContext);
 
     const getTasksByStatus = (status) =>
@@ -13,14 +12,14 @@ const KanbanBoard = ({ tasks }) => {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'In progress': return 'bg-green-100 text-green-700';
-            case 'Needs review': return 'bg-yellow-100 text-yellow-700';
-            case 'Needs attention': return 'bg-red-100 text-red-700';
-            case 'Needs input': return 'bg-orange-100 text-orange-700';
-            case 'Planned': return 'bg-gray-100 text-gray-700';
-            case 'Done': return 'bg-blue-100 text-blue-700';
-            case 'Not picked': return 'bg-gray-100 text-gray-700';
-            default: return 'bg-gray-100 text-gray-700';
+            case 'In progress': return 'bg-lime-100 text-lime-600';
+            case 'Needs review': return 'bg-blue-100 text-blue-600';
+            case 'Needs attention': return 'bg-orange-100 text-orange-600';
+            case 'Needs input': return 'bg-rose-100 text-rose-600';
+            case 'Planned': return 'bg-yellow-100 text-yellow-600';
+            case 'Done': return 'bg-green-100 text-green-600';
+            case 'Not picked': return 'bg-red-100 text-red-600';
+            default: return 'bg-gray-100 text-gray-600';
         }
     };
 
@@ -112,11 +111,13 @@ const KanbanBoard = ({ tasks }) => {
 
     const getStatusStyles = (status) => {
         switch (status) {
-            case 'Not picked': return 'bg-gray-200 text-gray-800';
-            case 'In progress': return 'bg-blue-200 text-blue-800';
-            case 'Needs review': return 'bg-yellow-200 text-yellow-800';
-            case 'Needs attention': return 'bg-red-200 text-red-800';
+            case 'In progress': return 'bg-lime-200 text-lime-800';
+            case 'Needs review': return 'bg-blue-200 text-blue-800';
+            case 'Needs attention': return 'bg-orange-200 text-orange-800';
+            case 'Needs input': return 'bg-rose-200 text-rose-800';
+            case 'Planned': return 'bg-yellow-200 text-yellow-800';
             case 'Done': return 'bg-green-200 text-green-800';
+            case 'Not picked': return 'bg-red-200 text-red-800';
             default: return 'bg-gray-200 text-gray-800';
         }
     };
