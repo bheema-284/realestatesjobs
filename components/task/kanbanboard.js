@@ -123,7 +123,7 @@ const KanbanBoard = ({ tasks }) => {
                                     <div
                                         ref={provided.innerRef}
                                         {...provided.droppableProps}
-                                        className="bg-gray-100 rounded-b-lg p-3 space-y-3 shadow-inner border border-t-0 border-gray-200 min-h-[100px]"
+                                        className="bg-gray-100 rounded-b-lg p-3 space-y-3 shadow-inner border border-t-0 border-gray-200 h-screen"
                                     >
                                         {statusTasks.map((task, index) => (
                                             <Draggable draggableId={task.id.toString()} index={index} key={task.id}>
