@@ -1,3 +1,8 @@
+'use client'
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'; // For Kanban board drag-and-drop
+import RootContext from '../config/rootcontext';
+import { useContext } from 'react';
+
 const KanbanBoard = () => {
     // Define the different statuses for the Kanban board columns.
     const statuses = ['Not picked', 'Needs input', 'Needs attention', 'Planned', 'In progress', 'Needs review', 'Done'];
@@ -221,4 +226,5 @@ const KanbanBoard = () => {
         </DragDropContext>
     );
 };
+
 export default KanbanBoard
