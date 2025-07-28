@@ -221,3 +221,4 @@ const KanbanBoard = () => {
         </DragDropContext>
     );
 };
+export default KanbanBoard
