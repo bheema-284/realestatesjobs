@@ -60,34 +60,43 @@ const KanbanBoard = ({ tasks }) => {
     );
 
     const onDragEnd = (result) => {
-        const { source, destination } = result;
+        const { source, destination, draggableId } = result;
+
         if (!destination) return;
 
         setRootContext((prevRootState) => {
-            const tasksCopy = [...prevRootState.tasks];
+            const taskMap = [...prevRootState.tasks];
+            const draggedTaskIndex = taskMap.findIndex(task => task.id.toString() === draggableId);
 
-            // Find the task being moved
-            const draggedTaskIndex = tasksCopy.findIndex(task =>
-                task.status === source.droppableId &&
-                tasksCopy.filter(t => t.status === source.droppableId)[source.index].id === task.id
-            );
-            const draggedTask = tasksCopy.splice(draggedTaskIndex, 1)[0];
+            if (draggedTaskIndex === -1) return prevRootState;
 
-            // Update the status if moved across columns
-            if (source.droppableId !== destination.droppableId) {
+            const draggedTask = { ...taskMap[draggedTaskIndex] };
+            taskMap.splice(draggedTaskIndex, 1); // remove from original position
+
+            // Filter tasks for destination column
+            const destinationTasks = taskMap.filter(t => t.status === destination.droppableId);
+            const beforeDestinationTasks = taskMap.filter(t => t.status !== destination.droppableId);
+
+            // If moved across columns, update status
+            if (draggedTask.status !== destination.droppableId) {
                 draggedTask.status = destination.droppableId;
             }
 
-            // Rebuild list with task inserted at correct drop position
-            const beforeTasks = tasksCopy.filter(task => task.status !== destination.droppableId);
-            const destTasks = tasksCopy.filter(task => task.status === destination.droppableId);
+            // Insert the task at the destination.index
+            destinationTasks.splice(destination.index, 0, draggedTask);
 
-            destTasks.splice(destination.index, 0, draggedTask); // Insert at exact drop location
+            // Rebuild full tasks list preserving order
+            const newTasks = [];
 
-            return {
-                ...prevRootState,
-                tasks: [...beforeTasks, ...destTasks],
-            };
+            for (const status of statuses) {
+                if (status === destination.droppableId) {
+                    newTasks.push(...destinationTasks.filter(t => t.status === status));
+                } else {
+                    newTasks.push(...beforeDestinationTasks.filter(t => t.status === status));
+                }
+            }
+
+            return { ...prevRootState, tasks: newTasks };
         });
     };
 
@@ -139,13 +148,13 @@ const KanbanBoard = ({ tasks }) => {
                                         className="bg-gray-100 rounded-b-lg p-3 shadow-inner border border-t-0 border-gray-200 flex-1 overflow-y-auto h-full"
                                     >
                                         {statusTasks.map((task, index) => (
-                                            <Draggable draggableId={task.id.toString()} index={index} key={task.id}>
-                                                {(provided, snapshot) => (
+                                            <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
+                                                {(provided) => (
                                                     <div
                                                         ref={provided.innerRef}
                                                         {...provided.draggableProps}
                                                         {...provided.dragHandleProps}
-                                                        className={`mb-3 transition-shadow duration-200 ${snapshot.isDragging ? 'shadow-md' : ''}`}
+                                                        className="mb-2"
                                                     >
                                                         <KanbanTaskCard task={task} />
                                                     </div>
