@@ -60,31 +60,34 @@ const KanbanBoard = ({ tasks }) => {
     );
 
     const onDragEnd = (result) => {
-        const { source, destination, draggableId } = result;
-
+        const { source, destination } = result;
         if (!destination) return;
 
         setRootContext((prevRootState) => {
-            let sourceColumnTasks = prevRootState.tasks.filter(task => task.status === source.droppableId);
-            let destinationColumnTasks = prevRootState.tasks.filter(task => task.status === destination.droppableId);
+            const tasksCopy = [...prevRootState.tasks];
 
-            const [draggedItem] = sourceColumnTasks.splice(source.index, 1);
+            // Find the task being moved
+            const draggedTaskIndex = tasksCopy.findIndex(task =>
+                task.status === source.droppableId &&
+                tasksCopy.filter(t => t.status === source.droppableId)[source.index].id === task.id
+            );
+            const draggedTask = tasksCopy.splice(draggedTaskIndex, 1)[0];
 
-            // Update task status only if moved to a new column
+            // Update the status if moved across columns
             if (source.droppableId !== destination.droppableId) {
-                draggedItem.status = destination.droppableId;
+                draggedTask.status = destination.droppableId;
             }
 
-            // Always append to end of destination column like GitHub
-            destinationColumnTasks.push(draggedItem);
+            // Rebuild list with task inserted at correct drop position
+            const beforeTasks = tasksCopy.filter(task => task.status !== destination.droppableId);
+            const destTasks = tasksCopy.filter(task => task.status === destination.droppableId);
 
-            const newTasks = statuses.flatMap(status => {
-                if (status === source.droppableId) return sourceColumnTasks;
-                if (status === destination.droppableId) return destinationColumnTasks;
-                return prevRootState.tasks.filter(task => task.status === status);
-            });
+            destTasks.splice(destination.index, 0, draggedTask); // Insert at exact drop location
 
-            return { ...prevRootState, tasks: newTasks };
+            return {
+                ...prevRootState,
+                tasks: [...beforeTasks, ...destTasks],
+            };
         });
     };
 
