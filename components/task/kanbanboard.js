@@ -61,24 +61,19 @@ const KanbanBoard = ({ tasks }) => {
 
     const onDragEnd = (result) => {
         const { source, destination, draggableId } = result;
-
         if (!destination || destination.droppableId === source.droppableId) return;
 
-        setTasks(prevTasks => {
-            const sourceColumnTasks = [...prevTasks[source.droppableId]];
-            const destColumnTasks = [...prevTasks[destination.droppableId]];
+        setRootContext((prev) => {
+            const moved = prev.tasks.find((t) => t.id.toString() === draggableId);
+            if (!moved) return prev;
 
-            const movedTask = sourceColumnTasks.find(task => task.id === draggableId);
-            const newSourceTasks = sourceColumnTasks.filter(task => task.id !== draggableId);
+            const newTasks = prev.tasks.map((t) =>
+                t.id === moved.id
+                    ? { ...t, status: destination.droppableId }
+                    : t
+            );
 
-            // Append to the end of destination
-            const newDestTasks = [...destColumnTasks, movedTask];
-
-            return {
-                ...prevTasks,
-                [source.droppableId]: newSourceTasks,
-                [destination.droppableId]: newDestTasks,
-            };
+            return { ...prev, tasks: newTasks };
         });
     };
 
