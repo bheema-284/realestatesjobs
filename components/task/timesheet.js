@@ -10,7 +10,7 @@ import {
 
 const Timesheet = ({ tasks }) => {
     // Flatten task array from status groups
-    const flatTasks = Object.values(tasks).flat();
+    const flatTasks = tasks.flatMap(group => group.tasks);
 
     const current = new Date('2024-12-10'); // Example week
     const weekStart = startOfWeek(current, { weekStartsOn: 1 }); // Monday

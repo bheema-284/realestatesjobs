@@ -1,6 +1,7 @@
-'use client';
+"use client";
 import React from 'react';
 import TaskItem from './taskitem';
+import { v4 as uuidv4 } from 'uuid';
 
 const priorityOrder = ['High', 'Medium', 'Low', 'None'];
 
@@ -11,9 +12,15 @@ const TaskListView = ({
     onDeleteTask,
     onMarkAsDone
 }) => {
-    // Flatten all tasks and regroup them by priority
-    const allTasks = Object.values(groupedTasks || {}).flat();
+    // Flatten and normalize all tasks
+    const allTasks = (groupedTasks || []).flatMap(group =>
+        (group.tasks || []).map(task => ({
+            ...task,
+            id: task.id || uuidv4(),
+        }))
+    );
 
+    // Group tasks by priority
     const groupedByPriority = allTasks.reduce((acc, task) => {
         const priority = task.priority || 'None';
         if (!acc[priority]) acc[priority] = [];

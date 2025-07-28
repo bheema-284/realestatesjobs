@@ -422,45 +422,155 @@ export default function RootLayout({ children }) {
       }
     ],
     notification: false,
-    tasks: {
-      'In progress': [
-        {
-          id: 1,
-          title: 'Marketing strategy',
-          priority: 'High',
-          status: 'In progress',
-          progress: 70,
-          dueDate: '2025-07-28',
-          remaining: '00:30',
-          overdue: false,
-          assignedTo: ['P', 'B'],
-          attachments: true,
-          comments: false,
-          bookmarked: false,
-          duration: '02:00',
-          timeSpent: '01:30'
-        }
-      ],
-      'Needs input': [
-        {
-          id: 4,
-          title: 'Quarter budget analysis',
-          priority: 'Low',
-          status: 'Needs input',
-          progress: 20,
-          dueDate: '2025-01-11',
-          remaining: '00:00',
-          overdue: false,
-          assignedTo: ['W', 'J'],
-          attachments: false,
-          comments: false,
-          bookmarked: false,
-          duration: '03:00',
-          timeSpent: '00:40'
-        }
-      ],
-      'Done': []
-    },
+    tasksColumns: [
+      {
+        title: 'Backlog',
+        tasks: [
+          {
+            id: 'e940fbf3-ff3b-4ac3-8134-1d620cc41734',
+            title: 'Add discount code to checkout page',
+            dueDate: '2025-08-10',
+            type: 'Feature Request',
+            progress: 60,
+            priority: 'High',
+            assignedTo: ['A'],
+            bookmarked: true,
+            attachments: true,
+            comments: false,
+            duration: '03:14',
+            timeSpent: '00:50',
+            remaining: '02:24',
+            overdue: false
+          },
+          {
+            id: 'b19059c9-9f2a-452c-90a6-8b3e3db4b3ae',
+            title: 'Provide documentation on integrations',
+            dueDate: '2025-08-07',
+            progress: 25,
+            priority: 'Medium',
+            assignedTo: ['A'],
+            bookmarked: false,
+            attachments: true,
+            comments: false,
+            duration: '03:36',
+            timeSpent: '02:00',
+            remaining: '01:36',
+            overdue: false
+          }
+        ]
+      },
+      {
+        title: 'In Progress',
+        tasks: [
+          {
+            id: 'c69e6d77-1316-4191-826c-348dcf73109c',
+            title: 'Fix bug in mobile nav',
+            dueDate: '2025-08-01',
+            type: 'Bug',
+            progress: 30,
+            priority: 'High',
+            assignedTo: ['A'],
+            bookmarked: true,
+            attachments: true,
+            comments: true,
+            duration: '02:00',
+            timeSpent: '01:00',
+            remaining: '01:00',
+            overdue: false
+          },
+          {
+            id: '6b5decb0-7a9a-4861-9425-c6643d69b1dc',
+            title: 'Refactor dashboard layout',
+            dueDate: '2025-08-06',
+            type: 'Feature Request',
+            progress: 10,
+            priority: 'Low',
+            assignedTo: ['A'],
+            bookmarked: false,
+            attachments: false,
+            comments: true,
+            duration: '02:40',
+            timeSpent: '00:40',
+            remaining: '02:00',
+            overdue: false
+          }
+        ]
+      },
+      {
+        title: 'Review',
+        tasks: [
+          {
+            id: '1a9051f7-5ff9-401c-a9fa-96155c367aba',
+            title: 'Add API rate limit warning',
+            dueDate: '2025-08-09',
+            type: 'Feature Request',
+            progress: 80,
+            priority: 'Medium',
+            assignedTo: ['A'],
+            bookmarked: true,
+            attachments: false,
+            comments: false,
+            duration: '01:30',
+            timeSpent: '01:20',
+            remaining: '00:10',
+            overdue: false
+          },
+          {
+            id: '2f225421-6290-46e3-92b8-35cc942c5952',
+            title: 'Remove legacy payment code',
+            dueDate: '2025-07-31',
+            type: 'Cleanup',
+            progress: 90,
+            priority: 'Low',
+            assignedTo: ['A'],
+            bookmarked: false,
+            attachments: true,
+            comments: true,
+            duration: '00:45',
+            timeSpent: '00:30',
+            remaining: '00:15',
+            overdue: false
+          }
+        ]
+      },
+      {
+        title: 'Done',
+        tasks: [
+          {
+            id: 'a4eac943-bfc4-4327-bb7f-7995570d4d45',
+            title: 'Fix broken image on homepage',
+            dueDate: '2025-08-02',
+            type: 'Bug',
+            progress: 100,
+            priority: 'High',
+            assignedTo: ['A'],
+            bookmarked: true,
+            attachments: false,
+            comments: true,
+            duration: '00:30',
+            timeSpent: '00:30',
+            remaining: '00:00',
+            overdue: false
+          },
+          {
+            id: '0939c4fc-ec70-4c47-81f5-d53f4b78e0ae',
+            title: 'Update user settings UI',
+            dueDate: '2025-08-01',
+            type: 'Improvement',
+            progress: 100,
+            priority: 'Medium',
+            assignedTo: ['A'],
+            bookmarked: false,
+            attachments: true,
+            comments: false,
+            duration: '01:30',
+            timeSpent: '01:30',
+            remaining: '00:00',
+            overdue: false
+          }
+        ]
+      }
+    ],
     schedule: [
       {
         title: 'Property Listing Review',

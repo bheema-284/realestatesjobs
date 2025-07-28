@@ -11,7 +11,7 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
         id: '',
         title: '',
         priority: 'Medium',
-        status: `${Object.keys(rootContext.tasks)}`,
+        status: ``,
         progress: 0,
         dueDate: '',
         remaining: '',
@@ -73,7 +73,7 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
         onClose();
     };
 
-    const statusList = Object.keys(rootContext.tasks);
+    const statusList = rootContext.tasksColumns.map(item => item.title);
 
     const getStatusColor = (status) => {
         switch (status) {
