@@ -3,13 +3,10 @@ import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'; // 
 import RootContext from '../config/rootcontext';
 import { useContext } from 'react';
 
-const KanbanBoard = () => {
+const KanbanBoard = ({ tasks }) => {
     // Define the different statuses for the Kanban board columns.
     const statuses = ['Not picked', 'Needs input', 'Needs attention', 'Planned', 'In progress', 'Needs review', 'Done'];
-    // Access the rootState and setRootContext function from the RootContext to update global state.
-    const { rootState, setRootContext } = useContext(RootContext);
-    const tasks = rootState.tasks; // Get tasks from the rootState
-
+    const { setRootContext } = useContext(RootContext);
     /**
      * Filters tasks based on their status to populate each Kanban column.
      * @param {string} status - The status to filter tasks by.
