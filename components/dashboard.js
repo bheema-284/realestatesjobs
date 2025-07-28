@@ -407,7 +407,7 @@ const Dashboard = () => {
     // const [startDate, setStartDate] = useState(new Date());
     const [filterType, setFilterType] = useState("Popular");
     const [showTaskForm, setShowTaskForm] = useState(false);
-    const taskList = rootContext.tasks || [];
+    const taskList = Object.values(rootContext.tasks || {}).flat() || [];
 
     const getNumericSalary = (salaryStr) => {
         const match = salaryStr.replace(/,/g, "").match(/\d+/);
