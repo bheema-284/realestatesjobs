@@ -2,14 +2,16 @@
 import { Dialog, Transition, Listbox } from '@headlessui/react';
 import { CheckIcon } from '@heroicons/react/24/outline';
 import { ChevronUpDownIcon, XMarkIcon } from '@heroicons/react/24/solid';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useContext, useEffect, useState } from 'react';
 import Input from '../common/input';
+import RootContext from '../config/rootcontext';
 export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
+    const { rootContext, setRootContext } = useContext(RootContext);
     const [formData, setFormData] = useState({
         id: '',
         title: '',
         priority: 'Medium',
-        status: 'Not picked',
+        status: `${Object.keys(rootContext.tasks)}`,
         progress: 0,
         dueDate: '',
         remaining: '',
@@ -22,7 +24,6 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
         timeSpent: "",
         duration: '',
     });
-
     useEffect(() => {
         if (isOpen) {
             setFormData({
@@ -72,7 +73,7 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
         onClose();
     };
 
-    const statusList = ['Not picked', 'In progress', 'Needs review', 'Needs attention', 'Needs input', 'Planned', 'Done']
+    const statusList = Object.keys(rootContext.tasks);
 
     const getStatusColor = (status) => {
         switch (status) {

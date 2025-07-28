@@ -2,6 +2,8 @@
 import React from 'react';
 import TaskItem from './taskitem';
 
+const priorityOrder = ['High', 'Medium', 'Low', 'None'];
+
 const TaskListView = ({
     groupedTasks,
     onToggleBookmark,
@@ -9,11 +11,20 @@ const TaskListView = ({
     onDeleteTask,
     onMarkAsDone
 }) => {
+    // Flatten all tasks and regroup them by priority
+    const allTasks = Object.values(groupedTasks || {}).flat();
+
+    const groupedByPriority = allTasks.reduce((acc, task) => {
+        const priority = task.priority || 'None';
+        if (!acc[priority]) acc[priority] = [];
+        acc[priority].push(task);
+        return acc;
+    }, {});
+
     return (
         <div className="w-full">
-            {/* Scrollable container for responsiveness */}
             <div className="overflow-x-auto">
-                {/* Task List Header Row */}
+                {/* Header */}
                 <div className="min-w-[700px] bg-gray-50 rounded-t-lg border-b border-gray-200 py-3 px-4 flex items-center text-xs font-semibold text-gray-600 uppercase">
                     <div className="w-64 flex-1 px-2">Task</div>
                     <div className="w-32 px-2">Status</div>
@@ -24,20 +35,20 @@ const TaskListView = ({
                     <div className="w-24 pr-4 text-right">Actions</div>
                 </div>
 
-                {/* Task List Body */}
+                {/* Body */}
                 <div className="bg-white rounded-b-lg shadow-md min-w-[700px]">
-                    {Object.keys(groupedTasks).map(priorityGroup => {
-                        const tasksInGroup = groupedTasks[priorityGroup];
-                        if (tasksInGroup.length === 0) return null;
+                    {priorityOrder.map(priority => {
+                        const tasks = groupedByPriority[priority];
+                        if (!tasks || tasks.length === 0) return null;
 
                         return (
-                            <div key={priorityGroup} className="border-t border-gray-200 first:border-t-0">
+                            <div key={priority} className="border-t border-gray-200 first:border-t-0">
                                 <div className="bg-gray-100 px-4 py-2 flex items-center justify-between text-sm font-semibold text-gray-700">
-                                    <span>{priorityGroup} priority</span>
-                                    <span className="text-gray-500">{tasksInGroup.length} tasks</span>
+                                    <span>{priority} priority</span>
+                                    <span className="text-gray-500">{tasks.length} tasks</span>
                                 </div>
                                 <div>
-                                    {tasksInGroup.map(task => (
+                                    {tasks.map(task => (
                                         <TaskItem
                                             key={task.id}
                                             task={task}

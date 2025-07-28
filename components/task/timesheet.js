@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import {
     startOfWeek,
@@ -7,11 +8,25 @@ import {
     parseISO,
 } from 'date-fns';
 
-
 const Timesheet = ({ tasks }) => {
-    const current = new Date('2024-12-10'); // Simulated week
+    // Flatten task array from status groups
+    const flatTasks = Object.values(tasks).flat();
+
+    const current = new Date('2024-12-10'); // Example week
     const weekStart = startOfWeek(current, { weekStartsOn: 1 }); // Monday
     const days = Array.from({ length: 5 }).map((_, i) => addDays(weekStart, i));
+
+    // Converts '01:30' or '2h' or '90m' to total hours (float)
+    const parseTimeToHours = (t) => {
+        if (!t) return 0;
+        if (t.includes(':')) {
+            const [h, m] = t.split(':').map(Number);
+            return h + m / 60;
+        }
+        if (t.includes('h')) return parseFloat(t.replace('h', ''));
+        if (t.includes('m')) return parseFloat(t.replace('m', '')) / 60;
+        return 0;
+    };
 
     return (
         <div className="p-6 bg-gray-100 min-h-screen text-sm font-medium">
@@ -40,16 +55,13 @@ const Timesheet = ({ tasks }) => {
             </div>
 
             {/* Task Rows */}
-            {tasks.map((task, index) => {
+            {flatTasks.map((task, index) => {
                 const taskDate = parseISO(task.dueDate);
                 const row = days.map((day) =>
                     isSameDay(day, taskDate) ? task.timeSpent : '0h'
                 );
 
-                const total = row.reduce((acc, t) => {
-                    const [h, m] = t.includes(':') ? t.split(':') : ['0', t.replace('h', '').replace('m', '')];
-                    return acc + (+h + (+m || 0) / 60);
-                }, 0);
+                const total = row.reduce((acc, t) => acc + parseTimeToHours(t), 0);
 
                 return (
                     <div

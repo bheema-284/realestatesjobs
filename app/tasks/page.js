@@ -1,8 +1,7 @@
 'use client';
 import React, { useContext, useState } from 'react';
 import {
-  Plus, Bookmark, User, ChevronDown, Filter, LayoutGrid, List, Settings, HelpCircle, Search, Clock, Calendar, CheckCircle, XCircle,
-  ArrowUp, ArrowDown, Paperclip, MessageSquare, Edit, Trash2
+  Plus, Bookmark, User, ChevronDown, Search
 } from 'lucide-react';
 import AddEditTaskModal from '@/components/task/addnewtask';
 import KanbanBoard from '@/components/task/kanbanboard';
@@ -12,53 +11,11 @@ import TaskBundlesView from '@/components/task/taskbundles';
 import TaskListView from '@/components/task/tasklist';
 import RootContext from '@/components/config/rootcontext';
 
-const groupTasks = (tasks, groupBy) => {
-  const grouped = {};
-  if (groupBy === 'Priorities') {
-    const priorityOrder = ['High', 'Medium', 'Low', 'None'];
-    priorityOrder.forEach(p => grouped[p] = []);
-    tasks.forEach(task => {
-      grouped[task.priority] ? grouped[task.priority].push(task) : grouped['None'].push(task);
-    });
-  } else if (groupBy === 'Due date') {
-    tasks.forEach(task => {
-      const dueDate = task.dueDate || 'No Due Date';
-      if (!grouped[dueDate]) {
-        grouped[dueDate] = [];
-      }
-      grouped[dueDate].push(task);
-    });
-    const sortedKeys = Object.keys(grouped).sort((a, b) => {
-      if (a === 'No Due Date') return 1;
-      if (b === 'No Due Date') return -1;
-      return new Date(a) - new Date(b);
-    });
-    const sortedGrouped = {};
-    sortedKeys.forEach(key => sortedGrouped[key] = grouped[key]);
-    return sortedGrouped;
-  }
-  return grouped;
-};
-
-const sortTasks = (tasks, sortBy) => {
-  return [...tasks].sort((a, b) => {
-    if (sortBy === 'Due date') {
-      const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
-      const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
-      return dateA - dateB;
-    } else if (sortBy === 'Title') {
-      return a.title.localeCompare(b.title);
-    }
-    return 0;
-  });
-};
-
 const TasksDashboard = () => {
   const { rootContext, setRootContext } = useContext(RootContext);
   const tasks = rootContext.tasks;
+  console.log("tasks", tasks)
   const [activeTab, setActiveTab] = useState('Task list');
-  const [groupedBy, setGroupedBy] = useState('Priorities');
-  const [sortedBy, setSortedBy] = useState('Due date');
   const [searchTerm, setSearchTerm] = useState('');
   const [showBookmarked, setShowBookmarked] = useState(false);
   const [showMyTasks, setShowMyTasks] = useState(false);
@@ -67,59 +24,15 @@ const TasksDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
 
-  const filteredTasks = tasks.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesBookmark = !showBookmarked || task.bookmarked;
-    const matchesMyTasks = !showMyTasks || task.assignedTo.includes(currentUserInitials);
-    return matchesSearch && matchesBookmark && matchesMyTasks;
-  });
-
-  const sortedAndFilteredTasks = sortTasks(filteredTasks, sortedBy);
-  const groupedTasks = groupTasks(sortedAndFilteredTasks, groupedBy);
-
-  const handleSaveTask = (newTask) => {
-    setRootContext((prev) => {
-      const updatedTasks = taskToEdit
-        ? prev.tasks.map((item) => (item.id === taskToEdit.id ? newTask : item))
-        : [...prev.tasks, newTask];
-      return { ...prev, tasks: updatedTasks };
+  const filteredTasks = {};
+  Object.entries(tasks).forEach(([status, taskList]) => {
+    filteredTasks[status] = taskList.filter(task => {
+      const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesBookmark = !showBookmarked || task.bookmarked;
+      const matchesMyTasks = !showMyTasks || task.assignedTo.includes(currentUserInitials);
+      return matchesSearch && matchesBookmark && matchesMyTasks;
     });
-    setTaskToEdit(null);
-    setIsModalOpen(false);
-  };
-
-  const handleEditTask = (task) => {
-    setTaskToEdit(task);
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteTask = (taskId) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this task?");
-    if (confirmDelete) {
-      setRootContext((prev) => ({
-        ...prev,
-        tasks: prev.tasks.filter((task) => task.id !== taskId),
-      }));
-    }
-  };
-
-  const handleMarkAsDone = (taskId) => {
-    setRootContext((prev) => ({
-      ...prev,
-      tasks: prev.tasks.map((task) =>
-        task.id === taskId ? { ...task, status: 'Done', progress: 100, remaining: '00:00' } : task
-      ),
-    }));
-  };
-
-  const handleToggleBookmark = (taskId) => {
-    setRootContext((prev) => ({
-      ...prev,
-      tasks: prev.tasks.map((task) =>
-        task.id === taskId ? { ...task, bookmarked: !task.bookmarked } : task
-      ),
-    }));
-  };
+  });
 
   const parseTime = (timeStr) => {
     const [hours, minutes] = timeStr.split(':').map(Number);
@@ -132,17 +45,19 @@ const TasksDashboard = () => {
     return `${hours}h ${minutes}min`;
   };
 
-  const currentTotalTasks = filteredTasks.length;
-  const totalTimeSpent = filteredTasks.reduce((sum, task) => sum + parseTime(task.timeSpent), 0);
-  const totalDuration = filteredTasks.reduce((sum, task) => sum + parseTime(task.duration), 0);
-  const totalRemaining = filteredTasks.reduce((sum, task) => {
+  const allFilteredTasks = Object.values(filteredTasks).flat();
+  const currentTotalTasks = allFilteredTasks.length;
+  const totalTimeSpent = allFilteredTasks.reduce((sum, task) => sum + parseTime(task.timeSpent), 0);
+  const totalDuration = allFilteredTasks.reduce((sum, task) => sum + parseTime(task.duration), 0);
+  const totalRemaining = allFilteredTasks.reduce((sum, task) => {
     if (task.status === 'Done') return sum;
     const total = parseTime(task.duration);
     const spent = parseTime(task.timeSpent);
     return sum + Math.max(total - spent, 0);
   }, 0);
-  const totalTodo = filteredTasks.filter(task => task.status !== 'Done').length;
-  const currentOverdueTasks = filteredTasks.filter(task => new Date(task.dueDate) < new Date() && task.status !== 'Done').length;
+  const totalTodo = allFilteredTasks.filter(task => task.status !== 'Done').length;
+  const currentOverdueTasks = allFilteredTasks.filter(task => new Date(task.dueDate) < new Date() && task.status !== 'Done').length;
+
   const summary = [
     { name: "Total", value: currentTotalTasks },
     { name: "Time spent", value: formatMinutes(totalTimeSpent) },
@@ -150,12 +65,84 @@ const TasksDashboard = () => {
     { name: "To Do", value: totalTodo },
     { name: "Remaining", value: formatMinutes(totalRemaining) },
     { name: "Overdue", value: currentOverdueTasks },
-  ]
+  ];
+
+  const handleSaveTask = (updatedTask) => {
+    setRootContext((prev) => {
+      const updatedTasks = { ...prev.tasks };
+
+      // Remove task from any status list where it might already exist
+      for (const status in updatedTasks) {
+        updatedTasks[status] = updatedTasks[status].filter((t) => t.id !== updatedTask.id);
+      }
+
+      // Add task to the correct status list
+      if (!updatedTasks[updatedTask.status]) {
+        updatedTasks[updatedTask.status] = [];
+      }
+
+      updatedTasks[updatedTask.status].push(updatedTask);
+
+      return {
+        ...prev,
+        tasks: updatedTasks,
+      };
+    });
+  };
+
+
+  const handleEditTask = (task) => {
+    setTaskToEdit(task);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteTask = (taskId) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this task?");
+    if (confirmDelete) {
+      setRootContext((prev) => {
+        const updated = {};
+        Object.entries(prev.tasks).forEach(([status, list]) => {
+          updated[status] = list.filter(task => task.id !== taskId);
+        });
+        return { ...prev, tasks: updated };
+      });
+    }
+  };
+
+  const handleMarkAsDone = (taskId) => {
+    setRootContext((prev) => {
+      const updated = {};
+      Object.entries(prev.tasks).forEach(([status, list]) => {
+        list.forEach(task => {
+          if (task.id === taskId) {
+            if (!updated['Done']) updated['Done'] = [];
+            updated['Done'].push({ ...task, status: 'Done', progress: 100, remaining: '00:00' });
+          } else {
+            if (!updated[status]) updated[status] = [];
+            updated[status].push(task);
+          }
+        });
+      });
+      return { ...prev, tasks: updated };
+    });
+  };
+
+  const handleToggleBookmark = (taskId) => {
+    setRootContext((prev) => {
+      const updated = {};
+      Object.entries(prev.tasks).forEach(([status, list]) => {
+        updated[status] = list.map(task =>
+          task.id === taskId ? { ...task, bookmarked: !task.bookmarked } : task
+        );
+      });
+      return { ...prev, tasks: updated };
+    });
+  };
+
   return (
     <>
       <div className="min-h-screen bg-gray-100 font-sans">
         <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Tabs */}
           <nav className="w-full flex flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-6">
             {['Task list', 'Task board', 'Timesheet', 'Recurring tasks', 'Task bundles'].map(tab => (
               <button
@@ -169,62 +156,35 @@ const TasksDashboard = () => {
             ))}
           </nav>
 
-          {/* Action Bar */}
-          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 flex-wrap">
-              <div className="w-full flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-                <button onClick={() => { setTaskToEdit(null); setIsModalOpen(true); }}
-                  className="w-full sm:w-auto flex items-center px-4 py-2 bg-lime-400 text-white text-sm font-medium rounded-md hover:bg-lime-500 transition">
-                  <Plus className="h-4 w-4 mr-2" /> New
-                </button>
-                <button onClick={() => setShowBookmarked(!showBookmarked)}
-                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition
-                  ${showBookmarked ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                  <Bookmark className={`h-4 w-4 mr-2 ${showBookmarked ? 'text-yellow-500' : 'text-gray-500'}`} fill={showBookmarked ? 'currentColor' : 'none'} />
-                  Bookmarks
-                </button>
-                <button onClick={() => setShowMyTasks(!showMyTasks)}
-                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition
-                  ${showMyTasks ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                  <User className={`h-4 w-4 mr-2 ${showMyTasks ? 'text-blue-500' : 'text-gray-500'}`} />
-                  My tasks
-                </button>
-
-                <div className="relative">
-                  <select value={groupedBy} onChange={(e) => setGroupedBy(e.target.value)}
-                    className="appearance-none w-full bg-gray-100 text-gray-700 text-sm font-medium py-2 pl-3 pr-8 rounded-md cursor-pointer hover:bg-gray-200 transition">
-                    <option value="Priorities">Grouped by: Priorities</option>
-                    <option value="Due date">Grouped by: Due date</option>
-                  </select>
-                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                </div>
-
-                <div className="relative">
-                  <select value={sortedBy} onChange={(e) => setSortedBy(e.target.value)}
-                    className="appearance-none w-full bg-gray-100 text-gray-700 text-sm font-medium py-2 pl-3 pr-8 rounded-md cursor-pointer hover:bg-gray-200 transition">
-                    <option value="Due date">Sorted by: Due date</option>
-                    <option value="Title">Sorted by: Title</option>
-                  </select>
-                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search tasks"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
+          <div className="bg-white rounded-lg shadow-md p-4 mb-6 flex flex-wrap gap-3 items-center">
+            <button onClick={() => { setTaskToEdit(null); setIsModalOpen(true); }}
+              className="flex items-center px-4 py-2 bg-lime-400 text-white text-sm font-medium rounded-md hover:bg-lime-500 transition">
+              <Plus className="h-4 w-4 mr-2" /> New
+            </button>
+            <button onClick={() => setShowBookmarked(!showBookmarked)}
+              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition
+              ${showBookmarked ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              <Bookmark className={`h-4 w-4 mr-2 ${showBookmarked ? 'text-yellow-500' : 'text-gray-500'}`} fill={showBookmarked ? 'currentColor' : 'none'} />
+              Bookmarks
+            </button>
+            <button onClick={() => setShowMyTasks(!showMyTasks)}
+              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition
+              ${showMyTasks ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              <User className={`h-4 w-4 mr-2 ${showMyTasks ? 'text-blue-500' : 'text-gray-500'}`} />
+              My tasks
+            </button>
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search tasks"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              />
             </div>
           </div>
 
-          {/* Summary */}
           <div className="bg-white rounded-lg shadow-md p-2 mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 text-center divide-x divide-gray-200">
             {summary.map((item, ind) => (<div key={ind} className="px-4">
               <p className="text-sm text-gray-500">{item.name}</p>
@@ -232,10 +192,9 @@ const TasksDashboard = () => {
             </div>))}
           </div>
 
-          {/* Dynamic Views */}
           {activeTab === 'Task list' && (
             <TaskListView
-              groupedTasks={groupedTasks}
+              groupedTasks={filteredTasks}
               onToggleBookmark={handleToggleBookmark}
               onEditTask={handleEditTask}
               onDeleteTask={handleDeleteTask}
