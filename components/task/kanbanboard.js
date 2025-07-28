@@ -62,45 +62,85 @@ const KanbanBoard = ({ tasks }) => {
     const onDragEnd = (result) => {
         const { source, destination, draggableId } = result;
 
-        if (!destination) return;
+        // If no destination or dropped in the same place, do nothing
+        if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) {
+            return;
+        }
 
         setRootContext((prevRootState) => {
-            const updatedTasks = [...prevRootState.tasks];
+            const newTasks = [...prevRootState.tasks];
 
-            const draggedIndex = updatedTasks.findIndex(
-                (task) => task.id.toString() === draggableId
-            );
-            const [draggedTask] = updatedTasks.splice(draggedIndex, 1);
+            // Find the dragged task
+            const draggedTaskIndex = newTasks.findIndex(task => task.id.toString() === draggableId);
+            const [draggedTask] = newTasks.splice(draggedTaskIndex, 1);
 
-            // Update the status
+            // Update the status if moved to a different column
             draggedTask.status = destination.droppableId;
 
-            // Get all tasks in the destination column (after removal)
-            const destinationTasks = updatedTasks.filter(
-                (task) => task.status === destination.droppableId
-            );
+            // Reinsert the task at the new position
+            // We need to re-filter the tasks for the destination column to get the correct index
+            // since newTasks has already had the dragged task removed
+            const tasksInDestinationColumn = newTasks.filter(task => task.status === destination.droppableId);
 
-            // Find task at drop index in destination column
-            const insertBeforeTask = destinationTasks[destination.index];
+            // To find the actual insertion index in the global array,
+            // we first collect all tasks that would appear before the insertion point
+            // in the new state of tasks.
+            let insertIndex = 0;
+            let foundDropSpot = false;
 
-            if (insertBeforeTask) {
-                // Find index of that task in global array
-                const insertIndex = updatedTasks.findIndex(
-                    (task) => task.id === insertBeforeTask.id
-                );
-                updatedTasks.splice(insertIndex, 0, draggedTask);
-            } else {
-                // Drop at end of column — insert after the last task in that column
-                let lastIndexInColumn = -1;
-                for (let i = updatedTasks.length - 1; i >= 0; i--) {
-                    if (updatedTasks[i].status === destination.droppableId) {
-                        lastIndexInColumn = i + 1;
+            for (let i = 0; i < newTasks.length; i++) {
+                if (newTasks[i].status === destination.droppableId) {
+                    if (tasksInDestinationColumn.indexOf(newTasks[i]) === destination.index) {
+                        insertIndex = i;
+                        foundDropSpot = true;
                         break;
                     }
                 }
-                const insertIndex = lastIndexInColumn !== -1 ? lastIndexInColumn : updatedTasks.length;
-                updatedTasks.splice(insertIndex, 0, draggedTask);
+                insertIndex = i + 1; // Default to inserting at the end if no specific spot found yet
             }
+
+            // If we didn't find a specific insertion spot (e.g., dropping into an empty column
+            // or at the very end of a column), we need to place it after the last task
+            // of the destination column or at the absolute end if it's a new column.
+            if (!foundDropSpot) {
+                // Find the index of the last task in the destination column
+                let lastTaskInDestinationColumnIndex = -1;
+                for (let i = newTasks.length - 1; i >= 0; i--) {
+                    if (newTasks[i].status === destination.droppableId) {
+                        lastTaskInDestinationColumnIndex = i;
+                        break;
+                    }
+                }
+                insertIndex = lastTaskInDestinationColumnIndex !== -1 ? lastTaskInDestinationColumnIndex + 1 : newTasks.length;
+            }
+
+
+            // The above logic for finding the insertIndex is still a bit complex.
+            // A more robust approach for `react-beautiful-dnd` with global state updates
+            // often involves reconstructing the entire list of tasks, or carefully
+            // managing insertion.
+
+            // Let's simplify and directly work with the tasks within their columns,
+            // then flatten them back.
+
+            const columns = {};
+            statuses.forEach(status => {
+                columns[status] = prevRootState.tasks.filter(t => t.status === status);
+            });
+
+            // Remove from source column
+            const sourceColumnTasks = Array.from(columns[source.droppableId]);
+            const [removed] = sourceColumnTasks.splice(source.index, 1);
+            columns[source.droppableId] = sourceColumnTasks;
+
+            // Add to destination column
+            const destinationColumnTasks = Array.from(columns[destination.droppableId]);
+            removed.status = destination.droppableId; // Update status for the moved task
+            destinationColumnTasks.splice(destination.index, 0, removed);
+            columns[destination.droppableId] = destinationColumnTasks;
+
+            // Flatten back into a single array
+            const updatedTasks = statuses.flatMap(status => columns[status]);
 
             return {
                 ...prevRootState,
@@ -108,7 +148,6 @@ const KanbanBoard = ({ tasks }) => {
             };
         });
     };
-
 
     const timeToMinutes = (timeStr) => {
         const [h, m] = timeStr.split(':').map(Number);
@@ -157,7 +196,7 @@ const KanbanBoard = ({ tasks }) => {
                                         className="bg-gray-100 rounded-b-lg p-3 shadow-inner border border-t-0 border-gray-200 flex-1 overflow-y-auto h-full"
                                     >
                                         {statusTasks.map((task, index) => (
-                                            <Draggable key={index} draggableId={task.id.toString()} index={index}>
+                                            <Draggable key={task.id.toString()} draggableId={task.id.toString()} index={index}>
                                                 {(provided) => (
                                                     <div
                                                         ref={provided.innerRef}
