@@ -65,47 +65,42 @@ const KanbanBoard = ({ tasks }) => {
         if (!destination) return;
 
         setRootContext((prevRootState) => {
-            const { tasks } = prevRootState;
+            const updatedTasks = [...prevRootState.tasks];
 
-            // 1. Clone current tasks
-            const updatedTasks = [...tasks];
+            const draggedIndex = updatedTasks.findIndex(
+                (task) => task.id.toString() === draggableId
+            );
+            const [draggedTask] = updatedTasks.splice(draggedIndex, 1);
 
-            // 2. Get the dragged task
-            const draggedTaskIndex = updatedTasks.findIndex(task => task.id.toString() === draggableId);
-            const draggedTask = updatedTasks[draggedTaskIndex];
+            // Update the status
+            draggedTask.status = destination.droppableId;
 
-            // 3. Remove dragged task from its current position
-            updatedTasks.splice(draggedTaskIndex, 1);
+            // Get all tasks in the destination column (after removal)
+            const destinationTasks = updatedTasks.filter(
+                (task) => task.status === destination.droppableId
+            );
 
-            // 4. Get all tasks in destination column
-            const destinationTasks = updatedTasks
-                .filter(task => task.status === destination.droppableId);
+            // Find task at drop index in destination column
+            const insertBeforeTask = destinationTasks[destination.index];
 
-            // 5. Get index in global tasks array where we want to insert the dragged task
-            const destinationTaskIds = destinationTasks.map(task => task.id.toString());
-
-            let insertBeforeTaskId = destinationTaskIds[destination.index];
-            let insertIndex;
-
-            if (insertBeforeTaskId) {
-                insertIndex = updatedTasks.findIndex(task => task.id.toString() === insertBeforeTaskId);
+            if (insertBeforeTask) {
+                // Find index of that task in global array
+                const insertIndex = updatedTasks.findIndex(
+                    (task) => task.id === insertBeforeTask.id
+                );
+                updatedTasks.splice(insertIndex, 0, draggedTask);
             } else {
-                // If dropped at end
-                // Find last index of that column
-                const lastInColumnIndex = [...updatedTasks]
-                    .map((task, i) => ({ ...task, index: i }))
-                    .filter(task => task.status === destination.droppableId)
-                    .map(task => task.index)
-                    .pop();
-
-                insertIndex = typeof lastInColumnIndex === 'number' ? lastInColumnIndex + 1 : updatedTasks.length;
+                // Drop at end of column — insert after the last task in that column
+                let lastIndexInColumn = -1;
+                for (let i = updatedTasks.length - 1; i >= 0; i--) {
+                    if (updatedTasks[i].status === destination.droppableId) {
+                        lastIndexInColumn = i + 1;
+                        break;
+                    }
+                }
+                const insertIndex = lastIndexInColumn !== -1 ? lastIndexInColumn : updatedTasks.length;
+                updatedTasks.splice(insertIndex, 0, draggedTask);
             }
-
-            // 6. Update dragged task status
-            const updatedDraggedTask = { ...draggedTask, status: destination.droppableId };
-
-            // 7. Insert at correct position
-            updatedTasks.splice(insertIndex, 0, updatedDraggedTask);
 
             return {
                 ...prevRootState,
