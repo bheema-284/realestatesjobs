@@ -19,6 +19,8 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
         comments: false,
         bookmarked: false,
         description: '',
+        timeSpent: "",
+        duration: '',
     });
 
     useEffect(() => {
@@ -37,15 +39,12 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
                 comments: task?.comments || false,
                 bookmarked: task?.bookmarked || false,
                 description: task?.description || '',
+                timeSpent: task?.timeSpent || "",
+                duration: task?.duration || '',
             });
         }
     }, [isOpen, task]);
 
-    // const handleChange = (e) => {
-    //     const { name, value, type, checked } = e.target;
-    //     const val = type === 'checkbox' ? checked : value;
-    //     setFormData((prev) => ({ ...prev, [name]: val }));
-    // };
 
     const handleChange = (field) => (e) => {
         const value = e?.target?.type === 'checkbox' ? e.target.checked : e.target?.value ?? e;
@@ -54,14 +53,21 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const formattedData = {
-            ...formData,
-            assignedTo: formData.assignedTo
+
+        const formattedAssignedTo = Array.isArray(formData.assignedTo)
+            ? formData.assignedTo
+            : (formData.assignedTo ?? '')
                 .split(',')
                 .map((s) => s.trim())
-                .filter(Boolean),
+                .filter(Boolean);
+
+        const formattedData = {
+            ...task,          // all original values
+            ...formData,              // overwrite only the edited ones
+            assignedTo: formattedAssignedTo,
             progress: Number(formData.progress),
         };
+
         onSave(formattedData);
         onClose();
     };
@@ -161,7 +167,7 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
                                         onChange={handleChange('title')}
                                     />
                                     <div className="relative border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white">
-                                        <label className="text-gray-700 text-sm font-medium">Description</label>
+                                        <label htmlFor="name" className={`label capitalize text-gray-500`}>Description</label>
                                         <textarea
                                             rows={3}
                                             placeholder="Enter description"
@@ -173,15 +179,15 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
 
                                     <Listbox value={formData.priority} onChange={handleChange('priority')}>
                                         {({ open }) => (
-                                            <div className="relative">
-                                                <Listbox.Label className="block text-sm font-medium text-gray-500">Label</Listbox.Label>
-                                                <div className="relative mt-1">
-                                                    <Listbox.Button className={`relative w-full cursor-default rounded border bg-white py-2 pl-3 pr-10 text-left text-sm shadow-sm focus:outline-none ${!formData.priority ? 'border-red-500' : 'border-gray-300'}`}>
+                                            <div className="relative border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white">
+                                                <Listbox.Label htmlFor="name" className={`label capitalize text-gray-500`}>Priority</Listbox.Label>
+                                                <div className="relative">
+                                                    <Listbox.Button>
                                                         <span className="flex items-center">
                                                             <span className={`w-2 h-2 rounded-full mr-2 ${getPriorityColor(formData.priority)}`} />
                                                             {formData.priority || 'Select Event Label'}
                                                         </span>
-                                                        <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                                        <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center">
                                                             <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
                                                         </span>
                                                     </Listbox.Button>
@@ -205,15 +211,15 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
                                     </Listbox>
                                     <Listbox value={formData.status} onChange={handleChange('status')}>
                                         {({ open }) => (
-                                            <div className="relative">
-                                                <Listbox.Label className="block text-sm font-medium text-gray-500">Label</Listbox.Label>
-                                                <div className="relative mt-1">
-                                                    <Listbox.Button className={`relative w-full cursor-default rounded border bg-white py-2 pl-3 pr-10 text-left text-sm shadow-sm focus:outline-none ${!formData.status ? 'border-red-500' : 'border-gray-300'}`}>
+                                            <div className="relative border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white">
+                                                <Listbox.Label htmlFor="name" className={`label capitalize text-gray-500`}>Status</Listbox.Label>
+                                                <div className="relative">
+                                                    <Listbox.Button>
                                                         <span className="flex items-center">
                                                             <span className={`w-2 h-2 rounded-full mr-2 ${getStatusColor(formData.status)}`} />
                                                             {formData.status || 'Select Event Label'}
                                                         </span>
-                                                        <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                                        <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center">
                                                             <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
                                                         </span>
                                                     </Listbox.Button>
@@ -235,21 +241,46 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
                                             </div>
                                         )}
                                     </Listbox>
-                                    <input
-                                        type="date"
-                                        name="dueDate"
-                                        value={formData.dueDate}
-                                        onChange={handleChange("dueDate")}
-                                        className="w-full border rounded px-3 py-2"
-                                    />
-                                    <Input
-                                        title="remaining"
-                                        type="text"
-                                        laceholder="Remaining (e.g., 01:30)"
-                                        className="w-full mt-1 p-2 border rounded text-sm"
-                                        value={formData.remaining}
-                                        onChange={handleChange('remaining')}
-                                    />
+                                    <div className="relative border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white">
+                                        <label htmlFor="name" className={`label capitalize text-gray-500`}>Due Date</label>
+                                        <input
+                                            type="date"
+                                            name="dueDate"
+                                            value={formData.dueDate}
+                                            onChange={handleChange("dueDate")}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div className="relative border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white">
+                                        <label htmlFor="name" className={`label capitalize text-gray-500`}>Remaining</label>
+                                        <input
+                                            type="time"
+                                            name="remaining"
+                                            value={formData.remaining}
+                                            onChange={handleChange("remaining")}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div className="relative border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white">
+                                        <label htmlFor="name" className={`label capitalize text-gray-500`}>Time Spent</label>
+                                        <input
+                                            type="time"
+                                            name="timeSpent"
+                                            value={formData.timeSpent}
+                                            onChange={handleChange("timeSpent")}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div className="relative border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white">
+                                        <label htmlFor="name" className={`label capitalize text-gray-500`}>Duration</label>
+                                        <input
+                                            type="time"
+                                            name="duration"
+                                            value={formData.duration}
+                                            onChange={handleChange("duration")}
+                                            className="w-full"
+                                        />
+                                    </div>
                                     <Input
                                         title="progress"
                                         type="text"

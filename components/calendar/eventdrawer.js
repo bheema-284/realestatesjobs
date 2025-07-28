@@ -170,7 +170,7 @@ export default function EventDrawer({ show, onClose, onSave, categories, editDat
 
                 {/* Description */}
                 <div className="relative border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white">
-                    <label className="text-gray-700 text-sm font-medium">Description</label>
+                    <label htmlFor="name" className={`label capitalize text-gray-500`}>Description</label>
                     <textarea
                         rows={3}
                         placeholder="Enter description"
