@@ -1,9 +1,9 @@
-'use client'
+'use client';
 import React, { useContext, useState } from 'react';
 import {
   Plus, Bookmark, User, ChevronDown, Filter, LayoutGrid, List, Settings, HelpCircle, Search, Clock, Calendar, CheckCircle, XCircle,
   ArrowUp, ArrowDown, Paperclip, MessageSquare, Edit, Trash2
-} from 'lucide-react'; // Using lucide-react for icons
+} from 'lucide-react';
 import AddEditTaskModal from '@/components/task/addnewtask';
 import KanbanBoard from '@/components/task/kanbanboard';
 import TimesheetView from '@/components/task/timesheet';
@@ -28,7 +28,6 @@ const groupTasks = (tasks, groupBy) => {
       }
       grouped[dueDate].push(task);
     });
-    // Sort due date groups chronologically (simple string sort for demo)
     const sortedKeys = Object.keys(grouped).sort((a, b) => {
       if (a === 'No Due Date') return 1;
       if (b === 'No Due Date') return -1;
@@ -44,7 +43,7 @@ const groupTasks = (tasks, groupBy) => {
 const sortTasks = (tasks, sortBy) => {
   return [...tasks].sort((a, b) => {
     if (sortBy === 'Due date') {
-      const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31'); // Push "No Due Date" to end
+      const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
       const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
       return dateA - dateB;
     } else if (sortBy === 'Title') {
@@ -63,12 +62,11 @@ const TasksDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showBookmarked, setShowBookmarked] = useState(false);
   const [showMyTasks, setShowMyTasks] = useState(false);
-  const currentUserInitials = 'P'; // Dummy current user
+  const currentUserInitials = 'P';
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
 
-  // --- Filtering and Sorting Logic ---
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesBookmark = !showBookmarked || task.bookmarked;
@@ -79,17 +77,12 @@ const TasksDashboard = () => {
   const sortedAndFilteredTasks = sortTasks(filteredTasks, sortedBy);
   const groupedTasks = groupTasks(sortedAndFilteredTasks, groupedBy);
 
-  // --- Handlers for Task Actions ---
   const handleSaveTask = (newTask) => {
     setRootContext((prev) => {
       const updatedTasks = taskToEdit
-        ? prev.tasks.map((item) => (item.id === taskToEdit.id ? newTask : item)) // update existing
-        : [...prev.tasks, newTask]; // add new
-
-      return {
-        ...prev,
-        tasks: updatedTasks,
-      };
+        ? prev.tasks.map((item) => (item.id === taskToEdit.id ? newTask : item))
+        : [...prev.tasks, newTask];
+      return { ...prev, tasks: updatedTasks };
     });
     setTaskToEdit(null);
     setIsModalOpen(false);
@@ -110,35 +103,28 @@ const TasksDashboard = () => {
     }
   };
 
-
   const handleMarkAsDone = (taskId) => {
     setRootContext((prev) => ({
       ...prev,
       tasks: prev.tasks.map((task) =>
-        task.id === taskId
-          ? { ...task, status: 'Done', progress: 100, remaining: '00:00' }
-          : task
+        task.id === taskId ? { ...task, status: 'Done', progress: 100, remaining: '00:00' } : task
       ),
     }));
   };
-
 
   const handleToggleBookmark = (taskId) => {
     setRootContext((prev) => ({
       ...prev,
       tasks: prev.tasks.map((task) =>
-        task.id === taskId
-          ? { ...task, bookmarked: !task.bookmarked }
-          : task
+        task.id === taskId ? { ...task, bookmarked: !task.bookmarked } : task
       ),
     }));
   };
 
-
-  function parseTime(timeStr) {
+  const parseTime = (timeStr) => {
     const [hours, minutes] = timeStr.split(':').map(Number);
     return hours * 60 + minutes;
-  }
+  };
 
   const formatMinutes = (mins) => {
     const hours = Math.floor(mins / 60);
@@ -146,50 +132,37 @@ const TasksDashboard = () => {
     return `${hours}h ${minutes}min`;
   };
 
-
-  // Summary statistics (now based on filtered/sorted tasks)
   const currentTotalTasks = filteredTasks.length;
-  const totalTimeSpent = filteredTasks.reduce((sum, task) => {
-    return sum + parseTime(task.timeSpent);
-  }, 0); // 75 minutes
-
-  const totalDuration = filteredTasks.reduce((sum, task) => {
-    return sum + parseTime(task.duration);
-  }, 0); // 90 minutes
-
+  const totalTimeSpent = filteredTasks.reduce((sum, task) => sum + parseTime(task.timeSpent), 0);
+  const totalDuration = filteredTasks.reduce((sum, task) => sum + parseTime(task.duration), 0);
   const totalRemaining = filteredTasks.reduce((sum, task) => {
     if (task.status === 'Done') return sum;
     const total = parseTime(task.duration);
     const spent = parseTime(task.timeSpent);
     return sum + Math.max(total - spent, 0);
-  }, 0); // 15 minutes
-
-  const totalTodo = filteredTasks.reduce((sum, task) => {
-    return task.status !== 'Done' ? sum + 1 : sum;
   }, 0);
-
+  const totalTodo = filteredTasks.filter(task => task.status !== 'Done').length;
   const currentOverdueTasks = filteredTasks.filter(task => new Date(task.dueDate) < new Date() && task.status !== 'Done').length;
-  const timeSpent = formatMinutes(totalTimeSpent);
-  const duration = formatMinutes(totalDuration);
-  const toDo = `${totalTodo} task${totalTodo !== 1 ? 's' : ''}`;
-  const remaining = formatMinutes(totalRemaining);
-
-
-
+  const summary = [
+    { name: "Total", value: currentTotalTasks },
+    { name: "Time spent", value: formatMinutes(totalTimeSpent) },
+    { name: "Duration", value: formatMinutes(totalDuration) },
+    { name: "To Do", value: totalTodo },
+    { name: "Remaining", value: formatMinutes(totalRemaining) },
+    { name: "Overdue", value: currentOverdueTasks },
+  ]
   return (
     <>
       <div className="min-h-screen bg-gray-100 font-sans">
-
-        {/* Main Content Area */}
-        <div className="max-w-7xl mx-auto ">
-          {/* Navigation Tabs */}
-          <nav className="flex space-x-4 mb-6">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Tabs */}
+          <nav className="w-full flex flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-6">
             {['Task list', 'Task board', 'Timesheet', 'Recurring tasks', 'Task bundles'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200
-                ${activeTab === tab ? 'bg-yellow-200 text-black shadow' : 'text-gray-700 hover:bg-yellow-200'}`}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition
+                  ${activeTab === tab ? 'bg-yellow-200 text-black shadow' : 'text-gray-700 hover:bg-yellow-100'}`}
               >
                 {tab}
               </button>
@@ -198,101 +171,68 @@ const TasksDashboard = () => {
 
           {/* Action Bar */}
           <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => { setTaskToEdit(null); setIsModalOpen(true); }}
-                  className="flex items-center px-4 py-2 bg-lime-400 text-white text-sm font-medium rounded-md hover:bg-lime-500 transition-colors duration-200"
-                >
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 flex-wrap">
+              <div className="w-full flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
+                <button onClick={() => { setTaskToEdit(null); setIsModalOpen(true); }}
+                  className="w-full sm:w-auto flex items-center px-4 py-2 bg-lime-400 text-white text-sm font-medium rounded-md hover:bg-lime-500 transition">
                   <Plus className="h-4 w-4 mr-2" /> New
                 </button>
-                <button
-                  onClick={() => setShowBookmarked(!showBookmarked)}
-                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
-                  ${showBookmarked ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                >
-                  <Bookmark className={`h-4 w-4 mr-2 ${showBookmarked ? 'text-yellow-500' : 'text-gray-500'}`} fill={showBookmarked ? 'currentColor' : 'none'} /> Bookmarks
+                <button onClick={() => setShowBookmarked(!showBookmarked)}
+                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition
+                  ${showBookmarked ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                  <Bookmark className={`h-4 w-4 mr-2 ${showBookmarked ? 'text-yellow-500' : 'text-gray-500'}`} fill={showBookmarked ? 'currentColor' : 'none'} />
+                  Bookmarks
                 </button>
-                <button
-                  onClick={() => setShowMyTasks(!showMyTasks)}
-                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
-                  ${showMyTasks ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                >
-                  <User className={`h-4 w-4 mr-2 ${showMyTasks ? 'text-blue-500' : 'text-gray-500'}`} /> My tasks
+                <button onClick={() => setShowMyTasks(!showMyTasks)}
+                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition
+                  ${showMyTasks ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                  <User className={`h-4 w-4 mr-2 ${showMyTasks ? 'text-blue-500' : 'text-gray-500'}`} />
+                  My tasks
                 </button>
-                <div className="relative">
-                  <select
-                    value={groupedBy}
-                    onChange={(e) => setGroupedBy(e.target.value)}
-                    className="appearance-none bg-gray-100 text-gray-700 text-sm font-medium py-2 pl-3 pr-8 rounded-md cursor-pointer hover:bg-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+
+                <div className="relative w-full">
+                  <select value={groupedBy} onChange={(e) => setGroupedBy(e.target.value)}
+                    className="appearance-none w-full bg-gray-100 text-gray-700 text-sm font-medium py-2 pl-3 pr-8 rounded-md cursor-pointer hover:bg-gray-200 transition">
                     <option value="Priorities">Grouped by: Priorities</option>
                     <option value="Due date">Grouped by: Due date</option>
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                 </div>
-                <div className="relative">
-                  <select
-                    value={sortedBy}
-                    onChange={(e) => setSortedBy(e.target.value)}
-                    className="appearance-none bg-gray-100 text-gray-700 text-sm font-medium py-2 pl-3 pr-8 rounded-md cursor-pointer hover:bg-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+
+                <div className="relative w-full">
+                  <select value={sortedBy} onChange={(e) => setSortedBy(e.target.value)}
+                    className="appearance-none w-full bg-gray-100 text-gray-700 text-sm font-medium py-2 pl-3 pr-8 rounded-md cursor-pointer hover:bg-gray-200 transition">
                     <option value="Due date">Sorted by: Due date</option>
                     <option value="Title">Sorted by: Title</option>
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                 </div>
-                <button className="flex items-center px-3 py-2 text-gray-700 bg-gray-100 text-sm font-medium rounded-md hover:bg-gray-200 transition-colors duration-200">
-                  <Filter className="h-4 w-4 mr-2" /> Filter
-                </button>
-                <button className="flex items-center px-3 py-2 text-gray-700 bg-gray-100 text-sm font-medium rounded-md hover:bg-gray-200 transition-colors duration-200">
-                  <List className="h-4 w-4 mr-2" /> View
-                </button>
               </div>
-              <div className="flex items-center space-x-3">
-                <div className="relative">
+
+              <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search tasks"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 pr-3 py-2 text-sm rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Summary Statistics */}
-          <div className="bg-white rounded-lg shadow-md p-2 mb-6 grid grid-cols-6 text-center divide-x divide-gray-200">
-            <div className="px-4">
-              <p className="text-sm text-gray-500">Total</p>
-              <p className="text-xl font-semibold text-gray-800">{currentTotalTasks}</p>
-            </div>
-            <div className="px-4">
-              <p className="text-sm text-gray-500">Time spent</p>
-              <p className="text-xl font-semibold text-gray-800">{timeSpent}</p>
-            </div>
-            <div className="px-4">
-              <p className="text-sm text-gray-500">Duration</p>
-              <p className="text-xl font-semibold text-gray-800">{duration}</p>
-            </div>
-            <div className="px-4">
-              <p className="text-sm text-gray-500">To do</p>
-              <p className="text-xl font-semibold text-gray-800">{toDo}</p>
-            </div>
-            <div className="px-4">
-              <p className="text-sm text-gray-500">Remaining</p>
-              <p className="text-xl font-semibold text-gray-800">{remaining}</p>
-            </div>
-            <div className="px-4">
-              <p className="text-sm text-red-500">Overdue</p>
-              <p className="text-xl font-semibold text-red-600">{currentOverdueTasks}</p>
-            </div>
+          {/* Summary */}
+          <div className="bg-white rounded-lg shadow-md p-2 mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 text-center divide-x divide-gray-200">
+            {summary.map((item, ind) => (<div key={ind} className="px-4">
+              <p className="text-sm text-gray-500">{item.name}</p>
+              <p className="text-xl font-semibold text-gray-800">{item.value}</p>
+            </div>))}
           </div>
 
-          {/* Conditional View Rendering */}
+          {/* Dynamic Views */}
           {activeTab === 'Task list' && (
             <TaskListView
               groupedTasks={groupedTasks}
@@ -302,17 +242,13 @@ const TasksDashboard = () => {
               onMarkAsDone={handleMarkAsDone}
             />
           )}
-
-          {activeTab === 'Task board' && (
-            <KanbanBoard tasks={filteredTasks} />
-          )}
-
+          {activeTab === 'Task board' && <KanbanBoard tasks={filteredTasks} />}
           {activeTab === 'Timesheet' && <TimesheetView tasks={filteredTasks} />}
           {activeTab === 'Recurring tasks' && <RecurringTasksView tasks={filteredTasks} />}
           {activeTab === 'Task bundles' && <TaskBundlesView tasks={filteredTasks} />}
-
         </div>
       </div>
+
       <AddEditTaskModal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setTaskToEdit(null); }}

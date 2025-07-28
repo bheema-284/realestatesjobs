@@ -129,7 +129,7 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
-                    <div className="fixed inset-0 bg-black bg-opacity-30" />
+                    <div className="fixed inset-0 bg-black/10 backdrop-blur-xs" />
                 </Transition.Child>
 
                 <div className="fixed inset-0 overflow-y-auto">

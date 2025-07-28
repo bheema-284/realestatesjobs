@@ -1,5 +1,5 @@
-'use client'
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'; // For Kanban board drag-and-drop
+'use client';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import RootContext from '../config/rootcontext';
 import { useContext } from 'react';
 
@@ -24,22 +24,19 @@ const KanbanBoard = ({ tasks }) => {
     };
 
     const dummyCandidates = Array.from({ length: 26 }, (_, i) => {
-        const letter = String.fromCharCode(65 + i); // A-Z
+        const letter = String.fromCharCode(65 + i);
         return {
             name: letter,
-            image: `https://i.pravatar.cc/150?u=${letter}`
+            image: `https://i.pravatar.cc/150?u=${letter}`,
         };
     });
 
     const KanbanTaskCard = ({ task }) => (
         <div className="bg-white p-3 relative rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-150 cursor-grab select-none">
-
-            {/* Title and Assigned Avatars on same line */}
             <div className="flex justify-between items-start gap-2">
                 <p className="font-medium text-sm text-gray-800 flex-1 line-clamp-2 pr-2">
                     {task.title}
                 </p>
-
                 {task.assignedTo?.length > 0 && (
                     <div className="flex -space-x-1 mt-0.5">
                         {task.assignedTo.map((initial, idx) => {
@@ -56,32 +53,19 @@ const KanbanBoard = ({ tasks }) => {
                     </div>
                 )}
             </div>
-
-            {/* Due Date */}
             <p className="text-xs text-gray-500 mt-2">Due: {task.dueDate}</p>
-
-            {/* Status with background color */}
             <div className="flex items-center mt-2">
-                <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                        task.status
-                    )}`}
-                >
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
                     {task.status}
                 </span>
             </div>
         </div>
     );
 
-
     const onDragEnd = (result) => {
         const { destination, source, draggableId } = result;
         if (!destination) return;
-
-        if (
-            destination.droppableId === source.droppableId &&
-            destination.index === source.index
-        ) return;
+        if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
         setRootContext((prev) => {
             const task = prev.tasks.find((t) => t.id.toString() === draggableId);
@@ -91,10 +75,7 @@ const KanbanBoard = ({ tasks }) => {
                 t.id === task.id ? { ...t, status: destination.droppableId } : t
             );
 
-            return {
-                ...prev,
-                tasks: updatedTasks,
-            };
+            return { ...prev, tasks: updatedTasks };
         });
     };
 
@@ -124,26 +105,26 @@ const KanbanBoard = ({ tasks }) => {
 
     return (
         <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex space-x-4 overflow-x-auto p-4 bg-gray-50 rounded-lg shadow-inner min-h-[500px]">
-                {statuses.map(status => {
+            <div className="flex overflow-x-auto space-x-4 p-4 bg-gray-50 rounded-lg shadow-inner min-h-[500px]">
+                {statuses.map((status, index) => {
                     const statusTasks = getTasksByStatus(status);
                     const totalDuration = statusTasks.reduce((sum, t) => sum + timeToMinutes(t.duration || '00:00'), 0);
                     return (
-                        <Droppable droppableId={status} key={status} isDropDisabled={false} isCombineEnabled={false} ignoreContainerClipping={false} >
-                            {(provided) => (
-                                <div
-                                    ref={provided.innerRef}
-                                    {...provided.droppableProps}
-                                    className="flex-shrink-0 w-72 bg-gray-100 rounded-lg p-3 shadow-inner border border-gray-200"
-                                >
-                                    <div className={`p-2 mb-2 text-sm font-semibold rounded capitalize ${getStatusStyles(status)}`}>
-                                        <p>{status}</p>
-                                        <div className="text-xs text-gray-600 mb-2">
-                                            <div>Tasks: {statusTasks.length}</div>
-                                            <div>Duration: {minutesToTime(totalDuration)}</div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-3 min-h-[100px]">
+                        <div key={index} className="flex-shrink-0 w-72">
+                            <div className={`p-3 rounded-t-lg ${getStatusStyles(status)}`}>
+                                <p className="text-sm font-semibold capitalize">{status}</p>
+                                <div className="text-xs text-gray-700 mt-1">
+                                    <div>Tasks: {statusTasks.length}</div>
+                                    <div>Duration: {minutesToTime(totalDuration)}</div>
+                                </div>
+                            </div>
+                            <Droppable droppableId={status} key={status} isDropDisabled={false} isCombineEnabled={false} ignoreContainerClipping={false} >
+                                {(provided) => (
+                                    <div
+                                        ref={provided.innerRef}
+                                        {...provided.droppableProps}
+                                        className="bg-gray-100 rounded-b-lg p-3 space-y-3 shadow-inner border border-t-0 border-gray-200 min-h-[100px]"
+                                    >
                                         {statusTasks.map((task, index) => (
                                             <Draggable draggableId={task.id.toString()} index={index} key={task.id}>
                                                 {(provided, snapshot) => (
@@ -151,7 +132,8 @@ const KanbanBoard = ({ tasks }) => {
                                                         ref={provided.innerRef}
                                                         {...provided.draggableProps}
                                                         {...provided.dragHandleProps}
-                                                        className={`transition-shadow duration-200 ${snapshot.isDragging ? 'shadow-md' : ''}`}
+                                                        className={`transition-shadow duration-200 ${snapshot.isDragging ? 'shadow-md' : ''
+                                                            }`}
                                                     >
                                                         <KanbanTaskCard task={task} />
                                                     </div>
@@ -160,15 +142,14 @@ const KanbanBoard = ({ tasks }) => {
                                         ))}
                                         {provided.placeholder}
                                     </div>
-                                </div>
-                            )}
-                        </Droppable>
+                                )}
+                            </Droppable>
+                        </div>
                     );
-
                 })}
             </div>
         </DragDropContext>
     );
 };
 
-export default KanbanBoard
+export default KanbanBoard;
