@@ -65,38 +65,52 @@ const KanbanBoard = ({ tasks }) => {
         if (!destination) return;
 
         setRootContext((prevRootState) => {
-            const taskMap = [...prevRootState.tasks];
-            const draggedTaskIndex = taskMap.findIndex(task => task.id.toString() === draggableId);
+            const { tasks } = prevRootState;
 
-            if (draggedTaskIndex === -1) return prevRootState;
+            // 1. Clone current tasks
+            const updatedTasks = [...tasks];
 
-            const draggedTask = { ...taskMap[draggedTaskIndex] };
-            taskMap.splice(draggedTaskIndex, 1); // remove from original position
+            // 2. Get the dragged task
+            const draggedTaskIndex = updatedTasks.findIndex(task => task.id.toString() === draggableId);
+            const draggedTask = updatedTasks[draggedTaskIndex];
 
-            // Filter tasks for destination column
-            const destinationTasks = taskMap.filter(t => t.status === destination.droppableId);
-            const beforeDestinationTasks = taskMap.filter(t => t.status !== destination.droppableId);
+            // 3. Remove dragged task from its current position
+            updatedTasks.splice(draggedTaskIndex, 1);
 
-            // If moved across columns, update status
-            if (draggedTask.status !== destination.droppableId) {
-                draggedTask.status = destination.droppableId;
+            // 4. Get all tasks in destination column
+            const destinationTasks = updatedTasks
+                .filter(task => task.status === destination.droppableId);
+
+            // 5. Get index in global tasks array where we want to insert the dragged task
+            const destinationTaskIds = destinationTasks.map(task => task.id.toString());
+
+            let insertBeforeTaskId = destinationTaskIds[destination.index];
+            let insertIndex;
+
+            if (insertBeforeTaskId) {
+                insertIndex = updatedTasks.findIndex(task => task.id.toString() === insertBeforeTaskId);
+            } else {
+                // If dropped at end
+                // Find last index of that column
+                const lastInColumnIndex = [...updatedTasks]
+                    .map((task, i) => ({ ...task, index: i }))
+                    .filter(task => task.status === destination.droppableId)
+                    .map(task => task.index)
+                    .pop();
+
+                insertIndex = typeof lastInColumnIndex === 'number' ? lastInColumnIndex + 1 : updatedTasks.length;
             }
 
-            // Insert the task at the destination.index
-            destinationTasks.splice(destination.index, 0, draggedTask);
+            // 6. Update dragged task status
+            const updatedDraggedTask = { ...draggedTask, status: destination.droppableId };
 
-            // Rebuild full tasks list preserving order
-            const newTasks = [];
+            // 7. Insert at correct position
+            updatedTasks.splice(insertIndex, 0, updatedDraggedTask);
 
-            for (const status of statuses) {
-                if (status === destination.droppableId) {
-                    newTasks.push(...destinationTasks.filter(t => t.status === status));
-                } else {
-                    newTasks.push(...beforeDestinationTasks.filter(t => t.status === status));
-                }
-            }
-
-            return { ...prevRootState, tasks: newTasks };
+            return {
+                ...prevRootState,
+                tasks: updatedTasks,
+            };
         });
     };
 
@@ -148,7 +162,7 @@ const KanbanBoard = ({ tasks }) => {
                                         className="bg-gray-100 rounded-b-lg p-3 shadow-inner border border-t-0 border-gray-200 flex-1 overflow-y-auto h-full"
                                     >
                                         {statusTasks.map((task, index) => (
-                                            <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
+                                            <Draggable key={index} draggableId={task.id.toString()} index={index}>
                                                 {(provided) => (
                                                     <div
                                                         ref={provided.innerRef}
