@@ -60,36 +60,33 @@ const KanbanBoard = ({ tasks }) => {
     );
 
     const onDragEnd = (result) => {
-        const { source, destination, draggableId } = result;
+        const { source, destination } = result;
         if (!destination) return;
 
         setRootContext((prevRootState) => {
-            const allTasks = [...prevRootState.tasks];
-            const taskIndex = allTasks.findIndex(task => task.id.toString() === draggableId);
-            const [draggedTask] = allTasks.splice(taskIndex, 1);
+            const tasksCopy = [...prevRootState.tasks];
 
-            // Update task status
-            draggedTask.status = destination.droppableId;
+            // Find the task being moved
+            const draggedTaskIndex = tasksCopy.findIndex(task =>
+                task.status === source.droppableId &&
+                tasksCopy.filter(t => t.status === source.droppableId)[source.index].id === task.id
+            );
+            const draggedTask = tasksCopy.splice(draggedTaskIndex, 1)[0];
 
-            // Rebuild column task arrays
-            const columns = {};
-            statuses.forEach(status => {
-                columns[status] = [];
-            });
+            // Update the status if moved across columns
+            if (source.droppableId !== destination.droppableId) {
+                draggedTask.status = destination.droppableId;
+            }
 
-            allTasks.forEach(task => {
-                columns[task.status].push(task);
-            });
+            // Rebuild list with task inserted at correct drop position
+            const beforeTasks = tasksCopy.filter(task => task.status !== destination.droppableId);
+            const destTasks = tasksCopy.filter(task => task.status === destination.droppableId);
 
-            // Insert dragged task into destination column at correct position
-            columns[destination.droppableId].splice(destination.index, 0, draggedTask);
-
-            // Flatten all columns back into single task list (maintain correct column groupings and order)
-            const reorderedTasks = statuses.flatMap(status => columns[status]);
+            destTasks.splice(destination.index, 0, draggedTask); // Insert at exact drop location
 
             return {
                 ...prevRootState,
-                tasks: reorderedTasks,
+                tasks: [...beforeTasks, ...destTasks],
             };
         });
     };
@@ -141,13 +138,13 @@ const KanbanBoard = ({ tasks }) => {
                                         className="bg-gray-100 rounded-b-lg p-3 shadow-inner border border-t-0 border-gray-200 flex-1 overflow-y-auto h-full"
                                     >
                                         {statusTasks.map((task, index) => (
-                                            <Draggable key={index} draggableId={task.id.toString()} index={index}>
-                                                {(provided) => (
+                                            <Draggable draggableId={task.id.toString()} index={index} key={task.id}>
+                                                {(provided, snapshot) => (
                                                     <div
                                                         ref={provided.innerRef}
                                                         {...provided.draggableProps}
                                                         {...provided.dragHandleProps}
-                                                        className="mb-2"
+                                                        className={`mb-3 transition-shadow duration-200 ${snapshot.isDragging ? 'shadow-md' : ''}`}
                                                     >
                                                         <KanbanTaskCard task={task} />
                                                     </div>
