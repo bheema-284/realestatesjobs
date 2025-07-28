@@ -1,7 +1,7 @@
 'use client';
 import { Dialog, Transition, Listbox } from '@headlessui/react';
 import { CheckIcon } from '@heroicons/react/24/outline';
-import { ChevronUpDownIcon } from '@heroicons/react/24/solid';
+import { ChevronUpDownIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { Fragment, useEffect, useState } from 'react';
 import Input from '../common/input';
 export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
@@ -144,8 +144,11 @@ export default function AddEditTaskModal({ isOpen, onClose, onSave, task }) {
                             leaveTo="opacity-0 scale-95"
                         >
                             <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                                <Dialog.Title className="text-lg font-semibold text-gray-900 mb-4">
-                                    {task ? 'Edit Task' : 'Add Task'}
+                                <Dialog.Title className="text-lg font-semibold text-gray-900 mb-4 flex ga-5 justify-between">
+                                    <p>{task ? 'Edit Task' : 'Add Task'}</p>
+                                    <button onClick={onClose} className="text-gray-600 hover:text-black hover:bg-gray-200 h-7 w-7 rounded-full text-xl">
+                                        <XMarkIcon className="h-5 w-5 pl-1.5 text-black font-bold" />
+                                    </button>
                                 </Dialog.Title>
 
                                 <form onSubmit={handleSubmit} className="space-y-4">
