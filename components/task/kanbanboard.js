@@ -64,33 +64,28 @@ const KanbanBoard = ({ tasks }) => {
         if (!destination) return;
 
         setRootContext((prevRootState) => {
-            const updatedTasks = [...prevRootState.tasks];
+            const allTasks = [...prevRootState.tasks];
+            const taskIndex = allTasks.findIndex(task => task.id.toString() === draggableId);
+            const [draggedTask] = allTasks.splice(taskIndex, 1);
 
-            // Find and remove the dragged task
-            const draggedIndex = updatedTasks.findIndex(
-                (task) => task.id.toString() === draggableId
-            );
-            const [draggedTask] = updatedTasks.splice(draggedIndex, 1);
-
-            // Update task status to new column
+            // Update task status
             draggedTask.status = destination.droppableId;
 
-            // Build a list of tasks for the destination status
-            const tasksInDestination = updatedTasks.filter(
-                (task) => task.status === destination.droppableId
-            );
+            // Rebuild column task arrays
+            const columns = {};
+            statuses.forEach(status => {
+                columns[status] = [];
+            });
 
-            // Insert the dragged task at the correct index within its new column
-            tasksInDestination.splice(destination.index, 0, draggedTask);
+            allTasks.forEach(task => {
+                columns[task.status].push(task);
+            });
 
-            // Now rebuild the full updatedTasks array
-            const reorderedTasks = [];
-            for (let status of statuses) {
-                const tasksForStatus = status === destination.droppableId
-                    ? tasksInDestination
-                    : updatedTasks.filter((task) => task.status === status);
-                reorderedTasks.push(...tasksForStatus);
-            }
+            // Insert dragged task into destination column at correct position
+            columns[destination.droppableId].splice(destination.index, 0, draggedTask);
+
+            // Flatten all columns back into single task list (maintain correct column groupings and order)
+            const reorderedTasks = statuses.flatMap(status => columns[status]);
 
             return {
                 ...prevRootState,
