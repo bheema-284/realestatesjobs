@@ -102,40 +102,37 @@ const columnsFromBackend = {
 
 const onDragEnd = (result, columns, setColumns) => {
     if (!result.destination) return;
+
     const { source, destination } = result;
 
-    if (source.droppableId !== destination.droppableId) {
-        const sourceColumn = columns[source.droppableId];
-        const destColumn = columns[destination.droppableId];
-        const sourceItems = [...sourceColumn.items];
-        const destItems = [...destColumn.items];
-        const [removed] = sourceItems.splice(source.index, 1);
-        destItems.splice(destination.index, 0, removed);
-        setColumns({
-            ...columns,
-            [source.droppableId]: {
-                ...sourceColumn,
-                items: sourceItems,
-            },
-            [destination.droppableId]: {
-                ...destColumn,
-                items: destItems,
-            },
-        });
-    } else {
-        const column = columns[source.droppableId];
-        const copiedItems = [...column.items];
-        const [removed] = copiedItems.splice(source.index, 1);
-        copiedItems.splice(destination.index, 0, removed);
-        setColumns({
-            ...columns,
-            [source.droppableId]: {
-                ...column,
-                items: copiedItems,
-            },
-        });
-    }
+    // If dropped in same column, do nothing
+    if (source.droppableId === destination.droppableId) return;
+
+    const sourceColumn = columns[source.droppableId];
+    const destColumn = columns[destination.droppableId];
+
+    const sourceItems = Array.from(sourceColumn.items);
+    const destItems = Array.from(destColumn.items);
+
+    // Remove item from source
+    const [moved] = sourceItems.splice(source.index, 1);
+
+    // Append to end of destination column
+    destItems.push(moved);
+
+    setColumns({
+        ...columns,
+        [source.droppableId]: {
+            ...sourceColumn,
+            items: sourceItems,
+        },
+        [destination.droppableId]: {
+            ...destColumn,
+            items: destItems,
+        },
+    });
 };
+
 
 function KanbanBoard() {
     const [columns, setColumns] = useState(columnsFromBackend);
