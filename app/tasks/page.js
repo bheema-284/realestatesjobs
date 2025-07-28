@@ -190,7 +190,7 @@ const TasksDashboard = () => {
                   My tasks
                 </button>
 
-                <div className="relative w-full">
+                <div className="relative">
                   <select value={groupedBy} onChange={(e) => setGroupedBy(e.target.value)}
                     className="appearance-none w-full bg-gray-100 text-gray-700 text-sm font-medium py-2 pl-3 pr-8 rounded-md cursor-pointer hover:bg-gray-200 transition">
                     <option value="Priorities">Grouped by: Priorities</option>
@@ -199,7 +199,7 @@ const TasksDashboard = () => {
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                 </div>
 
-                <div className="relative w-full">
+                <div className="relative">
                   <select value={sortedBy} onChange={(e) => setSortedBy(e.target.value)}
                     className="appearance-none w-full bg-gray-100 text-gray-700 text-sm font-medium py-2 pl-3 pr-8 rounded-md cursor-pointer hover:bg-gray-200 transition">
                     <option value="Due date">Sorted by: Due date</option>

@@ -5,7 +5,7 @@ import { PencilIcon, TrashIcon } from "@heroicons/react/24/solid";
 export default function JobList(props) {
     const { tabName, jobList, getIconForTitle, deleteItem, editForm, formatEmploymentTypes, formatWorkingSchedule, handleCategoryClick, setIsOpen } = props;
     return (
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-100 font-sans antialiased">
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-100 font-sans antialiased w-full">
             <div className="w-full mx-auto bg-white rounded-b-md overflow-hidden border border-gray-200">
                 <div className="flex w-full flex-col sm:flex-row sm:justify-between items-center p-3">
                     <div className="">

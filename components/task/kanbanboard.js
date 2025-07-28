@@ -34,9 +34,7 @@ const KanbanBoard = ({ tasks }) => {
     const KanbanTaskCard = ({ task }) => (
         <div className="bg-white p-3 relative rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-150 cursor-grab select-none">
             <div className="flex justify-between items-start gap-2">
-                <p className="font-medium text-sm text-gray-800 flex-1 line-clamp-2 pr-2">
-                    {task.title}
-                </p>
+                <p className="font-medium text-sm text-gray-800 flex-1 line-clamp-2 pr-2">{task.title}</p>
                 {task.assignedTo?.length > 0 && (
                     <div className="flex -space-x-1 mt-0.5">
                         {task.assignedTo.map((initial, idx) => {
@@ -64,8 +62,7 @@ const KanbanBoard = ({ tasks }) => {
 
     const onDragEnd = (result) => {
         const { destination, source, draggableId } = result;
-        if (!destination) return;
-        if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+        if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) return;
 
         setRootContext((prev) => {
             const task = prev.tasks.find((t) => t.id.toString() === draggableId);
@@ -105,12 +102,12 @@ const KanbanBoard = ({ tasks }) => {
 
     return (
         <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex overflow-x-auto space-x-4 p-4 bg-gray-50 rounded-lg shadow-inner min-h-[500px]">
+            <div className="flex overflow-x-auto space-x-4 p-4 bg-gray-50 rounded-lg shadow-inner h-screen">
                 {statuses.map((status, index) => {
                     const statusTasks = getTasksByStatus(status);
                     const totalDuration = statusTasks.reduce((sum, t) => sum + timeToMinutes(t.duration || '00:00'), 0);
                     return (
-                        <div key={index} className="flex-shrink-0 w-72">
+                        <div key={index} className="flex-shrink-0 w-72 flex flex-col h-full">
                             <div className={`p-3 rounded-t-lg ${getStatusStyles(status)}`}>
                                 <p className="text-sm font-semibold capitalize">{status}</p>
                                 <div className="text-xs text-gray-700 mt-1">
@@ -123,7 +120,7 @@ const KanbanBoard = ({ tasks }) => {
                                     <div
                                         ref={provided.innerRef}
                                         {...provided.droppableProps}
-                                        className="bg-gray-100 rounded-b-lg p-3 space-y-3 shadow-inner border border-t-0 border-gray-200 h-screen"
+                                        className="bg-gray-100 rounded-b-lg p-3 shadow-inner border border-t-0 border-gray-200 flex-1 overflow-y-auto relative h-full"
                                     >
                                         {statusTasks.map((task, index) => (
                                             <Draggable draggableId={task.id.toString()} index={index} key={task.id}>
@@ -132,8 +129,7 @@ const KanbanBoard = ({ tasks }) => {
                                                         ref={provided.innerRef}
                                                         {...provided.draggableProps}
                                                         {...provided.dragHandleProps}
-                                                        className={`transition-shadow duration-200 ${snapshot.isDragging ? 'shadow-md' : ''
-                                                            }`}
+                                                        className={`mb-3 transition-shadow duration-200 ${snapshot.isDragging ? 'shadow-md' : ''}`}
                                                     >
                                                         <KanbanTaskCard task={task} />
                                                     </div>
