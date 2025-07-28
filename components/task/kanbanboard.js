@@ -60,31 +60,25 @@ const KanbanBoard = ({ tasks }) => {
     );
 
     const onDragEnd = (result) => {
-        const { destination, source, draggableId } = result;
-        if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) return;
+        const { source, destination, draggableId } = result;
 
-        setRootContext((prev) => {
-            const sourceTasks = getTasksByStatus(source.droppableId);
-            const destinationTasks = getTasksByStatus(destination.droppableId);
+        if (!destination || destination.droppableId === source.droppableId) return;
 
-            const draggedTask = sourceTasks[source.index];
+        setTasks(prevTasks => {
+            const sourceColumnTasks = [...prevTasks[source.droppableId]];
+            const destColumnTasks = [...prevTasks[destination.droppableId]];
 
-            // Remove from source
-            const newSourceTasks = [...sourceTasks];
-            newSourceTasks.splice(source.index, 1);
+            const movedTask = sourceColumnTasks.find(task => task.id === draggableId);
+            const newSourceTasks = sourceColumnTasks.filter(task => task.id !== draggableId);
 
-            // Add to destination at correct index
-            const newDestinationTasks = [...destinationTasks];
-            draggedTask.status = destination.droppableId;
-            newDestinationTasks.splice(destination.index, 0, draggedTask);
+            // Append to the end of destination
+            const newDestTasks = [...destColumnTasks, movedTask];
 
-            // Combine and return updated tasks
-            const updatedTasks = prev.tasks
-                .filter((t) => t.id !== draggedTask.id && t.status !== destination.droppableId && t.status !== source.droppableId)
-                .concat(newSourceTasks)
-                .concat(newDestinationTasks);
-
-            return { ...prev, tasks: updatedTasks };
+            return {
+                ...prevTasks,
+                [source.droppableId]: newSourceTasks,
+                [destination.droppableId]: newDestTasks,
+            };
         });
     };
 
