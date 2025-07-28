@@ -7,8 +7,7 @@ const KanbanBoard = ({ tasks }) => {
     const statuses = ['Not picked', 'Needs input', 'Needs attention', 'Planned', 'In progress', 'Needs review', 'Done'];
     const { setRootContext } = useContext(RootContext);
 
-    const getTasksByStatus = (status) =>
-        tasks.filter((task) => task.status === status);
+    const getTasksByStatus = (status) => tasks.filter((task) => task.status === status);
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -65,12 +64,25 @@ const KanbanBoard = ({ tasks }) => {
         if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) return;
 
         setRootContext((prev) => {
-            const task = prev.tasks.find((t) => t.id.toString() === draggableId);
-            if (!task) return prev;
+            const sourceTasks = getTasksByStatus(source.droppableId);
+            const destinationTasks = getTasksByStatus(destination.droppableId);
 
-            const updatedTasks = prev.tasks.map((t) =>
-                t.id === task.id ? { ...t, status: destination.droppableId } : t
-            );
+            const draggedTask = sourceTasks[source.index];
+
+            // Remove from source
+            const newSourceTasks = [...sourceTasks];
+            newSourceTasks.splice(source.index, 1);
+
+            // Add to destination at correct index
+            const newDestinationTasks = [...destinationTasks];
+            draggedTask.status = destination.droppableId;
+            newDestinationTasks.splice(destination.index, 0, draggedTask);
+
+            // Combine and return updated tasks
+            const updatedTasks = prev.tasks
+                .filter((t) => t.id !== draggedTask.id && t.status !== destination.droppableId && t.status !== source.droppableId)
+                .concat(newSourceTasks)
+                .concat(newDestinationTasks);
 
             return { ...prev, tasks: updatedTasks };
         });
@@ -120,7 +132,7 @@ const KanbanBoard = ({ tasks }) => {
                                     <div
                                         ref={provided.innerRef}
                                         {...provided.droppableProps}
-                                        className="bg-gray-100 rounded-b-lg p-3 shadow-inner border border-t-0 border-gray-200 flex-1 overflow-y-auto relative h-full"
+                                        className="bg-gray-100 rounded-b-lg p-3 shadow-inner border border-t-0 border-gray-200 flex-1 overflow-y-auto h-full"
                                     >
                                         {statusTasks.map((task, index) => (
                                             <Draggable draggableId={task.id.toString()} index={index} key={task.id}>
