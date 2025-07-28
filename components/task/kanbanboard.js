@@ -51,25 +51,23 @@ const KanbanBoard = () => {
                         <h2 className="text-lg font-bold mb-2">{columnId}</h2>
                         <Droppable droppableId={columnId}>
                             {(provided) => (
-                                <div
-                                    ref={provided.innerRef}
-                                    {...provided.droppableProps}
-                                    className="bg-gray-100 rounded-xl p-2 space-y-3 min-h-[200px]"
-                                >
+                                <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3">
                                     {tasks.map((task, index) => (
                                         <Draggable key={task.id} draggableId={task.id} index={index}>
-                                            {(provided) => (
+                                            {(provided, snapshot) => (
                                                 <div
                                                     ref={provided.innerRef}
                                                     {...provided.draggableProps}
                                                     {...provided.dragHandleProps}
+                                                    className={`transition-transform duration-200 ${snapshot.isDragging ? 'shadow-lg' : ''
+                                                        }`}
                                                 >
                                                     <TaskCard task={task} />
                                                 </div>
                                             )}
                                         </Draggable>
                                     ))}
-                                    {provided.placeholder}
+                                    <div className="invisible">{provided.placeholder}</div>
                                 </div>
                             )}
                         </Droppable>
