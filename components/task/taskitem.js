@@ -102,26 +102,26 @@ const TaskItem = ({
 
             {/* Assigned To */}
             <div className="w-full sm:w-24 flex -space-x-1 overflow-hidden px-2 mt-2 sm:mt-0">
-                {task.assignedTo.map((name, idx) => {
-                    const candidate = dummyCandidates.find(c => c.name.toLowerCase() === name.toLowerCase());
-                    return candidate ? (
-                        <img
-                            key={idx}
-                            className="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover"
-                            src={candidate.image}
-                            alt={candidate.name}
-                            title={candidate.name}
-                        />
-                    ) : (
-                        <span
-                            key={idx}
-                            className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-500 text-white text-xs font-semibold ring-2 ring-white"
-                            title={name}
-                        >
-                            {name[0]}
-                        </span>
-                    );
-                })}
+                {task.assignedTo?.length > 0 && (
+                    <div className="flex -space-x-1 mt-0.5">
+                        {task.assignedTo.slice(0, 3).map((initial, idx) => {
+                            const user = dummyCandidates.find((c) => c.name === initial);
+                            return (
+                                <img
+                                    key={idx}
+                                    src={user?.image}
+                                    alt={initial}
+                                    className="h-6 w-6 rounded-full ring-2 ring-white object-cover"
+                                />
+                            );
+                        })}
+                        {task.assignedTo.length > 3 && (
+                            <div className="h-6 w-6 rounded-full bg-gray-300 text-[10px] text-gray-800 font-medium ring-2 ring-white flex items-center justify-center leading-none">
+                                +{task.assignedTo.length - 3}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Attachments / Comments */}

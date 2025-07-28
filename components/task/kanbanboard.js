@@ -55,7 +55,7 @@ const KanbanBoard = ({ tasks }) => {
                 <p className="font-medium text-sm text-gray-800 flex-1 line-clamp-2 pr-2">{task.title}</p>
                 {task.assignedTo?.length > 0 && (
                     <div className="flex -space-x-1 mt-0.5">
-                        {task.assignedTo.map((initial, idx) => {
+                        {task.assignedTo.slice(0, 3).map((initial, idx) => {
                             const user = dummyCandidates.find((c) => c.name === initial);
                             return (
                                 <img
@@ -66,6 +66,11 @@ const KanbanBoard = ({ tasks }) => {
                                 />
                             );
                         })}
+                        {task.assignedTo.length > 3 && (
+                            <div className="h-6 w-6 rounded-full bg-gray-300 text-[10px] text-gray-800 font-medium ring-2 ring-white flex items-center justify-center leading-none">
+                                +{task.assignedTo.length - 3}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
