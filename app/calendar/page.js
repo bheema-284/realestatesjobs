@@ -130,7 +130,7 @@ export default function Calendar() {
             <DayView date={currentDate} events={filteredEvents} categoryColors={categoryColors} />
           )}
           {view === 'list' && (
-            <ListView events={filteredEvents} categoryColors={categoryColors} />
+            <ListView date={currentDate} events={filteredEvents} categoryColors={categoryColors} />
           )}
         </div>
       </main>

@@ -1,7 +1,6 @@
-// ListView.jsx
 import React, { useState } from 'react';
-import { format, parseISO, eachDayOfInterval } from 'date-fns'; // Import eachDayOfInterval
-import EventDrawer from './eventdrawer';
+import { format, parseISO, eachDayOfInterval, isSameMonth, startOfMonth, endOfMonth } from 'date-fns';
+import EventDrawer from './eventdrawer.jsx';
 
 // Helper function to convert hex to RGBA for consistency
 const hexToRgba = (hex, alpha = 1) => {
@@ -21,33 +20,56 @@ const hexToRgba = (hex, alpha = 1) => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-export default function ListView({ events, categoryColors }) {
-    // Use a temporary array to store all event instances (including expanded multi-day ones)
-    const allEventsForDisplay = [];
+// Now expects 'date' as a prop, which is a Date object or a date string
+export default function ListView({ date, events, categoryColors }) {
     const [showDrawer, setShowDrawer] = useState(false);
     const [editData, setEditDate] = useState({});
+
     const editForm = (item) => {
-        setEditDate(item)
-        setShowDrawer(true)
-    }
+        setEditDate(item);
+        setShowDrawer(true);
+    };
+
+    // Determine the month to filter by based on the date prop.
+    // If date is a string, parse it. If it's a Date object, use it directly.
+    // If date is not provided, default to the current date's month.
+    const monthToFilter = date
+        ? (date instanceof Date ? date : parseISO(date))
+        : new Date(); // Default to current date if no date is provided
+
+    const targetMonthStart = startOfMonth(monthToFilter);
+    const targetMonthEnd = endOfMonth(monthToFilter);
+
+    // Use a temporary array to store all event instances (including expanded multi-day ones)
+    // Filter events to only include those that fall within the selected month
+    const allEventsForDisplay = [];
     events.forEach(event => {
-        // Parse start and end dates for date-fns operations
         const startDate = parseISO(event.startDate);
-        // If no endDate, it's a single-day event, so endDate is the same as startDate
         const endDate = event.endDate ? parseISO(event.endDate) : startDate;
 
-        // Get all days within the event's interval
-        const daysInEvent = eachDayOfInterval({ start: startDate, end: endDate });
+        // Check if the event's start or end date is within the selected month,
+        // or if it spans across the selected month.
+        const eventStartsInMonth = isSameMonth(startDate, monthToFilter);
+        const eventEndsInMonth = isSameMonth(endDate, monthToFilter);
+        // This condition checks if an event starts before the target month and ends after it,
+        // meaning it spans across the entire target month.
+        const eventSpansTargetMonth = startDate < targetMonthStart && endDate > targetMonthEnd;
 
-        daysInEvent.forEach(day => {
-            // Create a "display" event object for each day it spans
-            // We pass the original event details along, but associate it with 'day'
-            allEventsForDisplay.push({
-                ...event,
-                displayDate: format(day, 'yyyy-MM-dd'), // The date this instance should be displayed under
-                isMultiDay: event.endDate && event.startDate !== event.endDate, // Flag for styling/info if needed
+
+        if (eventStartsInMonth || eventEndsInMonth || eventSpansTargetMonth) {
+            const daysInEvent = eachDayOfInterval({ start: startDate, end: endDate });
+
+            daysInEvent.forEach(day => {
+                // Only add the event instance if the specific day falls within the selected month
+                if (isSameMonth(day, monthToFilter)) {
+                    allEventsForDisplay.push({
+                        ...event,
+                        displayDate: format(day, 'yyyy-MM-dd'), // The date this instance should be displayed under
+                        isMultiDay: event.endDate && event.startDate !== event.endDate, // Flag for styling/info if needed
+                    });
+                }
             });
-        });
+        }
     });
 
     // Group the expanded events by their displayDate
@@ -56,7 +78,6 @@ export default function ListView({ events, categoryColors }) {
         if (!acc[dateKey]) {
             acc[dateKey] = [];
         }
-        // Sort events within each day: all-day first, then by time
         acc[dateKey].push(event);
         return acc;
     }, {});
@@ -67,7 +88,6 @@ export default function ListView({ events, categoryColors }) {
     );
 
     // Sort events within each day: all-day first, then by time
-    // This sorting happens AFTER grouping for better control
     sortedDates.forEach(dateKey => {
         eventsByDate[dateKey].sort((a, b) => {
             // Prioritize all-day events
@@ -85,14 +105,16 @@ export default function ListView({ events, categoryColors }) {
             return 0;
         });
     });
+
     const categories = ['View all', 'Personal', 'Family', 'Business', 'Holiday', 'ETC'];
+
     return (
         <div className="space-y-4">
             {sortedDates.length === 0 ? (
-                <p className="text-sm text-gray-500">No upcoming events.</p>
+                <p className="text-sm text-gray-500 text-center py-4">No events found for {format(monthToFilter, 'MMMM yyyy')}.</p>
             ) : (
-                sortedDates.map(dateKey => (
-                    <div key={dateKey} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                sortedDates.map((dateKey, index) => (
+                    <div key={index} className="bg-white rounded-lg shadow-sm overflow-hidden">
                         {/* Date Header */}
                         <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
                             <h3 className="text-md font-semibold text-gray-800">
