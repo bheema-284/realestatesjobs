@@ -49,9 +49,9 @@ export default function JobList(props) {
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
                                         Hiring Multiple
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
+                                    {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
                                         Location
-                                    </th>
+                                    </th> */}
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
                                         Actions
                                     </th>
@@ -61,7 +61,10 @@ export default function JobList(props) {
                                 {jobList.map((job, index) => (
                                     <tr key={job.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-indigo-50 transition-colors duration-150`}>
                                         <td className="px-6 py-4 w-48 whitespace-nowrap">
-                                            <div className="text-sm w-48 text-wrap font-medium text-gray-900">{job.jobDescription}</div>
+                                            <div
+                                                className="text-sm w-48 text-wrap font-medium text-gray-900"
+                                                dangerouslySetInnerHTML={{ __html: job.jobDescription }}
+                                            />
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm text-gray-700">{formatEmploymentTypes(job.employmentTypes)}</div>
@@ -92,9 +95,9 @@ export default function JobList(props) {
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        {/* <td className="px-6 py-4 whitespace-nowrap">
                                             {job.location}
-                                        </td>
+                                        </td> */}
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex justify-center gap-2">
                                                 <PencilIcon className="h-5 ml-5 fill-yellow-400 hover:fill-yellow-500 hover:cursor-pointer" onClick={() => editForm(index, "update")} />

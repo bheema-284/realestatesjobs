@@ -2,7 +2,7 @@ export const runtime = "edge";
 export default function AnalyticsPage() {
   return (
     <div className="p-4 sm:p-8 space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Analytics Dashboard</h1>
+      <h1 className="text-3xl font-bold text-gray-800">Analytics Dashboard</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl shadow-md bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 text-white">
           <h2 className="text-xl font-semibold">Total Listings</h2>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { format, parseISO, eachDayOfInterval, isSameMonth, startOfMonth, endOfMonth } from 'date-fns';
-import EventDrawer from './eventdrawer.jsx';
+import EventDrawer from './eventdrawer';
+
 
 // Helper function to convert hex to RGBA for consistency
 const hexToRgba = (hex, alpha = 1) => {

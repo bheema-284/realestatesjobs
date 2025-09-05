@@ -678,11 +678,9 @@ export default function Jobs() {
     const handleCategoryClick = (categoryTitle) => {
         const newJob = generateDummyJob(categoryTitle);
         // setJobList((prevList) => [...prevList, newJob]); // Add the auto-generated job to the list
-        setRootContext((prevContext) => ({
-            ...prevContext,
-            jobs: [...prevContext.jobs, newJob],
-        }));
-        // No modal opening here
+        setEditData(newJob);
+        // modal opening here
+        setIsOpen(true);
     };
 
     // The handleNewJobPost function is now only relevant if you add a separate button to open the modal manually
@@ -722,12 +720,14 @@ export default function Jobs() {
 
     const deleteItem = (filterIndex) => {
         // Find the job to delete from the filtered list
+        const isConfirmed = confirm("Are you sure you want to delete?");
         const jobToDelete = filterJobs[filterIndex];
-
-        setRootContext((prevContext) => ({
-            ...prevContext,
-            jobs: prevContext.jobs.filter((job) => job !== jobToDelete),
-        }));
+        if (isConfirmed) {
+            setRootContext((prevContext) => ({
+                ...prevContext,
+                jobs: prevContext.jobs.filter((job) => job !== jobToDelete),
+            }));
+        }
     };
 
 

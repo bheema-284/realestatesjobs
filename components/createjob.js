@@ -213,9 +213,10 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                     id="jobTitle"
                                                     value={jobTitle}
                                                     onChange={(e) => setJobTitle(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    className="w-full p-2.5 border cursor-not-allowed border-gray-300 opacity-75 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                     placeholder="e.g. &quot;Kitchen staff&quot;"
                                                     required
+                                                    disabled
                                                 />
                                             </div>
                                         </div>

@@ -12,6 +12,7 @@ import { ChevronDownIcon, UserIcon } from "@heroicons/react/24/solid";
 import { Inter } from 'next/font/google';
 import JobPostingModal from "@/components/createjob";
 import Image from "next/image";
+import Link from "next/link";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -427,7 +428,7 @@ export default function RootLayout({ children }) {
         title: 'Backlog',
         tasks: [
           {
-            id: 'e940fbf3-ff3b-4ac3-8134-1d620cc41734',
+            id: '1',
             title: 'Add discount code to checkout page',
             dueDate: '2025-08-10',
             type: 'Feature Request',
@@ -443,7 +444,7 @@ export default function RootLayout({ children }) {
             overdue: false
           },
           {
-            id: 'b19059c9-9f2a-452c-90a6-8b3e3db4b3ae',
+            id: '2',
             title: 'Provide documentation on integrations',
             dueDate: '2025-08-07',
             progress: 25,
@@ -463,7 +464,7 @@ export default function RootLayout({ children }) {
         title: 'In Progress',
         tasks: [
           {
-            id: 'c69e6d77-1316-4191-826c-348dcf73109c',
+            id: '3',
             title: 'Fix bug in mobile nav',
             dueDate: '2025-08-01',
             type: 'Bug',
@@ -479,7 +480,7 @@ export default function RootLayout({ children }) {
             overdue: false
           },
           {
-            id: '6b5decb0-7a9a-4861-9425-c6643d69b1dc',
+            id: '4',
             title: 'Refactor dashboard layout',
             dueDate: '2025-08-06',
             type: 'Feature Request',
@@ -500,7 +501,7 @@ export default function RootLayout({ children }) {
         title: 'Review',
         tasks: [
           {
-            id: '1a9051f7-5ff9-401c-a9fa-96155c367aba',
+            id: '5',
             title: 'Add API rate limit warning',
             dueDate: '2025-08-09',
             type: 'Feature Request',
@@ -516,7 +517,7 @@ export default function RootLayout({ children }) {
             overdue: false
           },
           {
-            id: '2f225421-6290-46e3-92b8-35cc942c5952',
+            id: '6',
             title: 'Remove legacy payment code',
             dueDate: '2025-07-31',
             type: 'Cleanup',
@@ -537,7 +538,7 @@ export default function RootLayout({ children }) {
         title: 'Done',
         tasks: [
           {
-            id: 'a4eac943-bfc4-4327-bb7f-7995570d4d45',
+            id: '7',
             title: 'Fix broken image on homepage',
             dueDate: '2025-08-02',
             type: 'Bug',
@@ -553,7 +554,7 @@ export default function RootLayout({ children }) {
             overdue: false
           },
           {
-            id: '0939c4fc-ec70-4c47-81f5-d53f4b78e0ae',
+            id: '8',
             title: 'Update user settings UI',
             dueDate: '2025-08-01',
             type: 'Improvement',
@@ -833,9 +834,9 @@ export default function RootLayout({ children }) {
       <div
         className={`
         relative w-full max-w-[150px] h-10
-        flex items-center px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base justify-center
+        flex items-center px-3 sm:px-4 py-1.5 rounded text-sm text-gray-800 sm:text-base justify-center
         rounded-lg overflow-hidden
-        bg-white dark:bg-slate-700
+        bg-white
       `}
       >
         {/* Top border */}
@@ -863,7 +864,7 @@ export default function RootLayout({ children }) {
                    animate-drawLineLeft"
         />
 
-        <div className="relative z-10 font-semibold text-gray-700 dark:text-gray-300 text-center px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
+        <div className="relative z-10 font-semibold text-gray-700 text-center px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap">
           POST NEW JOB
         </div>
       </div>
@@ -895,7 +896,9 @@ export default function RootLayout({ children }) {
   const Topbar = () => (
     <div className="flex h-26 sm:h-16 flex-wrap sm:flex-nowrap fixed top-0 left-0 w-full z-50 justify-between items-center px-4 sm:px-6 py-2 bg-white shadow-md gap-2">
       <div className="flex items-center justify-between w-full sm:w-auto">
-        <Image alt={"logo"} width={100} height={20} src="https://realestatejobs.co.in/images/logo.png" />
+        <Link className="cursor-pointer" href={"/"}>
+          <Image alt={"logo"} width={100} height={20} src="https://realestatejobs.co.in/images/logo.png" />
+        </Link>
         <button
           onClick={() => setMobileSidebarOpen(!isMobileSidebarOpen)}
           className="sm:hidden text-gray-700 focus:outline-none"

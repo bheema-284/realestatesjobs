@@ -9,7 +9,7 @@ const AnimatedBorderLoader = () => {
         relative w-full max-w-[150px] h-10
         flex items-center justify-center
         rounded-lg overflow-hidden
-        bg-white dark:bg-slate-700
+        bg-white
       `}
     >
       <span className="absolute top-0 left-0 h-0.5 w-0 bg-gradient-to-r from-orange-400 via-purple-500 to-pink-500 animate-drawLineTop" />
@@ -95,7 +95,7 @@ export default function SettingsPage() {
 
   return (
     <div className="p-1 space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Settings</h1>
+      <h1 className="text-3xl font-bold text-gray-800">Settings</h1>
 
       <div className="space-y-4">
         <div className="p-6 rounded-2xl shadow-md bg-white dark:bg-slate-800">

@@ -6,8 +6,6 @@ const RecurringTasksView = () => (
 
 export default RecurringTasksView
 
-
-
 // 'use client';
 
 // import { useContext, useState } from 'react';
@@ -172,52 +170,6 @@ export default RecurringTasksView
 //         <div className="flex justify-center">
 //             <div className="flex overflow-x-auto space-x-4 p-4 bg-gray-50 rounded-lg shadow-inner h-screen">
 //                 <DragDropContext onDragEnd={onDragEnd}>
-//                     <div>
-//                         {/* <div className='flex justify-end'>
-//                             <button onClick={() => setShowModal(true)} className="text-gray-700 hover:text-gray-900">
-//                                 <PlusIcon className="w-5 h-5" />
-//                             </button>
-//                         </div> */}
-//                         {/* <div className={`rounded-t-lg ${getStatusColor(column.title)} flex justify-between items-center`}>
-//                             <div>
-//                                 <div className='flex gap-5 justify-between'>
-//                                     <p className="text-sm font-semibold capitalize">{column.title}</p>
-//                                     <div className="relative">
-//                                         <button onClick={() => setMenuOpen(colIndex)}>
-//                                             <MoreHorizontal className="w-4 h-4 text-gray-500 hover:text-gray-700" />
-//                                         </button>
-//                                         {menuOpen === colIndex && (
-//                                             <div className="absolute left-0 right-0 top-6 bg-white border rounded shadow p-2 text-sm z-10 w-44">
-//                                                 <button className="block px-2 py-1 hover:bg-gray-100 w-full text-left">Change Title</button>
-//                                                 <div className="block px-2 py-1 text-left">
-//                                                     <p className="mb-1 text-xs text-gray-500">Change Color:</p>
-//                                                     <div className="flex flex-wrap gap-1">
-//                                                         {defaultColors.map((colorClass, i) => (
-//                                                             <button
-//                                                                 key={i}
-//                                                                 onClick={() => {
-//                                                                     setStatusColors((prev) => ({
-//                                                                         ...prev,
-//                                                                         [column.title]: colorClass,
-//                                                                     }));
-//                                                                     setMenuOpen(null);
-//                                                                 }}
-//                                                                 className={`w-5 h-5 rounded-full ${colorClass.split(' ')[0]}`}
-//                                                             />
-//                                                         ))}
-//                                                     </div>
-//                                                 </div>
-//                                             </div>
-//                                         )}
-//                                     </div>
-//                                 </div>
-//                                 <div className="text-xs text-gray-700 mt-1">
-//                                     <div>Tasks: {column.tasks.length}</div>
-//                                     <div>Duration: {minutesToTime(totalDuration)}</div>
-//                                 </div>
-//                             </div>
-//                         </div> */}
-//                     </div>
 //                     {columns.map((column, colIndex) => {
 //                         return (
 //                             <Droppable droppableId={column.title}>
@@ -227,6 +179,52 @@ export default RecurringTasksView
 //                                         {...provided.droppableProps}
 //                                         className="bg-gray-100 rounded-b-lg p-3 shadow-inner border border-t-0 border-gray-200 flex-1 overflow-y-auto h-full"
 //                                     >
+//                                         <div>
+//                                             <div className='flex justify-end'>
+//                                                 <button onClick={() => setShowModal(true)} className="text-gray-700 hover:text-gray-900">
+//                                                     <PlusIcon className="w-5 h-5" />
+//                                                 </button>
+//                                             </div>
+//                                             <div className={`rounded-t-lg ${getStatusColor(column.title)} flex justify-between items-center`}>
+//                                                 <div>
+//                                                     <div className='flex gap-5 justify-between'>
+//                                                         <p className="text-sm font-semibold capitalize">{column.title}</p>
+//                                                         <div className="relative">
+//                                                             <button onClick={() => setMenuOpen(colIndex)}>
+//                                                                 <MoreHorizontal className="w-4 h-4 text-gray-500 hover:text-gray-700" />
+//                                                             </button>
+//                                                             {menuOpen === colIndex && (
+//                                                                 <div className="absolute left-0 right-0 top-6 bg-white border rounded shadow p-2 text-sm z-10 w-44">
+//                                                                     <button className="block px-2 py-1 hover:bg-gray-100 w-full text-left">Change Title</button>
+//                                                                     <div className="block px-2 py-1 text-left">
+//                                                                         <p className="mb-1 text-xs text-gray-500">Change Color:</p>
+//                                                                         <div className="flex flex-wrap gap-1">
+//                                                                             {defaultColors.map((colorClass, i) => (
+//                                                                                 <button
+//                                                                                     key={i}
+//                                                                                     onClick={() => {
+//                                                                                         setStatusColors((prev) => ({
+//                                                                                             ...prev,
+//                                                                                             [column.title]: colorClass,
+//                                                                                         }));
+//                                                                                         setMenuOpen(null);
+//                                                                                     }}
+//                                                                                     className={`w-5 h-5 rounded-full ${colorClass.split(' ')[0]}`}
+//                                                                                 />
+//                                                                             ))}
+//                                                                         </div>
+//                                                                     </div>
+//                                                                 </div>
+//                                                             )}
+//                                                         </div>
+//                                                     </div>
+//                                                     <div className="text-xs text-gray-700 mt-1">
+//                                                         <div>Tasks: {column.tasks.length}</div>
+//                                                         <div>Duration: {minutesToTime(totalDuration)}</div>
+//                                                     </div>
+//                                                 </div>
+//                                             </div>
+//                                         </div>
 //                                         {column.tasks.map((task, index) => (
 //                                             <Draggable draggableId={task.id.toString()} index={index} key={task.id}>
 //                                                 {(provided, snapshot) => (
