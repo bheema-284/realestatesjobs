@@ -2,7 +2,7 @@ import React from 'react';
 
 const AutoScrollLogos = ({ logos }) => {
     return (
-        <div className="relative w-full overflow-hidden py-4">
+        <div className="relative w-full overflow-hidden py-4 cursor-pointer">
             <div className="flex animate-scroll-left whitespace-nowrap">
                 {/* Duplicate the logos to create a seamless loop */}
                 {[...logos, ...logos].map((recruiter, index) => (

@@ -897,9 +897,7 @@ export default function RootLayout({ children }) {
   const Topbar = () => (
     <div className="flex h-26 sm:h-16 flex-wrap sm:flex-nowrap fixed top-0 left-0 w-full z-50 justify-between items-center px-4 sm:px-6 py-2 bg-white shadow-md gap-2">
       <div className="flex items-center justify-between w-full sm:w-auto">
-        <Link className="cursor-pointer" href={"/"}>
-          <Image alt={"logo"} width={100} height={20} src="https://realestatejobs.co.in/images/logo.png" />
-        </Link>
+        <Image alt={"logo"} width={100} height={20} src="https://realestatejobs.co.in/images/logo.png" />
         <button
           onClick={() => setMobileSidebarOpen(!isMobileSidebarOpen)}
           className="sm:hidden text-gray-700 focus:outline-none"
