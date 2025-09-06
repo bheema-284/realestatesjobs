@@ -13,6 +13,7 @@ import { Inter } from 'next/font/google';
 import JobPostingModal from "@/components/createjob";
 import Image from "next/image";
 import Link from "next/link";
+import { Navbar } from "@/components/navbar";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -961,22 +962,14 @@ export default function RootLayout({ children }) {
     <html lang="en" className={inter.variable}>
       <body className="antialiased">
         <RootContext.Provider value={{ rootContext, setRootContext }}>
-          {pathName === "/signup" && !rootContext.authenticated && !rootContext.loader ? (
-            <RegisterForm />
-          ) : rootContext.loader ? (
-            <Loader />
-          ) : !rootContext.authenticated ? (
-            <SignIn />
-          ) : (
-            <div>
-              {!ready && <Loader />}
-              <Topbar />
-              <div className="flex flex-col sm:flex-row pt-26 sm:pt-16 bg-gray-100 min-h-screen">
-                <Sidebar isMobileOpen={isMobileSidebarOpen} toggleSidebar={setMobileSidebarOpen} />
-                <main className="flex-1 sm:ml-36 p-1">{children}</main>
-              </div>
+          <div>
+            {!ready && <Loader />}
+            {rootContext.authenticated ? <Topbar /> : <Navbar />}
+            <div className="flex flex-col sm:flex-row pt-26 sm:pt-16 min-h-screen">
+              {rootContext.authenticated && <Sidebar isMobileOpen={isMobileSidebarOpen} toggleSidebar={setMobileSidebarOpen} />}
+              <main className={`flex-1 p-1 ${(pathName === "/" || pathName === "/login" || pathName === "/signup") ? "ml-0" : "sm:ml-36"}`}>{children}</main>
             </div>
-          )}
+          </div>
           {rootContext?.toast && <Toast />}
         </RootContext.Provider>
       </body>

@@ -24,7 +24,6 @@ export function CustomImage(props) {
     const { src, alt, width, height, priority, className, fill, sizes, skeleton } = props;
 
     const [source, setSource] = useState(src);
-console.log("source",source)
     useEffect(() => {
         setSource(src);
     }, [src]);
