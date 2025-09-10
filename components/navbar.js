@@ -9,8 +9,8 @@ export const Navbar = () => {
     const [menuOpen, setMenuOpen] = useState(false);
 
     return (
-        <nav className="bg-white shadow-md fixed top-0 left-0 w-full z-50">
-            <div className="flex items-center justify-between px-6 py-3">
+        <nav className="bg-white shadow-md fixed top-0 left-0 w-full px-2 z-10">
+            <div className="flex items-center justify-between h-26 sm:h-16">
                 {/* Logo */}
                 <Link href="/" className="flex items-center">
                     <Image
@@ -27,13 +27,16 @@ export const Navbar = () => {
                     <Link href="/" className="text-gray-700 hover:text-indigo-700 font-medium">
                         Home
                     </Link>
+                    <Link href="/companies" className="text-gray-700 hover:text-indigo-700 font-medium">
+                        Companies
+                    </Link>
+                    <Link href="/jobs" className="text-gray-700 hover:text-indigo-700 font-medium">
+                        Jobs
+                    </Link>
                     <Link href="/about" className="text-gray-700 hover:text-indigo-700 font-medium">
                         About Us
                     </Link>
-                    <Link
-                        href="/login"
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                    >
+                    <Link href="/login" className="px-4 py-2 bg-indigo-600 text-white rounded-sm hover:bg-indigo-700 transition">
                         Login
                     </Link>
                 </div>

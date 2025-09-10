@@ -1,74 +1,98 @@
-import Image from 'next/image';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from "react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 
-function Slider({ data }) {
-    const [currentSlide, setCurrentSlide] = useState(0);
+function Slider({ data, imageSize = "400px", rounded }) {
+    const [currentSlide, setCurrentSlide] = useState(1); // start at index 1 (first "real" slide)
+    const [isTransitioning, setIsTransitioning] = useState(true);
 
-    const nextSlide = useCallback(
-        (index) => {
-            setCurrentSlide(index ?? (currentSlide + 1) % (data?.length || 1));
-        },
-        [currentSlide, data?.length]
-    );
+    // Clone first & last images
+    const slides = [data[data.length - 1], ...data, data[0]];
+
+    const nextSlide = useCallback(() => {
+        setCurrentSlide((prev) => prev + 1);
+        setIsTransitioning(true);
+    }, []);
+
+    const prevSlide = useCallback(() => {
+        setCurrentSlide((prev) => prev - 1);
+        setIsTransitioning(true);
+    }, []);
 
     useEffect(() => {
         const autoScrollInterval = setInterval(nextSlide, 3000);
-
-        return () => {
-            clearInterval(autoScrollInterval);
-        };
+        return () => clearInterval(autoScrollInterval);
     }, [nextSlide]);
 
+    // Handle "jump" without animation
+    useEffect(() => {
+        if (currentSlide === slides.length - 1) {
+            // reached cloned last (actually first)
+            setTimeout(() => {
+                setIsTransitioning(false);
+                setCurrentSlide(1); // jump to real first
+            }, 700);
+        }
+        if (currentSlide === 0) {
+            // reached cloned first (actually last)
+            setTimeout(() => {
+                setIsTransitioning(false);
+                setCurrentSlide(slides.length - 2); // jump to real last
+            }, 700);
+        } else {
+            setIsTransitioning(true);
+        }
+    }, [currentSlide, slides.length]);
+
     return (
-        <div id="default-carousel" className="relative w-full bg-white" data-carousel="slide">
-            {/* Carousel wrapper */}
-            <div className="relative h-72 w-full overflow-hidden">
-                {/* Image container */}
-                <div
-                    className="flex transition-transform duration-700 ease-in-out"
-                    style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-                >
-                    {data?.map((item, index) => (
-                        <div key={index} className="flex-none w-full" data-carousel-item>
-                            {item?.image ? (
-                                <img
-                                    src={item.image}
-                                    alt={`carousel-${index}`}
-                                    className="object-cover w-full h-full lg:group-hover/item:delay-500 lg:group-hover/item:rounded-r-none"
-                                />
-                            ) : (
-                                <Image
-                                    src="https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
-                                    alt="error image"
-                                    priority={false}
-                                    fill={true}
-                                    sizes="100vw"
-                                    className="lg:w-full object-cover aspect-[16/9]"
-                                />
-                            )}
+        <div className={`relative w-full bg-white overflow-hidden ${rounded}`}>
+            <div className="relative w-full" style={{ height: imageSize }}>
+                {/* Slides wrapper */}
+                <div className={`flex ${isTransitioning ? "transition-transform duration-700 ease-in-out" : ""}`} style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                    {slides.map((item, index) => (
+                        <div key={index} className="flex-none w-full h-full">
+                            <div className={`w-full`} style={{ height: imageSize }}>
+                                {item?.image ? (
+                                    <img
+                                        src={item.image}
+                                        alt={`carousel-${index}`}
+                                        className="object-cover w-full h-full"
+                                    />
+                                ) : (
+                                    <img
+                                        src="https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
+                                        alt="error"
+                                        className="object-cover w-full h-full"
+                                    />
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* Slider indicators */}
+            {/* Prev / Next buttons */}
             {data?.length > 1 && (
-                <div className="absolute z-30 flex space-x-3 -translate-x-1/2 bottom-5 left-1/2">
-                    {data.map((_, index) => (
-                        <button
-                            onClick={() => nextSlide(index)}
-                            key={index}
-                            type="button"
-                            className={`w-3 h-3 rounded-full ${currentSlide === index
-                                ? 'bg-red-700 opacity-80'
-                                : 'bg-red-200 opacity-50'
-                                }`}
-                            aria-current={currentSlide === index ? 'true' : 'false'}
-                            aria-label={`Slide ${index + 1}`}
-                            data-carousel-slide-to={index}
-                        />
-                    ))}
-                </div>
+                <>
+                    <button
+                        type="button"
+                        className="absolute top-0 left-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group"
+                        onClick={prevSlide}
+                    >
+                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50">
+                            <ChevronLeftIcon className="w-6 h-6 text-white" />
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        className="absolute top-0 right-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group"
+                        onClick={nextSlide}
+                    >
+                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50">
+                            <ChevronRightIcon className="w-6 h-6 text-white" />
+                        </span>
+                    </button>
+                </>
             )}
         </div>
     );

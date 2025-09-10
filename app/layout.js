@@ -958,14 +958,14 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en" className={inter.variable}>
-      <body className="antialiased">
+      <body className="">
         <RootContext.Provider value={{ rootContext, setRootContext }}>
           <div>
             {!ready && <Loader />}
             {rootContext.authenticated ? <Topbar /> : <Navbar />}
-            <div className="flex flex-col sm:flex-row pt-26 sm:pt-16 min-h-screen">
-              {rootContext.authenticated && <Sidebar isMobileOpen={isMobileSidebarOpen} toggleSidebar={setMobileSidebarOpen} />}
-              <main className={`flex-1 p-1 ${(pathName === "/" || pathName === "/login" || pathName === "/signup") ? "ml-0" : "sm:ml-36"}`}>{children}</main>
+            <div className="flex flex-col sm:flex-row pt-26 sm:pt-16">
+              {(rootContext.authenticated && pathName !== "/") && <Sidebar isMobileOpen={isMobileSidebarOpen} toggleSidebar={setMobileSidebarOpen} />}
+              <main className={`flex-1 ${(rootContext.authenticated && pathName !== "/") ? "sm:ml-36" : "ml-0"}`}>{children}</main>
             </div>
           </div>
           {rootContext?.toast && <Toast />}
