@@ -748,7 +748,7 @@ export default function Jobs() {
             {/* Job Categories Section */}
             <div className="bg-gray-50 min-h-screen flex flex-col font-sans">
                 {/* Header */}
-                <div className="hidden sm:flex flex-col left-0 right-0 text-sm w-full fixed top-16 z-10 bg-white shadow pl-36 text-center">
+                <div className="hidden sm:flex flex-col text-sm w-full z-10 bg-white shadow text-center">
                     <h1 className="text-xl sm:text-2xl md:text-3xl mb-3 sm:mb-5 font-normal text-gray-800 leading-tight">
                         Click to unlock your <span className="font-bold">Dream Real Estate Jobs</span> below
                     </h1>
@@ -793,7 +793,7 @@ export default function Jobs() {
                 </div>
 
                 {/* Job List Section */}
-                <div className="hidden sm:flex w-full sm:mt-32">
+                <div className="hidden sm:flex w-full">
                     {jobCategories[activeTab] && (
                         <JobList
                             tabName={tabName}

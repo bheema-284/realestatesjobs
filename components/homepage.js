@@ -2,8 +2,6 @@
 import { useEffect, useState } from "react";
 import AutoScrollLogos from "./common/autoscrolllogs";
 import Slider from "./common/slider";
-import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa'; // Import social media icons
-import Image from "next/image";
 import { motion, useAnimation } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 
@@ -215,12 +213,12 @@ export default function HomePage() {
         }, []);
 
         return (
-            <div className="mx-auto py-5 rounded-3xl bg-white cursor-pointer w-screen">
+            <div className="mx-auto py-5 rounded-3xl bg-white cursor-pointer w-full my-10">
                 <div className="container mx-auto px-4">
-                    <h3 className="text-3xl md:text-4xl font-bold text-center mb-12">
+                    <h3 className="text-3xl md:text-4xl font-bold text-center">
                         Trending Certifications Programs
                     </h3>
-                    <div className="relative overflow-hidden rounded-3xl">
+                    <div className="relative overflow-hidden rounded-3xl mt-16">
                         <div className="flex animate-scroll">
                             {loopedCerts.map((cert, index) => (
                                 <div key={index} className="w-96 flex-shrink-0 px-4">
@@ -295,16 +293,16 @@ export default function HomePage() {
 
     const OurServices = () => {
         return (
-            <div className="py-12 w-full mx-auto">
-                <h2 className="text-3xl font-bold text-center mb-10 text-gray-800">Our Recruitment Services</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="py-8 w-full mx-auto">
+                <h2 className="text-3xl font-bold text-center mt-10 text-gray-800">Our Recruitment Services</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-14">
                     {ourServices.map((service, index) => (
                         <div key={index} className="bg-white rounded-lg shadow-md text-center hover:shadow-lg transition-shadow duration-300">
-                            <div className="flex justify-center mb-4">
+                            <div className="flex w-full h-80 justify-center mb-4">
                                 <img
                                     src={service.icon}
                                     alt={service.title}
-                                    className="w-full h-72 object-cover"
+                                    className="w-full h-80 object-cover"
                                 />
                             </div>
                             <div className="p-2">
@@ -348,7 +346,7 @@ export default function HomePage() {
                 ref={ref}
                 className="flex my-5 flex-col items-center justify-center w-full mx-auto sm:w-[80%]"
             >
-                <h1 className="text-2xl sm:text-3xl font-normal text-gray-700 mb-5 text-center">
+                <h1 className="text-4xl sm:text-3xl font-normal text-gray-700 mb-10 text-center">
                     Click to unlock your{" "}
                     <span className="font-semibold text-gray-900">
                         Dream Real Estate Jobs
@@ -356,7 +354,7 @@ export default function HomePage() {
                     below
                 </h1>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl w-full">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl w-full mt-5">
                     {jobCategories.map((job, index) => {
                         const dir = directions[index % directions.length];
 
@@ -404,79 +402,60 @@ export default function HomePage() {
         );
     }
 
+    function ExploreJobsByCity() {
+        const [hoveredCity, setHoveredCity] = useState(null);
 
-    const Footer = () => (
-        <footer
-            className="text-white py-12 px-6 mt-8"
-            style={{
-                backgroundColor: "#1c4676",                   // solid blue base
-                backgroundImage: 'url("/rejobs/india.png")', // world map
-                backgroundSize: "100% 100%",                 // ✅ spread whole footer, no cut
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "center",
-                backgroundBlendMode: "multiply",             // keeps image + blue color
-            }}
-        >
-            <div className="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
-                <div className="col-span-1 md:col-span-1">
-                    <Image
-                        src="https://realestatejobs.co.in/images/logo.png"
-                        alt="logo"
-                        width={120}
-                        height={30}
-                        priority
-                    />
-                    <p className="text-sm font-light">
-                        Welcome to Real Estate Jobs, Inc - India's first and only dedicated job portal exclusively designed for the real estate industry. Whether you are a job seeker looking to build a career in real estate or an employer searching for top talent, we are here to connect you with the right opportunities and resources.
-                    </p>
-                </div>
-                <div className="col-span-1">
-                    <h4 className="text-lg font-bold mb-4">Quick Links</h4>
-                    <ul className="space-y-2 text-sm font-light">
-                        <li><a href="/" className="hover:text-amber-400">Home</a></li>
-                        <li><a href="/jobs" className="hover:text-amber-400">Job Listings</a></li>
-                        <li><a href="/companies" className="hover:text-amber-400">Companies</a></li>
-                        <li><a href="/about" className="hover:text-amber-400">About Us</a></li>
-                        <li><a href="/login" className="hover:text-amber-400">Login</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 className="text-lg font-bold mb-4">Jobs by Category</h4>
-                    <ul className="space-y-2 text-sm font-light">
-                        <li><a href="#" className="hover:text-orange-400 hover:font-bold block">Channel Partners</a></li>
-                        <li><a href="#" className="hover:text-orange-400 hover:font-bold block">HR & Operations</a></li>
-                        <li><a href="#" className="hover:text-orange-400 hover:font-bold block">Real Estate Sales</a></li>
-                        <li><a href="#" className="hover:text-orange-400 hover:font-bold block">Tele Caller</a></li>
-                        <li><a href="#" className="hover:text-orange-400 hover:font-bold block">DigitalMarketing</a></li>
-                        <li><a href="#" className="hover:text-orange-400 hover:font-bold block">Web Development</a></li>
-                        <li><a href="#" className="hover:text-orange-400 hover:font-bold block">CRM Executive</a></li>
-                        <li><a href="#" className="hover:text-orange-400 hover:font-bold block">Accounts & Auditing</a></li>
-                    </ul>
-                </div>
-                <div className="col-span-1 mb-4">
-                    <h4 className="text-lg font-bold mb-4">Contact Us</h4>
-                    <address className="not-italic text-sm font-light space-y-2">
-                        <p><strong>Corporate Office:</strong><br />7th Floor, Block 2, My Home Hub, Madhapur, Patrika Nagar, HITEC City, Hyderabad</p>
-                    </address>
+        // Animation variants
+        const directions = [
+            { x: -50, y: 0 }, // from left
+            { x: 50, y: 0 },  // from right
+            { x: 0, y: -50 }, // from top
+            { x: 0, y: 50 },  // from bottom
+        ];
+
+        return (
+            <div className="py-12 rounded-lg w-full mx-auto sm:w-[80%]">
+                <h2 className="text-4xl font-bold text-center mb-10 text-gray-800">
+                    Explore Jobs by City
+                </h2>
+                <div className="mt-5 grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-6 gap-8 w-full px-4 mx-auto max-w-full-xl">
+                    {topCities.map((city, index) => {
+                        const direction = directions[index % directions.length]; // cycle directions
+                        return (
+                            <motion.div
+                                key={index}
+                                className="w-24 h-24 cursor-pointer"
+                                initial={{ opacity: 0, x: direction.x, y: direction.y }}
+                                animate={{ opacity: 1, x: 0, y: 0 }}
+                                transition={{ duration: 0.6, delay: index * 0.1 }}
+                            >
+                                <div
+                                    className="relative rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105"
+                                    onMouseEnter={() => setHoveredCity(city.name)}
+                                    onMouseLeave={() => setHoveredCity(null)}
+                                >
+                                    <img
+                                        src={hoveredCity === city.name ? city.imageColor : city.imageBlack}
+                                        alt={city.name}
+                                        className="w-full h-full object-contain transition-transform duration-300"
+                                    />
+                                </div>
+                                <div className="text-gray-900 text-center">
+                                    <h3 className="text-xl font-semibold">{city.name}</h3>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
                 </div>
             </div>
-            <div className="p-3 my-5 rounded-lg text-center text-sm font-light flex flex-col md:flex-row justify-between items-center" style={{ backgroundColor: 'rgba(99, 99, 144, 0.5)' }}>
-                <p className="mb-4 md:mb-0">&copy; 2025 Real Estate Jobs. All rights reserved.</p>
-                <div className="flex space-x-4 cursor-pointer">
-                    <FaFacebook />
-                    <FaTwitter />
-                    <FaInstagram />
-                    <FaLinkedin />
-                </div>
-            </div>
-        </footer>
-    );
+        );
+    }
 
     return (
-        <div className="w-full mx-auto w-screen">
+        <div className="w-full mx-auto w-full">
             {/* Existing Slider Section */}
             <div className="mb-12">
-                <Slider data={dummyData} imageSize={"380px"} />
+                <Slider data={dummyData} imageSize={"400px"} />
             </div>
 
             {/* Dream Jobs */}
@@ -485,47 +464,23 @@ export default function HomePage() {
             </div>
 
             {/* Top Cities Section */}
-            <div className="py-12 rounded-lg w-full mx-auto sm:w-[80%]">
-                <h2 className="text-4xl font-bold text-center mb-10 text-gray-800">Explore Jobs by City</h2>
-                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-6 gap-8 w-full px-4 mx-auto max-w-screen-xl">
-                    {topCities.map((city, index) => (
-                        <div
-                            key={index} className="w-24 h-24 cursor-pointer">
-                            <div
-                                className="relative rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105"
-                                onMouseEnter={() => setHoveredCity(city.name)}
-                                onMouseLeave={() => setHoveredCity(null)}
-                            >
-                                <img
-                                    src={hoveredCity === city.name ? city.imageColor : city.imageBlack}
-                                    alt={city.name}
-                                    className="w-full h-full object-contain transition-transform duration-300"
-                                />
-                            </div>
-                            <div className="text-gray-900 text-center">
-                                <h3 className="text-xl font-semibold">{city.name}</h3>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
+            <ExploreJobsByCity />
             <RealStats />
             {/* Our Top Recruiters Section with Auto-Scroll */}
             <div className="py-12">
-                <h2 className="text-3xl font-bold text-center mb-10">Our Top Recruiters</h2>
+                <h2 className="text-4xl font-bold text-center mb-10">Our Top Recruiters</h2>
                 <AutoScrollLogos logos={topRecruiters} />
             </div>
             <AllLocations />
             {/* Our Services Section */}
             <OurServices />
-            <div className="my-5">
-                <h2 className="text-3xl font-bold text-center mb-10 text-gray-800">Our Exclusive Services</h2>
-                <div className="mx-auto w-full sm:w-[80%] rounded-lg">
+            <div className="my-10">
+                <h2 className="text-4xl font-bold text-center mb-10 text-gray-800">Our Exclusive Services</h2>
+                <div className="mx-auto w-full sm:w-[80%] rounded-lg mt-16">
                     <Slider data={ads} imageSize={"200px"} rounded={"rounded-lg"} />
                 </div>
             </div>
             <CertificationsCarousel />
-            <Footer />
         </div>
     );
 }

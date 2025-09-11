@@ -2,20 +2,22 @@
 import React, { useState, useEffect } from 'react';
 import { PencilIcon } from '@heroicons/react/24/solid';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
-import DigitalMarketing from './digitalmarketing';
 import CompanyInvestors from './companyinvestors';
 import CompanyProjects from './comanyprojects';
 import AboutCompany from './aboutcompany';
 import ButtonTab from '../common/buttontab';
-
+import CompanyJobs from './companyjobs';
+import CompanyServices from './companyservices';
+import { companyData } from '../config/data'
 const tabs = [
     { name: 'About', component: AboutCompany },
     { name: 'New Projects', component: CompanyProjects },
-    { name: 'Digital Marketing', component: DigitalMarketing },
+    { name: 'Jobs', component: CompanyJobs },
+    { name: 'Premium Services', component: CompanyServices },
     { name: 'Investors', component: CompanyInvestors },
 ];
 
-export default function CompanyDetails({ userId }) {
+export default function CompanyDetails({ companyId }) {
     const [activeTab, setActiveTab] = useState(0);
 
     const [companyProfile, setCompanyProfile] = useState({
@@ -26,28 +28,12 @@ export default function CompanyDetails({ userId }) {
     const [accordionOpen, setAccordionOpen] = useState(null);
 
     useEffect(() => {
-        const companyData = [
-            { id: 1, name: "DLF Ltd.", logo: "/company/dlf.png", industry: "Real Estate", location: "Gurugram", established: 1946, website: "https://www.dlf.in" },
-            { id: 2, name: "Honer Properties", logo: "/company/honer.jpg", industry: "Real Estate", location: "Hyderabad", established: 2010, website: "https://www.honerhomes.com" },
-            { id: 3, name: "Brigade Group", logo: "/company/brigade.jpeg", industry: "Real Estate", location: "Bengaluru", established: 1986, website: "https://www.brigadegroup.com" },
-            { id: 4, name: "Cyber City.", logo: "/company/cybercity.jpg", industry: "IT Parks & Infrastructure", location: "Hyderabad", established: 2000, website: "https://www.cybercity.in" },
-            { id: 5, name: "Jayabheri Properties", logo: "/company/jayabheri.jpg", industry: "Real Estate", location: "Hyderabad", established: 1987, website: "https://www.jayabheri.com" },
-            { id: 6, name: "Muppa Group", logo: "/company/muppa.jpeg", industry: "Real Estate", location: "Hyderabad", established: 2009, website: "https://www.muppagroup.com" },
-            { id: 7, name: "Prestige Group", logo: "/company/prestigegroup.png", industry: "Real Estate", location: "Bengaluru", established: 1986, website: "https://www.prestigeconstructions.com" },
-            { id: 8, name: "My Home Group.", logo: "/company/myhomegroup.png", industry: "Real Estate", location: "Hyderabad", established: 1981, website: "https://www.myhomegroup.in" },
-            { id: 9, name: "Radhey Properties", logo: "/company/radhey.jpg", industry: "Real Estate", location: "Ahmedabad", established: 2005, website: "https://www.radheyproperties.com" },
-            { id: 10, name: "Rajpushpa Group", logo: "/company/rajpushpagroup.jpg", industry: "Real Estate", location: "Hyderabad", established: 2011, website: "https://www.rajapushpa.in" },
-            { id: 11, name: "NCC Ltd.", logo: "/company/ncc.jpg", industry: "Construction & Infrastructure", location: "Hyderabad", established: 1978, website: "https://www.nccltd.in" },
-            { id: 12, name: "Ramkey Group", logo: "/company/ramkeygroup.jpg", industry: "Infrastructure & Real Estate", location: "Hyderabad", established: 1994, website: "https://www.ramky.com" },
-            { id: 13, name: "Lodha Group", logo: "/company/lodha.jpg", industry: "Real Estate", location: "Mumbai", established: 1980, website: "https://www.lodhagroup.in" },
-            { id: 14, name: "Phoenix Mills", logo: "/company/images.jpeg", industry: "Retail & Hospitality", location: "Mumbai", established: 1905, website: "https://www.thephoenixmills.com" },
-        ];
-        const data = companyData.find((c) => String(c.id) === String(userId || 1));
+        const data = companyData.find((c) => String(c.id) === String(companyId || 1));
         if (data) {
             setCompanyProfile(data);
             setTempCompanyProfile(data);
         }
-    }, [userId]);
+    }, [companyId]);
 
     const ActiveComponent = tabs[activeTab].component;
 

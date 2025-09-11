@@ -67,7 +67,7 @@ export default function Calendar() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row max-w-screen">
+    <div className="flex flex-col md:flex-row max-w-full">
       {/* Mobile Sidebar Toggle */}
       <div className="md:hidden flex justify-between items-center p-4 border-b">
         <button

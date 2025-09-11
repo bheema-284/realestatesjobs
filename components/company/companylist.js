@@ -2,25 +2,10 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import React from 'react';
-
+import { companyData } from '../config/data'
 
 // Dummy company data (remains the same)
-const companys = [
-    { id: 1, name: "DLF Ltd.", logo: "/company/dlf.png", industry: "Real Estate", location: "Gurugram", established: 1946, website: "https://www.dlf.in" },
-    { id: 2, name: "Honer Properties", logo: "/company/honer.jpg", industry: "Real Estate", location: "Hyderabad", established: 2010, website: "https://www.honerhomes.com" },
-    { id: 3, name: "Brigade Group", logo: "/company/brigade.jpeg", industry: "Real Estate", location: "Bengaluru", established: 1986, website: "https://www.brigadegroup.com" },
-    { id: 4, name: "Cyber City.", logo: "/company/cybercity.jpg", industry: "IT Parks & Infrastructure", location: "Hyderabad", established: 2000, website: "https://www.cybercity.in" },
-    { id: 5, name: "Jayabheri Properties", logo: "/company/jayabheri.jpg", industry: "Real Estate", location: "Hyderabad", established: 1987, website: "https://www.jayabheri.com" },
-    { id: 6, name: "Muppa Group", logo: "/company/muppa.jpeg", industry: "Real Estate", location: "Hyderabad", established: 2009, website: "https://www.muppagroup.com" },
-    { id: 7, name: "Prestige Group", logo: "/company/prestigegroup.png", industry: "Real Estate", location: "Bengaluru", established: 1986, website: "https://www.prestigeconstructions.com" },
-    { id: 8, name: "My Home Group.", logo: "/company/myhomegroup.png", industry: "Real Estate", location: "Hyderabad", established: 1981, website: "https://www.myhomegroup.in" },
-    { id: 9, name: "Radhey Properties", logo: "/company/radhey.jpg", industry: "Real Estate", location: "Ahmedabad", established: 2005, website: "https://www.radheyproperties.com" },
-    { id: 10, name: "Rajpushpa Group", logo: "/company/rajpushpagroup.jpg", industry: "Real Estate", location: "Hyderabad", established: 2011, website: "https://www.rajapushpa.in" },
-    { id: 11, name: "NCC Ltd.", logo: "/company/ncc.jpg", industry: "Construction & Infrastructure", location: "Hyderabad", established: 1978, website: "https://www.nccltd.in" },
-    { id: 12, name: "Ramkey Group", logo: "/company/ramkeygroup.jpg", industry: "Infrastructure & Real Estate", location: "Hyderabad", established: 1994, website: "https://www.ramky.com" },
-    { id: 13, name: "Lodha Group", logo: "/company/lodha.jpg", industry: "Real Estate", location: "Mumbai", established: 1980, website: "https://www.lodhagroup.in" },
-    { id: 14, name: "Phoenix Mills", logo: "/company/images.jpeg", industry: "Retail & Hospitality", location: "Mumbai", established: 1905, website: "https://www.thephoenixmills.com" },
-];
+const companys = companyData || [];
 
 // Card Component (simplified for the chat button, no longer managing `isChatOpen` itself)
 const CompanyCard = ({ company }) => {
@@ -31,60 +16,61 @@ const CompanyCard = ({ company }) => {
     };
 
     return (
-        <div className="border rounded-xl shadow-sm flex p-2 flex-col sm:flex-row grid grid-cols-1 sm:grid-cols-3 justify-between gap-4">
-            {/* Left section with logo and name */}
-            <div className="flex gap-2 justify-between items-center gap-4 flex-1">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 p-2">
-                    <img
-                        src={company.logo}
-                        alt={company.name}
-                        className="w-full h-full object-cover"
-                    />
-                </div>
+        <div className="relative bg-white border border-gray-200 rounded-2xl shadow-md flex flex-col sm:flex-row items-start p-4 sm:p-6 gap-6">
+            {/* Logo with overlay effect */}
+            <div className="absolute w-24 h-24 sm:w-32 sm:h-32 md:w-42 md:h-42 -top-3 -left-3 border border-gray-300 bg-white rounded-xl sm:rounded-2xl shadow-md flex items-center justify-center p-2">
+                <img
+                    src={company.logo}
+                    alt={company.name}
+                    className="w-full h-full object-contain"
+                />
+            </div>
 
-                <div className="flex-1 py-2">
-                    <div className="flex items-center gap-2 font-semibold text-base sm:text-lg flex-wrap sm:flex-row">
-                        <span className="text-md text-black">{company.name.toUpperCase()}</span>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">Industry: {company.industry}</p>
-                    <p className="text-sm text-gray-500 mt-1 mb-5">Established: {company.established}</p>
+            {/* Main content (with padding to avoid overlap) */}
+            <div className="flex-1 w-full break-words flex flex-col sm:flex-row justify-between items-center pl-28 sm:pl-40 md:pl-48">
+                {/* Left section: Name + Industry + Button */}
+                <div className="flex-1 w-full sm:w-[60%] flex flex-col justify-center">
+                    <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800">
+                        {company.name.toUpperCase()}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                        Industry: {company.industry}
+                    </p>
+
                     <button
                         onClick={handleViewCompany}
-                        className="border hidden sm:block px-2 py-1 flex gap-2 items-center rounded text-xs sm:text-sm text-purple-600 border-purple-600 hover:bg-purple-50 whitespace-nowrap"
+                        className="mt-3 px-3 sm:px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-md hover:bg-blue-700 transition w-fit"
                     >
-                        <span className="inline">Know More</span>
+                        Know More
                     </button>
                 </div>
-            </div>
-            <div></div>
-            {/* Right section */}
-            <div className="flex flex-row justify-between">
-                {/* Full height divider */}
-                <div className="hidden sm:block w-px bg-purple-600 self-stretch"></div>
-                <div className="text-sm text-gray-600 flex flex-col justify-center">
-                    <p>Location: {company.location}</p>
-                    <p>
-                        Website:{" "}
-                        <a
-                            href={company.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline inline"
-                        >
-                            {company.website.replace(/(^\w+:|^)\/\//, "")}
-                        </a>
-                    </p>
+
+                {/* Right section: Divider + Info */}
+                <div className="flex flex-col sm:flex-row w-full sm:w-[40%] items-start sm:items-center gap-2 sm:gap-4 mt-4 sm:mt-0">
+                    {/* Divider */}
+                    <div className="hidden sm:block w-px bg-blue-600 h-full"></div>
+
+                    <div className="text-xs sm:text-sm text-gray-700 space-y-1">
+                        <p className="truncate">📍 Location: {company.location}</p>
+                        <p>🏢 Established: {company.established}</p>
+                        <p className="truncate break-all">
+                            🌐 Website:{" "}
+                            <a
+                                href={company.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline break-all"
+                            >
+                                {company.website}
+                            </a>
+                        </p>
+                    </div>
                 </div>
-                <button
-                    onClick={handleViewCompany}
-                    className="border sm:hidden px-2 py-1 flex gap-2 items-center rounded text-xs sm:text-sm text-purple-600 border-purple-600 hover:bg-purple-50 whitespace-nowrap"
-                >
-                    <span className="inline">Know More</span>
-                </button>
             </div>
         </div>
     );
 };
+
 
 const TitleCard = () => {
     return (
@@ -132,7 +118,7 @@ const TitleCard = () => {
 const CompanyList = () => {
 
     return (
-        <div className="w-full sm:w-[80%] m-auto grid grid-cols-1 gap-4 p-2">
+        <div className="w-full px-10 m-auto grid grid-cols-1 gap-20 p-5">
             <TitleCard />
             {companys.map((company) => (
                 <CompanyCard

@@ -6,5 +6,5 @@ export default function Company() {
   const params = useParams();
   const id = params?.id;
 
-  return <CompanyDetails userId={id} />;
+  return <CompanyDetails companyId={id} />;
 }

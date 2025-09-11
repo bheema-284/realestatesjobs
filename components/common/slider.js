@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 
 function Slider({ data, imageSize = "400px", rounded }) {
-    const [currentSlide, setCurrentSlide] = useState(1); // start at index 1 (first "real" slide)
+    // Start at 1 (first real slide, since we add clone at start)
+    const [currentSlide, setCurrentSlide] = useState(1);
     const [isTransitioning, setIsTransitioning] = useState(true);
 
-    // Clone first & last images
+    // Clone first & last for seamless looping
     const slides = [data[data.length - 1], ...data, data[0]];
 
     const nextSlide = useCallback(() => {
@@ -18,28 +19,27 @@ function Slider({ data, imageSize = "400px", rounded }) {
         setIsTransitioning(true);
     }, []);
 
+    // Auto scroll
     useEffect(() => {
         const autoScrollInterval = setInterval(nextSlide, 3000);
         return () => clearInterval(autoScrollInterval);
     }, [nextSlide]);
 
-    // Handle "jump" without animation
+    // Reset instantly (no transition) when hitting clone edges
     useEffect(() => {
         if (currentSlide === slides.length - 1) {
-            // reached cloned last (actually first)
+            // at cloned first → jump to real first
             setTimeout(() => {
                 setIsTransitioning(false);
-                setCurrentSlide(1); // jump to real first
-            }, 700);
+                setCurrentSlide(1);
+            }, 700); // same as transition duration
         }
         if (currentSlide === 0) {
-            // reached cloned first (actually last)
+            // at cloned last → jump to real last
             setTimeout(() => {
                 setIsTransitioning(false);
-                setCurrentSlide(slides.length - 2); // jump to real last
+                setCurrentSlide(slides.length - 2);
             }, 700);
-        } else {
-            setIsTransitioning(true);
         }
     }, [currentSlide, slides.length]);
 
@@ -47,10 +47,15 @@ function Slider({ data, imageSize = "400px", rounded }) {
         <div className={`relative w-full bg-white overflow-hidden ${rounded}`}>
             <div className="relative w-full" style={{ height: imageSize }}>
                 {/* Slides wrapper */}
-                <div className={`flex ${isTransitioning ? "transition-transform duration-700 ease-in-out" : ""}`} style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                <div
+                    className={`flex ${isTransitioning ? "transition-transform duration-700 ease-in-out" : ""
+                        }`}
+                    style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                    onTransitionEnd={() => setIsTransitioning(true)} // re-enable after jump
+                >
                     {slides.map((item, index) => (
                         <div key={index} className="flex-none w-full h-full">
-                            <div className={`w-full`} style={{ height: imageSize }}>
+                            <div className="w-full" style={{ height: imageSize }}>
                                 {item?.image ? (
                                     <img
                                         src={item.image}
