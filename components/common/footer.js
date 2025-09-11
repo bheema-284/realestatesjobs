@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa';
 
 const Footer = () => (
@@ -34,11 +35,11 @@ const Footer = () => (
             <div className="col-span-1">
                 <h4 className="text-lg font-bold mb-4">Quick Links</h4>
                 <ul className="space-y-2 text-sm font-light w-full sm:w-20">
-                    <li><a href="/" className="hover:text-amber-400 transition-colors duration-300 hover:font-bold">Home</a></li>
-                    <li><a href="/jobs" className="hover:text-amber-400 transition-colors duration-300 hover:font-bold">Job Listings</a></li>
-                    <li><a href="/companies" className="hover:text-amber-400 transition-colors duration-300 hover:font-bold">Companies</a></li>
-                    <li><a href="/about" className="hover:text-amber-400 transition-colors duration-300 hover:font-bold">About Us</a></li>
-                    <li><a href="/login" className="hover:text-amber-400 transition-colors duration-300 hover:font-bold">Login</a></li>
+                    <li><Link href="/" className="hover:text-amber-400 transition-colors duration-300 hover:font-bold">Home</Link></li>
+                    <li><Link href="/jobs" className="hover:text-amber-400 transition-colors duration-300 hover:font-bold">Job Listings</Link></li>
+                    <li><Link href="/companies" className="hover:text-amber-400 transition-colors duration-300 hover:font-bold">Companies</Link></li>
+                    <li><Link href="/about" className="hover:text-amber-400 transition-colors duration-300 hover:font-bold">About Us</Link></li>
+                    <li><Link href="/login" className="hover:text-amber-400 transition-colors duration-300 hover:font-bold">Login</Link></li>
                 </ul>
             </div>
 
@@ -46,14 +47,14 @@ const Footer = () => (
             <div className="col-span-1">
                 <h4 className="text-lg font-bold mb-4">Jobs by Category</h4>
                 <ul className="space-y-2 text-sm font-light w-full sm:w-34">
-                    <li><a href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Channel Partners</a></li>
-                    <li><a href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">HR & Operations</a></li>
-                    <li><a href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Real Estate Sales</a></li>
-                    <li><a href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Tele Caller</a></li>
-                    <li><a href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Digital Marketing</a></li>
-                    <li><a href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Web Development</a></li>
-                    <li><a href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">CRM Executive</a></li>
-                    <li><a href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Accounts & Auditing</a></li>
+                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Channel Partners</Link></li>
+                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">HR & Operations</Link></li>
+                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Real Estate Sales</Link></li>
+                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Tele Caller</Link></li>
+                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Digital Marketing</Link></li>
+                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Web Development</Link></li>
+                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">CRM Executive</Link></li>
+                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Accounts & Auditing</Link></li>
                 </ul>
             </div>
 
