@@ -108,6 +108,7 @@ const SignIn = () => {
           email: userByEmail.email,
           mobile: userByEmail.mobile,
           password: userByEmail.password,
+          role: userByEmail.role,
           token: userByEmail.token,
         },
         remember: formData.remember,
@@ -125,7 +126,7 @@ const SignIn = () => {
       });
       localStorage.setItem("user_details", JSON.stringify(resp.user));
       // Optional: Navigate to dashboard
-      router.push("/dashboard");
+      router.push("/");
     }
   };
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { FaBell } from "react-icons/fa";
 import AnimatedBorderLoader from "./animatedbutton";
 import JobPostingModal from "../createjob";
@@ -16,12 +16,19 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = useRef(null);
     const pathname = usePathname();
+    const router = useRouter();
+    const linkClasses = (href) => {
+        const isActive =
+            href === "/"
+                ? pathname === "/" // Home should only be active on root
+                : pathname.startsWith(href); // Others can use startsWith
 
-    const linkClasses = (href) =>
-        `relative flex items-center h-full px-2 font-medium transition ${pathname === href
+        return `relative flex items-center h-full px-2 font-medium transition ${isActive
             ? "text-purple-600 after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-full after:h-[3px] after:bg-purple-600"
             : "text-gray-700 hover:text-purple-600"
-        }`;
+            }`;
+    };
+
 
     const NotificationBell = ({ count }) => {
         return (
@@ -58,13 +65,15 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                     <Link href="/" className={linkClasses("/")}>
                         Home
                     </Link>
-                    <Link href="/companies" className={linkClasses("/companies")}>
+                    {!rootContext.authenticated && <Link href="/companies" className={linkClasses("/companies")}>
                         Companies
-                    </Link>
-                    <Link href="/jobs" className={linkClasses("/jobs")}>
+                    </Link>}
+                    {!rootContext.authenticated && <Link href="/jobs" className={linkClasses("/jobs")}>
                         Jobs
-                    </Link>
-
+                    </Link>}
+                    {rootContext.authenticated && <Link href="/services" className={linkClasses("/services")}>
+                        Premium Services
+                    </Link>}
                     {rootContext.authenticated ? (
                         <>
                             {pathname !== "/applications" && (
@@ -81,12 +90,6 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                                     )}
                                 </div>
                             )}
-
-                            <input
-                                type="text"
-                                placeholder="Search candidate, vacancy, etc"
-                                className="px-3 py-2 border rounded w-1/3 ml-4 text-sm"
-                            />
                             <NotificationBell count={3} />
                             <div
                                 className="flex items-center gap-1 ml-4 cursor-pointer relative"
@@ -96,16 +99,16 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                                 <div className="sm:hidden w-6 h-6 rounded-full bg-indigo-900 text-white flex items-center justify-center font-semibold">
                                     {(rootContext?.user?.name || "U").charAt(0).toUpperCase()}
                                 </div>
-                                <div className="hidden sm:flex flex-col">
+                                <div className="hidden sm:flex flex-col capitalize">
                                     <p className="font-semibold">{rootContext?.user?.name || "User"}</p>
-                                    <p className="text-gray-500 text-xs">Lead HR</p>
+                                    <p className="text-gray-500 text-xs">{rootContext?.user?.role || "role"}</p>
                                 </div>
                                 <ChevronDownIcon className="w-4 h-4 text-gray-400 hidden sm:block" />
 
                                 {showDropdown && (
                                     <div className="absolute top-full right-0 mt-2 w-36 bg-white shadow-lg border rounded-md z-50">
                                         <button
-                                            onClick={()=>rou}
+                                            onClick={() => router.push(`/dashboard`)}
                                             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                         >
                                             Dashboard

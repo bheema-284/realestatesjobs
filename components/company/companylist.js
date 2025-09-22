@@ -16,9 +16,9 @@ const CompanyCard = ({ company }) => {
     };
 
     return (
-        <div className="relative bg-white border border-gray-200 rounded-2xl shadow-md flex flex-col sm:flex-row items-start p-4 sm:p-6 gap-6">
+        <div className="relative w-full sm:w-[80%] mx-auto bg-white border border-gray-400 shadow-lg rounded-2xl shadow-md flex flex-col sm:flex-row items-start p-4 sm:p-6 gap-6">
             {/* Logo with overlay effect */}
-            <div className="absolute w-24 h-24 sm:w-32 sm:h-32 md:w-42 md:h-42 -top-3 -left-3 border border-gray-300 bg-white rounded-xl sm:rounded-2xl shadow-md flex items-center justify-center p-2">
+            <div className="absolute w-24 h-24 sm:w-32 sm:h-32 md:w-42 md:h-42 -top-3 -left-3 border border-gray-400 shadow-lg bg-white rounded-xl sm:rounded-2xl shadow-md flex items-center justify-center p-2">
                 <img
                     src={company.logo}
                     alt={company.name}
@@ -36,7 +36,6 @@ const CompanyCard = ({ company }) => {
                     <p className="text-xs sm:text-sm text-gray-600 mt-1">
                         Industry: {company.industry}
                     </p>
-
                     <button
                         onClick={handleViewCompany}
                         className="mt-3 px-3 sm:px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-md hover:bg-blue-700 transition w-fit"

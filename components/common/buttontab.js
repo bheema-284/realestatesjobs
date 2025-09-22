@@ -1,19 +1,29 @@
 'use client';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 export default function ButtonTab({ tabs, activeTab, setActiveTab }) {
-    const [indicatorStyle, setIndicatorStyle] = useState({}); // State for the moving indicator's style
-    const tabRefs = useRef([]); // Ref to store references to each tab button
-    const tabContainerRef = useRef(null); // Ref for the main tab container
+    const [activeIndicator, setActiveIndicator] = useState({});
+    const [hoverIndicator, setHoverIndicator] = useState({});
+    const tabRefs = useRef([]);
 
-    const handleTabClick = (index,) => {
-        const tab = tabRefs.current[index];
-        setActiveTab(index)
-        if (tab) {
-            setIndicatorStyle({
+    useEffect(() => {
+        // Set initial position of active indicator
+        if (tabRefs.current[activeTab]) {
+            const tab = tabRefs.current[activeTab];
+            setActiveIndicator({
                 width: tab.offsetWidth,
                 left: tab.offsetLeft,
-                opacity: 1,
+            });
+        }
+    }, [activeTab]);
+
+    const handleTabClick = (index) => {
+        setActiveTab(index);
+        const tab = tabRefs.current[index];
+        if (tab) {
+            setActiveIndicator({
+                width: tab.offsetWidth,
+                left: tab.offsetLeft,
             });
         }
     };
@@ -21,7 +31,7 @@ export default function ButtonTab({ tabs, activeTab, setActiveTab }) {
     const handleMouseEnter = (index) => {
         const tab = tabRefs.current[index];
         if (tab) {
-            setIndicatorStyle({
+            setHoverIndicator({
                 width: tab.offsetWidth,
                 left: tab.offsetLeft,
                 opacity: 1,
@@ -30,38 +40,40 @@ export default function ButtonTab({ tabs, activeTab, setActiveTab }) {
     };
 
     const handleMouseLeave = () => {
-        setIndicatorStyle({
-            opacity: 0,
-        });
+        setHoverIndicator((prev) => ({ ...prev, opacity: 0 }));
     };
-
 
     return (
         <div
-            ref={tabContainerRef}
             className="flex flex-row justify-between bg-white rounded-t-md relative overflow-hidden"
             onMouseLeave={handleMouseLeave}
         >
-            {/* Moving background indicator */}
+            {/* Hover indicator (gray) */}
             <span
-                className="absolute bottom-0 h-full bg-gray-200 rounded-t-md transition-all duration-300 ease-in-out z-0"
+                className="absolute bottom-0 h-full bg-gray-200 rounded-t-md transition-all duration-600 ease-in-out z-0"
                 style={{
-                    ...indicatorStyle,
-                    transition: 'all 0.3s ease-in-out, opacity 0.2s ease-in-out',
+                    ...hoverIndicator,
                 }}
             ></span>
+
+            {/* Active indicator (blue) */}
+            <span
+                className="absolute bottom-0 h-full bg-indigo-900 rounded-t-md transition-all duration-600 ease-in-out z-0"
+                style={{
+                    ...activeIndicator,
+                }}
+            ></span>
+
             {tabs.map((tab, index) => (
                 <button
                     key={index}
-                    ref={el => tabRefs.current[index] = el} // Assign ref to each button
-                    className={`py-1 px-3 rounded-t-md transition-colors relative font-medium z-10
-                            transition-colors duration-300 ease-in-out
-                            ${activeTab === index
-                            ? 'bg-indigo-900 text-white' // Active tab text color (bg handled by indicator)
-                            : 'text-gray-700' // Non-active tab text color
-                        }`}
+                    ref={(el) => (tabRefs.current[index] = el)}
+                    className={`py-1 px-3 rounded-t-md relative font-medium z-10
+                        transition-colors duration-300 ease-in-out
+                        ${activeTab === index ? 'text-white' : 'text-gray-700'}
+                    `}
                     onClick={() => handleTabClick(index)}
-                    onMouseEnter={() => handleMouseEnter(index)}// Listen for mouse entering individual tab
+                    onMouseEnter={() => handleMouseEnter(index)}
                 >
                     <span className="flex flex-wrap items-center justify-center gap-1">
                         <span>{tab.name}</span>

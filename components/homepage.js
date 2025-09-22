@@ -455,7 +455,7 @@ export default function HomePage() {
         <div className="w-full mx-auto w-full">
             {/* Existing Slider Section */}
             <div className="mb-12">
-                <Slider data={dummyData} imageSize={"400px"} />
+                <Slider data={dummyData} imageSize={"500px"} />
             </div>
 
             {/* Dream Jobs */}

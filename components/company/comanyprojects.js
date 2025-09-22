@@ -10,6 +10,7 @@ import {
     CalendarDaysIcon,
     ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/solid";
+import Header from "./companyheader";
 
 export default function ProjectsPage({ companyProfile }) {
     const router = useRouter();
@@ -30,10 +31,7 @@ export default function ProjectsPage({ companyProfile }) {
 
     return (
         <div className="w-full mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-10">
-                Featured Projects
-            </h2>
-
+            <Header />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {companyProfile.projects.map((p) => (
                     <div
@@ -115,13 +113,13 @@ export default function ProjectsPage({ companyProfile }) {
                         {/* Buttons appear on hover */}
                         <div className="absolute bottom-0 left-0 w-full translate-y-full group-hover:translate-y-0 transition-transform duration-300">
                             <div className="flex justify-between gap-2 p-2 border-t border-gray-200 bg-gray-50">
-                                <button className="flex items-center gap-1 border border-yellow-700 text-yellow-900 py-1 px-3 text-[9px] bg-yellow-300 opacity-75">
+                                <button className="flex items-center gap-1 border border-yellow-700 text-yellow-900 py-1 px-3 text-[9px] bg-orange-100">
                                     <ChatBubbleLeftRightIcon className="w-4 h-4" /> Enquire Now
                                 </button>
-                                <button className="flex items-center gap-1 border border-yellow-700 text-yellow-900 py-1 px-3 text-[9px] bg-yellow-300 opacity-75">
+                                <button className="flex items-center gap-1 border border-yellow-700 text-yellow-900 py-1 px-3 text-[9px] bg-orange-100">
                                     <CalendarDaysIcon className="w-4 h-4" /> Book Site Visit
                                 </button>
-                                <button className="flex items-center gap-1 border border-yellow-700 text-yellow-900 py-1 px-3 text-[9px] bg-yellow-300 opacity-75">
+                                <button className="flex items-center gap-1 border border-yellow-700 text-yellow-900 py-1 px-3 text-[9px] bg-orange-100">
                                     <PhoneIcon className="w-4 h-4" /></button>
                             </div>
                         </div>

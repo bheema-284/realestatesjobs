@@ -578,79 +578,81 @@ export default function ProfilePage({ userId }) {
     const ActiveComponent = tabs[activeTab].component;
 
     return (
-        <div className="bg-gray-100 min-h-screen">
-            <div className="bg-[#0d1b2a] text-white py-6 px-4 relative">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 max-w-5xl mx-auto">
-                    <img
-                        src={tempProfile.image || "https://placehold.co/48x48/F0F0F0/000000?text=Logo"}
-                        alt="Avatar"
-                        className="w-16 sm:w-20 h-16 sm:h-20 rounded-full border-4 border-white object-cover"
-                    />
-                    {editingHeader ? (
-                        <div className="flex flex-col w-full gap-2">
-                            <label className="text-sm">Name</label>
-                            <input
-                                className="bg-white text-black p-1 rounded"
-                                value={tempProfile.name}
-                                onChange={(e) => setTempProfile({ ...tempProfile, name: e.target.value })}
-                            />
-                            <label className="text-sm">Title</label>
-                            <input
-                                className="bg-white text-black p-1 rounded"
-                                value={tempProfile.title}
-                                onChange={(e) => setTempProfile({ ...tempProfile, title: e.target.value })}
-                            />
-                            <label className="text-sm">Email</label>
-                            <input
-                                className="bg-white text-black p-1 rounded"
-                                value={tempProfile.email}
-                                onChange={(e) => setTempProfile({ ...tempProfile, email: e.target.value })}
-                            />
-                            <div className="flex gap-2 mt-2">
-                                <button
-                                    className="text-sm bg-white text-black px-3 py-1 rounded"
-                                    onClick={() => {
-                                        setProfile(tempProfile);
-                                        setEditingHeader(false);
-                                    }}
-                                >
-                                    Save
-                                </button>
-                                <button
-                                    className="text-sm text-white border border-white px-3 py-1 rounded"
-                                    onClick={() => setEditingHeader(false)}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
+        <div className="bg-white min-h-screen mt-16">
+            {/* Card Content */}
+            <div className="max-w-5xl border border-gray-200 rounded-t-xl mx-auto relative shadow-sm">
+                {/* Card Content */}
+                <div className="p-6 flex flex-col sm:flex-row items-center gap-4 relative z-10">
+                    {/* Spacer to leave room for the overlapping image */}
+                    <div className="absolute -top-12 left-6 sm:left-6">
+                        <img
+                            src={tempProfile.image || "https://placehold.co/80x80/F0F0F0/000000?text=Logo"}
+                            alt="Avatar"
+                            className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border-4 border-white object-cover shadow-lg"
+                        />
+                    </div>
+
+                    {/* Candidate Details */}
+                    <div className="flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 w-full ml-0 sm:ml-40">
+                        <div className="flex-1">
+                            {editingHeader ? (
+                                <div className="flex flex-col gap-2">
+                                    <input
+                                        className="border p-1 rounded w-full"
+                                        value={tempProfile.name}
+                                        onChange={(e) => setTempProfile({ ...tempProfile, name: e.target.value })}
+                                    />
+                                    <input
+                                        className="border p-1 rounded w-full"
+                                        value={tempProfile.title}
+                                        onChange={(e) => setTempProfile({ ...tempProfile, title: e.target.value })}
+                                    />
+                                    <input
+                                        className="border p-1 rounded w-full"
+                                        value={tempProfile.email}
+                                        onChange={(e) => setTempProfile({ ...tempProfile, email: e.target.value })}
+                                    />
+                                    <div className="flex gap-2 mt-2">
+                                        <button
+                                            className="px-3 py-1 bg-blue-600 text-white rounded"
+                                            onClick={() => {
+                                                setProfile(tempProfile);
+                                                setEditingHeader(false);
+                                            }}
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            className="px-3 py-1 border border-gray-400 rounded"
+                                            onClick={() => setEditingHeader(false)}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
+                                    <p className="text-sm sm:text-base text-gray-600">{profile.title}</p>
+                                    <p className="text-xs sm:text-sm text-gray-500">{profile.email}</p>
+                                </div>
+                            )}
                         </div>
-                    ) : (
-                        <div>
-                            <h2 className="font-bold text-lg sm:text-xl">{profile.name}</h2>
-                            <p className="text-sm">{profile.title}</p>
-                            <p className="text-xs text-gray-300">{profile.email}</p>
-                        </div>
-                    )}
-                    <button
-                        onClick={() => {
-                            setEditingHeader(true);
-                            setTempProfile(profile);
-                        }}
-                        className="absolute top-8 sm:top-4 right-6 text-white"
-                    >
-                        <PencilIcon className="w-5 h-5" />
-                    </button>
+
+                        {/* Edit Button */}
+                        {!editingHeader && (
+                            <button
+                                onClick={() => {
+                                    setEditingHeader(true);
+                                    setTempProfile(profile);
+                                }}
+                                className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0"
+                            >
+                                <PencilIcon className="w-5 h-5" />
+                            </button>
+                        )}
+                    </div>
                 </div>
-                {/* Desktop Edit Icon */}
-                <button
-                    onClick={() => {
-                        setEditingHeader(true);
-                        setTempProfile(profile);
-                    }}
-                    className="hidden sm:block absolute top-4 right-6 text-white"
-                >
-                    <PencilIcon className="w-5 h-5" />
-                </button>
             </div>
 
             {/* Tab / Accordion Section */}

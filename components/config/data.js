@@ -1,9 +1,10 @@
 export const users = [
     {
-        name: "bheema",
-        email: "bheema@gmail.com",
+        name: "Real Beez",
+        email: "realbeez@gmail.com",
         mobile: "9000133416",
-        password: "bheema@123",
+        password: "realbeez@123",
+        role: "recruiter",
         token: "csef",
         isAdmin: true,
     }

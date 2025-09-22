@@ -421,15 +421,17 @@ const Dashboard = () => {
             : events;
 
     const Icons = {
-        RealEstateSales: <FaBuilding className="w-4 h-4 text-gray-800" />,
-        ChannelPartners: <FaUsers className="w-4 h-4 text-gray-800" />,
-        TeleCaller: <FaHeadset className="w-4 h-4 text-gray-800" />,
-        HROperations: <FaUserTie className="w-4 h-4 text-gray-800" />,
-        CRMExecutive: <FaUserCog className="w-4 h-4 text-gray-800" />,
-        WebDevelopment: <FaCode className="w-4 h-4 text-gray-800" />,
-        DigitalMarketing: <FaChartBar className="w-4 h-4 text-gray-800" />,
-        AccountsAuditing: <FaFileInvoiceDollar className="w-4 h-4 text-gray-800" />,
-        Default: <ExclamationTriangleIcon className="w-4 h-4 text-gray-800" />,
+        ChannelPartners: "/icons/cp.png",
+        RealEstateSales: "/icons/realestate.png",
+        TeleCaller: "/icons/tel.png",
+        HROperations: "/icons/hrandop.png",
+        CRMExecutive: "/icons/crm.png",
+        WebDevelopment: "/icons/webdev.png",
+        DigitalMarketing: "/icons/digital.png",
+        AccountsAuditing: "/icons/accounts.png",
+        Default: (
+            <ExclamationTriangleIcon className="w-6 h-6 text-gray-400" />
+        ),
     };
 
     const jobCategories = [
@@ -558,7 +560,11 @@ const Dashboard = () => {
         );
         return {
             ...job,
-            icon: category?.icon || <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />,
+            icon: <img
+                src={category?.icon}
+                alt={category.title}
+                className="h-5 w-auto object-contain mx-auto"
+            /> || <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />,
             tags: job.employmentTypes,
         };
     });

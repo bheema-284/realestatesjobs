@@ -7,7 +7,7 @@ const Footer = () => (
         className="text-white py-12 px-6 w-full z-50"
         style={{
             backgroundColor: "#1c4676",
-            backgroundImage: 'url("/rejobs/india.png")',
+            backgroundImage: 'url("/rejobs/worldmap.jpg")',
             backgroundSize: "100% 100%",
             backgroundRepeat: "no-repeat",
             backgroundPosition: "center",

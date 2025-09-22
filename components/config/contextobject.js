@@ -5,6 +5,7 @@ export const contextObject = {
         name: "",
         email: "",
         mobile: "",
+        role: "",
         password: "",
         token: "",
         isAdmin: "",

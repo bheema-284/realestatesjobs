@@ -11,156 +11,14 @@ import JobList from '@/components/jobslist';
 
 
 const Icons = {
-    RealEstateSales: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-blue-600">
-            <defs>
-                <linearGradient id="salesHouseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#60A5FA" />
-                    <stop offset="100%" stopColor="#3B82F6" />
-                </linearGradient>
-                <linearGradient id="salesMoneyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FACC15" />
-                    <stop offset="100%" stopColor="#EAB308" />
-                </linearGradient>
-            </defs>
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="url(#salesHouseGradient)" />
-            <polyline points="9 22 9 12 15 12 15 22" stroke="#fff" strokeWidth="2" />
-            <circle cx="15" cy="8" r="3" fill="url(#salesMoneyGradient)" stroke="#D97706" strokeWidth="1" />
-            <path d="M15 11v-2" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-    ),
-    ChannelPartners: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-green-600">
-            <defs>
-                <linearGradient id="partnersPersonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#34D399" />
-                    <stop offset="100%" stopColor="#10B981" />
-                </linearGradient>
-                <linearGradient id="partnersLinkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#6EE7B7" />
-                    <stop offset="100%" stopColor="#34D399" />
-                </linearGradient>
-            </defs>
-            <circle cx="6" cy="7" r="3" fill="url(#partnersPersonGradient)" />
-            <path d="M6 10v4c0 1.657 1.343 3 3 3h6c1.657 0 3-1.343 3-3v-4" stroke="url(#partnersPersonGradient)" strokeWidth="2" />
-            <circle cx="18" cy="7" r="3" fill="url(#partnersPersonGradient)" />
-            <circle cx="12" cy="17" r="3" fill="url(#partnersPersonGradient)" />
-            <line x1="6" y1="10" x2="12" y2="14" stroke="url(#partnersLinkGradient)" strokeWidth="2" />
-            <line x1="18" y1="10" x2="12" y2="14" stroke="url(#partnersLinkGradient)" strokeWidth="2" />
-        </svg>
-    ),
-    TeleCaller: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-red-600">
-            <defs>
-                <linearGradient id="callerPhoneGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#EF4444" />
-                    <stop offset="100%" stopColor="#DC2626" />
-                </linearGradient>
-                <linearGradient id="callerHeadsetGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#F87171" />
-                    <stop offset="100%" stopColor="#EF4444" />
-                </linearGradient>
-            </defs>
-            <rect x="5" y="10" width="14" height="8" rx="2" ry="2" fill="url(#callerPhoneGradient)" />
-            <line x1="12" y1="10" x2="12" y2="18" stroke="#fff" strokeWidth="1" />
-            <circle cx="12" cy="14" r="1.5" fill="#fff" />
-            <path d="M17 10c0-3.866-3.134-7-7-7s-7 3.134-7 7" stroke="url(#callerHeadsetGradient)" strokeWidth="2" />
-            <path d="M12 3v4" stroke="url(#callerHeadsetGradient)" strokeWidth="2" />
-        </svg>
-    ),
-    HROperations: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-purple-600">
-            <defs>
-                <linearGradient id="hrGearGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#A855F7" />
-                    <stop offset="100%" stopColor="#9333EA" />
-                </linearGradient>
-                <linearGradient id="hrPersonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#C084FC" />
-                    <stop offset="100%" stopColor="#A855F7" />
-                </linearGradient>
-            </defs>
-            <circle cx="12" cy="12" r="8" fill="url(#hrGearGradient)" />
-            <circle cx="12" cy="12" r="3" fill="#fff" />
-            <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="#fff" strokeWidth="1.5" />
-            <circle cx="12" cy="7" r="2" fill="url(#hrPersonGradient)" />
-            <path d="M12 9c-2.209 0-4 1.791-4 4v2h8v-2c0-2.209-1.791-4-4-4z" fill="url(#hrPersonGradient)" />
-        </svg>
-    ),
-    CRMExecutive: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-teal-600">
-            <defs>
-                <linearGradient id="crmChartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#2DD4BF" />
-                    <stop offset="100%" stopColor="#14B8A6" />
-                </linearGradient>
-                <linearGradient id="crmPersonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#6EE7B7" />
-                    <stop offset="100%" stopColor="#34D399" />
-                </linearGradient>
-            </defs>
-            <rect x="4" y="10" width="4" height="10" rx="1" ry="1" fill="url(#crmChartGradient)" />
-            <rect x="10" y="7" width="4" height="13" rx="1" ry="1" fill="url(#crmChartGradient)" />
-            <rect x="16" y="4" width="4" height="16" rx="1" ry="1" fill="url(#crmChartGradient)" />
-            <circle cx="12" cy="3" r="2" fill="url(#crmPersonGradient)" />
-            <path d="M12 5c-2.209 0-4 1.791-4 4v2h8v-2c0-2.209-1.791-4-4-4z" fill="url(#crmPersonGradient)" />
-        </svg>
-    ),
-    WebDevelopment: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-yellow-600">
-            <defs>
-                <linearGradient id="webMonitorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FCD34D" />
-                    <stop offset="100%" stopColor="#F59E0B" />
-                </linearGradient>
-                <linearGradient id="webCodeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FDE68A" />
-                    <stop offset="100%" stopColor="#FCD34D" />
-                </linearGradient>
-            </defs>
-            <rect x="2" y="4" width="20" height="14" rx="2" ry="2" fill="url(#webMonitorGradient)" />
-            <line x1="12" y1="18" x2="12" y2="22" stroke="#6B7280" strokeWidth="2" />
-            <line x1="8" y1="22" x2="16" y2="22" stroke="#6B7280" strokeWidth="2" />
-            <polyline points="8 8 5 12 8 16" stroke="url(#webCodeGradient)" strokeWidth="2" />
-            <polyline points="16 8 19 12 16 16" stroke="url(#webCodeGradient)" strokeWidth="2" />
-            <line x1="10" y1="12" x2="14" y2="12" stroke="url(#webCodeGradient)" strokeWidth="2" />
-        </svg>
-    ),
-    DigitalMarketing: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-orange-600">
-            <defs>
-                <linearGradient id="marketingMegaphoneGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FB923C" />
-                    <stop offset="100%" stopColor="#F97316" />
-                </linearGradient>
-                <linearGradient id="marketingGraphGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FDBA74" />
-                    <stop offset="100%" stopColor="#FB923C" />
-                </linearGradient>
-            </defs>
-            <path d="M18 11a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3h9a3 3 0 0 0 3-3z" fill="url(#marketingMegaphoneGradient)" />
-            <path d="M18 11h3a1 1 0 0 1 1 1v0a1 1 0 0 1-1 1h-3" stroke="url(#marketingMegaphoneGradient)" strokeWidth="2" />
-            <polyline points="17 6 12 11 7 6" stroke="url(#marketingGraphGradient)" strokeWidth="2" />
-            <path d="M17 6h-3.5L12 11" stroke="url(#marketingGraphGradient)" strokeWidth="2" />
-        </svg>
-    ),
-    AccountsAuditing: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-gray-600">
-            <defs>
-                <linearGradient id="accountsDocGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#D1D5DB" />
-                    <stop offset="100%" stopColor="#9CA3AF" />
-                </linearGradient>
-                <linearGradient id="accountsCheckGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#86EFAC" />
-                    <stop offset="100%" stopColor="#22C55E" />
-                </linearGradient>
-            </defs>
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#accountsDocGradient)" />
-            <polyline points="14 2 14 8 20 8" stroke="#4B5563" strokeWidth="1.5" />
-            <path d="M9 12l2 2 4-4" stroke="url(#accountsCheckGradient)" strokeWidth="2.5" />
-        </svg>
-    ),
+    ChannelPartners: "/icons/cp.png",
+    RealEstateSales: "/icons/realestate.png",
+    TeleCaller: "/icons/tel.png",
+    HROperations: "/icons/hrandop.png",
+    CRMExecutive: "/icons/crm.png",
+    WebDevelopment: "/icons/webdev.png",
+    DigitalMarketing: "/icons/digital.png",
+    AccountsAuditing: "/icons/accounts.png",
     Default: (
         <ExclamationTriangleIcon className="w-6 h-6 text-gray-400" />
     ),
@@ -169,51 +27,55 @@ const Icons = {
 // Data for the job category cards
 const jobCategories = [
     {
-        title: "Real Estate Sales",
-        description: "Sell Property Faster",
-        icon: Icons.RealEstateSales,
+        icon: '/icons/cp.png',
+        title: 'Channel Partners',
+        description: 'Collaborate & Earn',
     },
     {
-        title: "Channel Partners",
-        description: "Collaborate & Earn",
-        icon: Icons.ChannelPartners,
+        icon: '/icons/hrandop.png',
+        title: 'HR & Operations',
+        description: 'People & Process',
     },
     {
-        title: "Tele Caller",
-        description: "Engage & Convert",
-        icon: Icons.TeleCaller,
+        icon: '/icons/realestate.png',
+        title: 'Real Estate Sales',
+        description: 'Sell Property Faster',
     },
     {
-        title: "HR & Operations",
-        description: "People & Process",
-        icon: Icons.HROperations,
+        icon: '/icons/tel.png',
+        title: 'Tele Caller',
+        description: 'Engage & Convert',
     },
     {
-        title: "CRM Executive",
-        description: "Manage Client Relations",
-        icon: Icons.CRMExecutive,
+        icon: '/icons/digital.png',
+        title: 'Digital Marketing',
+        description: 'Promote & Convert',
     },
     {
-        title: "Web Development",
-        description: "Build Real Estate Tech",
-        icon: Icons.WebDevelopment,
+        icon: '/icons/webdev.png',
+        title: 'Web Development',
+        description: 'Build Real Estate Tech',
     },
     {
-        title: "Digital Marketing",
-        description: "Promote & Convert",
-        icon: Icons.DigitalMarketing,
+        icon: '/icons/crm.png',
+        title: 'CRM Executive',
+        description: 'Manage Client Relations',
     },
     {
-        title: "Accounts & Auditing",
-        description: "Ensure Financial Clarity",
-        icon: Icons.AccountsAuditing,
+        icon: '/icons/accounts.png',
+        title: 'Accounts & Auditing',
+        description: 'Ensure Financial Clarity',
     },
 ];
 
 
 const getIconForTitle = (name) => {
     const normalizedTitle = name && name.replace(/\s+/g, '').replace(/[^\w]/g, '');
-    return Icons[normalizedTitle] || Icons.Default;
+    return <img
+        src={Icons[normalizedTitle] || Icons.Default}
+        alt={name}
+        className="h-8 w-auto object-contain mx-auto"
+    />;
 };
 
 
@@ -735,7 +597,11 @@ export default function Jobs() {
         name: (
             <div key={index} className="flex flex-wrap items-center gap-2 text-left">
                 <div className="flex flex-col">
-                    <span className="text-sm font-semibold">{job.icon}</span>
+                    <img
+                        src={job.icon}
+                        alt={job.title}
+                        className="h-12 w-auto object-contain mx-auto"
+                    />
                     <span className="text-sm font-semibold">{job.title}</span>
                     <span className="text-xs text-gray-500">{job.description}</span>
                 </div>
