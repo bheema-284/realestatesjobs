@@ -1,5 +1,3 @@
-"use client";
-
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Link from "next/link";
@@ -19,7 +17,7 @@ export default function AboutPage() {
                     <nav>
                         <ol className="flex justify-center space-x-2">
                             <li>
-                                <a href="/" className="text-white hover:underline">Home</a>
+                                <Link href="/" className="text-white hover:underline">Home</Link>
                             </li>
                             <li>/ About Us</li>
                         </ol>
@@ -47,21 +45,24 @@ export default function AboutPage() {
                     </p>
                 </div>
             </div>
-            {/* About Re Jobs */}
-            <div className="bg-white">
-                <div className="max-w-7xl mx-auto py-12 px-4">
+
+            {/* About RE Jobs with new design - Image Right, Inset, Red Dots */}
+            <div
+                className="relative bg-cover bg-center bg-no-repeat text-white py-12"
+                >
+                {/* Overlay for blur over entire section */}
+                <div className="absolute inset-0 backdrop-blur-sm bg-black/50"></div>
+
+                <div className="relative z-10 max-w-7xl mx-auto py-12 px-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                         {/* Left Content */}
                         <div className="space-y-4">
                             <h2 className="text-3xl font-bold mb-3">
-                                About <span className="text-[#1c4676]">RE JOBS</span>
+                                About <span className="text-yellow-500">RE JOBS</span>
                             </h2>
-                            <p className="text-lg text-gray-700 leading-relaxed">
+                            <p className="text-lg text-white leading-relaxed">
                                 Welcome to{" "}
-                                <Link
-                                    href="/"
-                                    className="text-[#1c4676] underline inline"
-                                >
+                                <Link href="/" className="text-yellow-500 underline inline">
                                     www.realestatejobs.co.in
                                 </Link>{" "}
                                 – India’s first and only dedicated job portal exclusively designed
@@ -72,37 +73,78 @@ export default function AboutPage() {
                             </p>
                         </div>
 
-                        {/* Right Image */}
-                        <div className="flex justify-center md:justify-end">
+                        {/* Right Image - only this container has red dots */}
+                        <div className="relative flex justify-center md:justify-end">
+                            {/* Red dots overlay */}
+                            <div
+                                className="absolute inset-0 opacity-70 pointer-events-none"
+                                style={{
+                                    backgroundImage: 'radial-gradient(#ff0000 2px, transparent 2px)',
+                                    backgroundSize: '15px 15px',
+                                    borderRadius: '0.5rem',
+                                }}
+                            ></div>
+
                             <img
                                 src="https://realestatejobs.co.in/images/banner.avif"
                                 alt="logo"
-                                className="rounded-lg shadow-md max-w-full h-auto"
-                            />
+                                className="rounded-lg shadow-inner-lg max-w-full h-auto transform scale-95 relative z-10" // keep image above the dots
+                               />
                         </div>
                     </div>
                 </div>
             </div>
 
+
             {/* Mission & Vision */}
-            <div className="bg-[#1c4676] text-white py-12">
-                <div className="w-[90%] mx-auto space-y-10">
+            <div
+                className="relative bg-cover bg-center bg-no-repeat text-white py-12"
+                style={{ backgroundImage: "url('/cover/add11.jpg')" }}
+            >
+                {/* Overlay for better readability */}
+                <div className="absolute inset-0 backdrop-blur-md bg-black/10"></div>
+
+                <div className="relative w-[90%] text-gray-800 mx-auto space-y-10">
                     <div className="grid md:grid-cols-2 gap-8 items-center">
-                        <Image src="https://realestatejobs.co.in/images/mission.png" width={500} height={400} alt="mission" />
+                        {/* Mission Image */}
+                        <Image
+                            src="https://realestatejobs.co.in/images/mission.png"
+                            width={400}
+                            height={300}
+                            alt="mission"
+                            className="rounded-lg shadow-lg"
+                        />
                         <div>
                             <h2 className="text-2xl font-bold mb-3">Our Mission</h2>
-                            <p className="text-lg">To revolutionize recruitment in the real estate sector by providing a seamless and efficient platform that connects skilled professionals with the right employers. We aim to support the growth of real estate businesses by helping them build high-performing teams while empowering job seekers to advance their careers.</p>
+                            <p className="text-lg">
+                                To revolutionize recruitment in the real estate sector by providing a seamless and
+                                efficient platform that connects skilled professionals with the right employers.
+                                We aim to support the growth of real estate businesses by helping them build
+                                high-performing teams while empowering job seekers to advance their careers.
+                            </p>
                         </div>
                     </div>
+
                     <div className="grid md:grid-cols-2 gap-8 items-center">
                         <div>
                             <h2 className="text-2xl font-bold mb-3">Our Vision</h2>
-                            <p className="text-lg">To be the go-to hub for real estate employment across India, driving innovation, trust, and collaboration in the hiring process.</p>
+                            <p className="text-lg">
+                                To be the go-to hub for real estate employment across India, driving innovation,
+                                trust, and collaboration in the hiring process.
+                            </p>
                         </div>
-                        <Image src="https://realestatejobs.co.in/images/vision.png" width={500} height={400} alt="vision" />
+                        {/* Vision Image */}
+                        <Image
+                            src="https://realestatejobs.co.in/images/vision.png"
+                            width={400}
+                            height={300}
+                            alt="vision"
+                            className="rounded-lg shadow-lg"
+                        />
                     </div>
                 </div>
             </div>
+
 
             {/* Core Values */}
             <div className="bg-gray-100 py-12">
