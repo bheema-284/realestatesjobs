@@ -1,7 +1,6 @@
 'use client';
-
-import { useRouter } from 'next/router';
-import { ProfilePage } from './candidates';
+import { useRouter } from 'next/navigation';
+import { ProfilePage } from './candidates/candidates';
 
 const Profile = () => {
   const router = useRouter();

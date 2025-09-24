@@ -42,7 +42,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
             </div>
         );
     };
-
+    const role = rootContext?.user?.role;
     return (
         <nav className="bg-white shadow-md fixed top-0 left-0 w-full px-4 sm:px-6 z-50">
             <div className="flex h-16 sm:h-16 items-center justify-between gap-4">
@@ -65,10 +65,13 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                     <Link href="/" className={linkClasses("/")}>
                         Home
                     </Link>
-                    {!rootContext.authenticated && <Link href="/companies" className={linkClasses("/companies")}>
+                    <Link href="/about" className={linkClasses("/about")}>
+                        About Us
+                    </Link>
+                    {(role !== "recruiter" || !rootContext.authenticated) && <Link href="/companies" className={linkClasses("/companies")}>
                         Companies
                     </Link>}
-                    {!rootContext.authenticated && <Link href="/jobs" className={linkClasses("/jobs")}>
+                    {(role !== "recruiter" || !rootContext.authenticated) && <Link href="/jobs" className={linkClasses("/jobs")}>
                         Jobs
                     </Link>}
                     {rootContext.authenticated && <Link href="/services" className={linkClasses("/services")}>
@@ -107,12 +110,17 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
 
                                 {showDropdown && (
                                     <div className="absolute top-full right-0 mt-2 w-36 bg-white shadow-lg border rounded-md z-50">
-                                        <button
+                                        {role === "recruiter" ? <button
                                             onClick={() => router.push(`/dashboard`)}
                                             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                         >
                                             Dashboard
-                                        </button>
+                                        </button> : <button
+                                            onClick={() => router.push(`/details/${rootContext?.user?.id || 1}/${rootContext?.user?.name || ""}`)}
+                                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        >
+                                            Profile
+                                        </button>}
                                         <button
                                             onClick={logOut}
                                             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

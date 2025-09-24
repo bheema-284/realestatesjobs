@@ -1,6 +1,7 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import RootContext from '../config/rootcontext';
 
 const dummyLogos = [
     'https://placehold.co/48x48/F0F0F0/000000?text=Google',
@@ -12,6 +13,7 @@ const dummyLogos = [
 
 export default function AboutMe({ profile }) {
     // State for Summary section
+    const { rootContext } = useContext(RootContext);
     const [editingSummary, setEditingSummary] = useState(false);
     const [tempSummary, setTempSummary] = useState('');
     const [summary, setSummary] = useState(profile.summary || 'Write a brief summary about yourself, your skills, and your professional goals.');
@@ -135,8 +137,8 @@ export default function AboutMe({ profile }) {
     };
 
     return (
-        <div className="bg-gray-50 min-h-screen font-sans antialiased">
-            <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 md:space-y-10">
+        <div className="min-h-screen font-sans antialiased">
+            <div className="px-4 py-8 space-y-8 md:space-y-10">
                 {/* Summary Section */}
                 <section className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
                     <div className="flex justify-between items-start mb-4">
@@ -158,14 +160,16 @@ export default function AboutMe({ profile }) {
                                     </button>
                                 </>
                             ) : (
-                                <button
-                                    onClick={() => { setEditingSummary(true); }}
-                                    className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                    aria-label="Edit summary"
-                                    disabled={isAddingOrEditing} // Disable if any other section is being edited
-                                >
-                                    <PencilIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-gray-600'}`} />
-                                </button>
+                                <div>
+                                    {rootContext?.user?.role !== "recruiter" && <button
+                                        onClick={() => { setEditingSummary(true); }}
+                                        className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                        aria-label="Edit summary"
+                                        disabled={isAddingOrEditing} // Disable if any other section is being edited
+                                    >
+                                        <PencilIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-gray-600'}`} />
+                                    </button>}
+                                </div>
                             )}
                         </div>
                     </div>
@@ -188,14 +192,14 @@ export default function AboutMe({ profile }) {
                 <section className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-bold text-gray-800">EXPERIENCE</h3>
-                        <button
+                        {rootContext?.user?.role !== "recruiter" && <button
                             onClick={handleAddExperience}
                             className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 shadow-md"
                             aria-label="Add experience"
                             disabled={isAddingOrEditing} // Disable if any other section is being edited
                         >
                             <PlusIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-white'}`} />
-                        </button>
+                        </button>}
                     </div>
                     <div className="space-y-6">
                         {experience.length === 0 && (
@@ -300,7 +304,7 @@ export default function AboutMe({ profile }) {
                                                     <p className="text-xs text-gray-500">{exp.startDate} - {exp.endDate}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex space-x-2">
+                                            {rootContext?.user?.role !== "recruiter" && <div className="flex space-x-2">
                                                 <button
                                                     onClick={() => handleEditExperience(index)}
                                                     className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
@@ -317,7 +321,7 @@ export default function AboutMe({ profile }) {
                                                 >
                                                     <TrashIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-red-600'}`} />
                                                 </button>
-                                            </div>
+                                            </div>}
                                         </div>
                                         {exp.description && (
                                             <div className="mt-2">
@@ -345,14 +349,14 @@ export default function AboutMe({ profile }) {
                 <section className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-bold text-gray-800">QUALIFICATION</h3>
-                        <button
+                        {rootContext?.user?.role !== "recruiter" && <button
                             onClick={handleAddEducation}
                             className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 shadow-md"
                             aria-label="Add education"
                             disabled={isAddingOrEditing} // Disable if any other section is being edited
                         >
                             <PlusIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-white'}`} />
-                        </button>
+                        </button>}
                     </div>
                     <div className="space-y-6">
                         {education.length === 0 && (
@@ -416,7 +420,7 @@ export default function AboutMe({ profile }) {
                                             <p className="text-sm text-gray-700">{edu.board}</p>
                                             <p className="text-xs text-gray-500">{edu.years}</p>
                                         </div>
-                                        <div className="flex space-x-2">
+                                        {rootContext?.user?.role !== "recruiter" && <div className="flex space-x-2">
                                             <button
                                                 onClick={() => handleEditEducation(index)}
                                                 className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
@@ -433,7 +437,7 @@ export default function AboutMe({ profile }) {
                                             >
                                                 <TrashIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-red-600'}`} />
                                             </button>
-                                        </div>
+                                        </div>}
                                     </div>
                                 )}
                             </div>

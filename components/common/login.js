@@ -6,7 +6,7 @@ import RootContext from "../config/rootcontext";
 import { contextObject } from "../config/contextobject";
 import { useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
-import { users } from '../config/data'
+import { candidatesData, companyData, users } from '../config/data'
 import Image from "next/image";
 import Link from "next/link";
 const SignIn = () => {
@@ -58,6 +58,13 @@ const SignIn = () => {
 
     const userByEmail = users.find((user) => user.email === formData.email);
     const userByPassword = users.find((user) => user.password === formData.password);
+    const allUsers = [
+      ...(candidatesData || []),
+      ...(companyData || [])
+    ];
+    const userDetail = (allUsers || []).find(
+      (c) => c.email.includes(formData.email)
+    );
     if (!userByEmail && !userByPassword) {
       // User not found
       setRootContext((prevContext) => ({
@@ -104,12 +111,13 @@ const SignIn = () => {
         authenticated: true,
         loader: false,
         user: {
-          name: username,
+          name: userDetail?.name || username,
           email: userByEmail.email,
           mobile: userByEmail.mobile,
           password: userByEmail.password,
           role: userByEmail.role,
           token: userByEmail.token,
+          id: userDetail.id || 1
         },
         remember: formData.remember,
       };
@@ -125,7 +133,6 @@ const SignIn = () => {
         },
       });
       localStorage.setItem("user_details", JSON.stringify(resp.user));
-      // Optional: Navigate to dashboard
       router.push("/");
     }
   };

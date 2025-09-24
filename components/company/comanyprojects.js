@@ -10,7 +10,6 @@ import {
     CalendarDaysIcon,
     ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/solid";
-import Header from "./companyheader";
 
 export default function ProjectsPage({ companyProfile }) {
     const router = useRouter();
@@ -31,7 +30,6 @@ export default function ProjectsPage({ companyProfile }) {
 
     return (
         <div className="w-full mx-auto">
-            <Header />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {companyProfile.projects.map((p) => (
                     <div

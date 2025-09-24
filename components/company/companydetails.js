@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { PencilIcon } from '@heroicons/react/24/solid';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import CompanyInvestors from './companyinvestors';
@@ -9,6 +9,7 @@ import ButtonTab from '../common/buttontab';
 import CompanyJobs from './companyjobs';
 import CompanyServices from './companyservices';
 import { companyData } from '../config/data'
+import RootContext from '../config/rootcontext';
 const tabs = [
     { name: 'About', component: AboutCompany },
     { name: 'New Projects', component: CompanyProjects },
@@ -19,7 +20,7 @@ const tabs = [
 
 export default function CompanyDetails({ companyId }) {
     const [activeTab, setActiveTab] = useState(0);
-
+    const { rootContext } = useContext(RootContext)
     const [companyProfile, setCompanyProfile] = useState({
         name: '', industry: '', location: '', image: '', summary: '', experience: [], education: [],
     });
@@ -38,79 +39,76 @@ export default function CompanyDetails({ companyId }) {
     const ActiveComponent = tabs[activeTab].component;
 
     return (
-        <div className="bg-gray-100 min-h-screen">
-            <div className="bg-[#0d1b2a] text-white py-6 px-4 relative">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 max-w-5xl mx-auto">
-                    <img
-                        src={tempCompanyProfile.logo || "https://placehold.co/48x48/F0F0F0/000000?text=Logo"}
-                        alt="Avatar"
-                        className="w-16 sm:w-20 h-16 sm:h-20 rounded-full border-4 border-white object-cover"
-                    />
-                    {editingHeader ? (
-                        <div className="flex flex-col w-full gap-2">
-                            <label className="text-sm">Name</label>
-                            <input
-                                className="bg-white text-black p-1 rounded"
-                                value={tempCompanyProfile.name}
-                                onChange={(e) => setTempCompanyProfile({ ...tempCompanyProfile, name: e.target.value })}
-                            />
-                            <label className="text-sm">Industry</label>
-                            <input
-                                className="bg-white text-black p-1 rounded"
-                                value={tempCompanyProfile.industry}
-                                onChange={(e) => setTempCompanyProfile({ ...tempCompanyProfile, industry: e.target.value })}
-                            />
-                            <label className="text-sm">Location</label>
-                            <input
-                                className="bg-white text-black p-1 rounded"
-                                value={tempCompanyProfile.location}
-                                onChange={(e) => setTempCompanyProfile({ ...tempCompanyProfile, location: e.target.value })}
-                            />
-                            <div className="flex gap-2 mt-2">
-                                <button
-                                    className="text-sm bg-white text-black px-3 py-1 rounded"
-                                    onClick={() => {
-                                        setCompanyProfile(tempCompanyProfile);
-                                        setEditingHeader(false);
-                                    }}
-                                >
-                                    Save
-                                </button>
-                                <button
-                                    className="text-sm text-white border border-white px-3 py-1 rounded"
-                                    onClick={() => setEditingHeader(false)}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
+        <div className="bg-white mt-20 min-h-screen">
+            <div className="max-w-5xl border border-gray-200 rounded-t-xl mx-auto relative shadow-sm">
+                <div className="p-6 flex flex-col sm:flex-row items-center gap-4 relative z-10">
+                    <div className="absolute -top-12 left-6 sm:left-6">
+                        <img
+                            src={tempCompanyProfile.logo || "https://placehold.co/48x48/F0F0F0/000000?text=Logo"}
+                            alt="Avatar"
+                            className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border-4 border-white object-cover shadow-lg"
+                        />
+                    </div>
+
+                    <div className="flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 w-full ml-0 sm:ml-40">
+                        <div className="flex-1">
+                            {editingHeader ? (
+                                <div className="flex flex-col gap-2">
+                                    <input
+                                        className="border p-1 rounded w-full"
+                                        value={tempCompanyProfile.name}
+                                        onChange={(e) => setTempCompanyProfile({ ...tempCompanyProfile, name: e.target.value })}
+                                    />
+                                    <input
+                                        className="border p-1 rounded w-full"
+                                        value={tempCompanyProfile.industry}
+                                        onChange={(e) => setTempCompanyProfile({ ...tempCompanyProfile, industry: e.target.value })}
+                                    />
+                                    <input
+                                        className="border p-1 rounded w-full"
+                                        value={tempCompanyProfile.location}
+                                        onChange={(e) => setTempCompanyProfile({ ...tempCompanyProfile, location: e.target.value })}
+                                    />
+                                    <div className="flex gap-2 mt-2">
+                                        <button
+                                            className="px-3 py-1 bg-blue-600 text-white rounded"
+                                            onClick={() => {
+                                                setProfile(tempCompanyProfile);
+                                                setEditingHeader(false);
+                                            }}
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            className="px-3 py-1 border border-gray-400 rounded"
+                                            onClick={() => setEditingHeader(false)}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <h2 className="font-bold text-lg sm:text-xl">{companyProfile.name}</h2>
+                                    <p className="text-sm">{companyProfile.industry}</p>
+                                    <p className="text-xs text-gray-300">{companyProfile.location}</p>
+                                </div>
+                            )}
                         </div>
-                    ) : (
-                        <div>
-                            <h2 className="font-bold text-lg sm:text-xl">{companyProfile.name}</h2>
-                            <p className="text-sm">{companyProfile.industry}</p>
-                            <p className="text-xs text-gray-300">{companyProfile.location}</p>
-                        </div>
-                    )}
-                    <button
-                        onClick={() => {
-                            setEditingHeader(true);
-                            setTempCompanyProfile(companyProfile);
-                        }}
-                        className="absolute top-8 sm:top-4 right-6 text-white"
-                    >
-                        <PencilIcon className="w-5 h-5" />
-                    </button>
+
+                        {!editingHeader && rootContext?.user?.role === "recruiter" && (
+                            <button
+                                onClick={() => {
+                                    setEditingHeader(true);
+                                    setTempCompanyProfile(profile);
+                                }}
+                                className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0"
+                            >
+                                <PencilIcon className="w-5 h-5" />
+                            </button>
+                        )}
+                    </div>
                 </div>
-                {/* Desktop Edit Icon */}
-                <button
-                    onClick={() => {
-                        setEditingHeader(true);
-                        setTempCompanyProfile(companyProfile);
-                    }}
-                    className="hidden sm:block absolute top-4 right-6 text-white"
-                >
-                    <PencilIcon className="w-5 h-5" />
-                </button>
             </div>
 
             {/* Tab / Accordion Section */}

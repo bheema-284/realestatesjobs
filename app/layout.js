@@ -754,6 +754,30 @@ export default function RootLayout({ children }) {
     setReady(true);
   }, []);
 
+  useEffect(() => {
+    if (!ready) return;
+
+    const role = rootContext?.user?.role;
+    const allowedRoutes = [
+      `/home`,
+      `/jobs`,
+      `/services`,
+      `/companies`,
+      `/about`,
+      `/details`,
+      `/details/${rootContext?.user?.id || 1}/${rootContext?.user?.name || ""}`
+    ];
+
+    if (role !== "recruiter" && rootContext?.authenticated) {
+      const isAllowed = allowedRoutes.some((route) =>
+        pathName.startsWith(route)
+      );
+      if (!isAllowed && rootContext?.authenticated) {
+        router.push("/");
+      }
+    }
+  }, [ready, rootContext, pathName, router]);
+
   const logOut = () => {
     localStorage.clear();
     const updatedContext = {
@@ -781,11 +805,13 @@ export default function RootLayout({ children }) {
     <html lang="en" className={inter.variable}>
       <body className="w-full mx-auto">
         <RootContext.Provider value={{ rootContext, setRootContext }}>
-          <Navbar rootContext={rootContext} showLoader={showLoader} logOut={logOut} />
+          {(pathName !== "/login" && pathName !== "/signup") && (
+            <Navbar rootContext={rootContext} showLoader={showLoader} logOut={logOut} />
+          )}
           <div className="flex pt-26 sm:pt-16">
             {!ready && <Loader />}
             {/* Sidebar only when authenticated & not home */}
-            {(rootContext.authenticated && pathName !== "/") && (
+            {(rootContext?.user?.role === "recruiter" && (rootContext.authenticated && pathName !== "/")) && (
               <Sidebar
                 isMobileOpen={isMobileSidebarOpen}
                 toggleSidebar={setMobileSidebarOpen}
@@ -797,7 +823,7 @@ export default function RootLayout({ children }) {
               {children}
             </main>
           </div>
-          <Footer />
+          {(pathName !== "/login" && pathName !== "/signup") && <Footer />}
           {rootContext?.toast && <Toast />}
         </RootContext.Provider>
       </body>

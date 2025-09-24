@@ -32,7 +32,6 @@ export default function ProjectDetailsPage() {
         const data = company?.projects.find(
             (c) => String(c.title) === decodeURIComponent(String(title || ""))
         );
-        console.log("data", data)
         if (data) {
             setProject(data);
         }
@@ -75,7 +74,7 @@ export default function ProjectDetailsPage() {
     };
 
     return (
-        <div>
+        <div className="mt-16">
             <Header company={company} />
             <div className="w-full sm:w-[80%] mx-auto">
                 {/* Project Slider */}

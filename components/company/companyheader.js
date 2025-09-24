@@ -6,16 +6,15 @@ import { FaBars, FaTimes, FaSearch } from "react-icons/fa";
 export default function Header({ company }) {
     const [showSearch, setShowSearch] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
-    const [isScrolled, setIsScrolled] = useState(false);
+    const [scrolledDown, setScrolledDown] = useState(false);
     const searchRef = useRef(null);
 
     useEffect(() => {
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 50);
+            setScrolledDown(window.scrollY > 50); // shrink logo when scrolling
         };
         window.addEventListener("scroll", handleScroll);
 
-        // Close search on outside click
         const handleClickOutside = (event) => {
             if (
                 searchRef.current &&
@@ -35,27 +34,29 @@ export default function Header({ company }) {
 
     return (
         <header
-            className={`fixed w-full z-20 transition-all duration-500 ${isScrolled
-                    ? "bg-transparent backdrop-blur-md"
-                    : "bg-gray-100/75 shadow-md"
+            className={`fixed top-0 w-full z-20 transition-all border-b border-gray-200 duration-500 mt-16 ${scrolledDown
+                ? "bg-transparent backdrop-blur-md"
+                : "bg-gray-100/75 shadow-md"
                 }`}
         >
-            {/* Top Navbar */}
-            <div
-                className={`flex justify-between items-center mx-auto transition-all duration-500 ${isScrolled ? "w-[80%]" : "w-[95%]"
-                    }`}
-            >
-                {/* Logo */}
-                <div
-                    className={`flex items-center gap-3 transform transition-transform duration-500 ${isScrolled ? "scale-75" : "scale-100"
-                        }`}
-                >
-                    <img src={company.logo} alt="Logo" className="h-12" />
+            {/* Navbar with fixed height */}
+            <div className="flex justify-between items-center mx-auto w-[80%] h-14 relative">
+
+                {/* Logo wrapper (keeps flex intact) */}
+                <div className="relative">
+                    <img
+                        src={company.logo}
+                        alt="Logo"
+                        className={`h-24 z-50 shadow-lg rounded-lg transform transition-all duration-500 ${scrolledDown
+                            ? "scale-75 translate-y-2"
+                            : "scale-100 translate-y-4"
+                            }`}
+                    />
                 </div>
 
                 {/* Right Side */}
-                <div className="flex items-center gap-4">
-                    <button className="border px-4 py-2 text-xs font-semibold uppercase">
+                <div className="flex items-center gap-4 ml-auto">
+                    <button className="border px-4 hover:bg-purple-100 py-2 text-xs font-semibold uppercase">
                         Upcoming Projects
                     </button>
                     <FaSearch
@@ -71,9 +72,8 @@ export default function Header({ company }) {
 
             {/* Search Overlay */}
             {showSearch && (
-                <div ref={searchRef}>
+                <div className="w-full sm:w-[83%] mx-auto" ref={searchRef}>
                     <div className="p-6 flex flex-col gap-6">
-                        {/* Search Bar */}
                         <div className="flex items-center gap-4">
                             <input
                                 type="text"
@@ -82,7 +82,6 @@ export default function Header({ company }) {
                             />
                         </div>
 
-                        {/* Filters */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <select className="border p-2 rounded">
                                 <option>Project Type</option>
@@ -103,17 +102,17 @@ export default function Header({ company }) {
 
             {/* Right-Side Drawer Menu */}
             <div
-                className={`fixed top-0 right-0 h-full w-72 bg-white shadow-lg transform ${showMenu ? "translate-x-0" : "translate-x-full"
+                className={`fixed top-0 right-0 h-full w-72 transform ${showMenu ? "translate-x-0" : "translate-x-full"
                     } transition-transform duration-500 z-50`}
             >
-                <div className="flex justify-between items-center p-4 border-b">
-                    <h2 className="text-lg font-semibold">Menu</h2>
-                    <FaTimes
-                        onClick={() => setShowMenu(false)}
-                        className="cursor-pointer"
-                    />
-                </div>
-                <nav className="flex flex-col gap-4 p-6 text-sm">
+                <nav className="flex flex-col gap-4 p-2 text-sm bg-white">
+                    <div className="flex justify-between mt-3 items-center">
+                        <h2 className="text-lg font-semibold">Menu</h2>
+                        <FaTimes
+                            onClick={() => setShowMenu(false)}
+                            className="cursor-pointer"
+                        />
+                    </div>
                     <a href="#">About</a>
                     <a href="#">Residential</a>
                     <a href="#">Commercial</a>

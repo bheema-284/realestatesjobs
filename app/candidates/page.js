@@ -1,10 +1,11 @@
 'use client';
 import Chat from '@/components/common/chat';
+import { candidatesData, jobCategories } from '@/components/config/data';
 import RootContext from '@/components/config/rootcontext';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid';
 import { ChatBubbleOvalLeftEllipsisIcon, EyeIcon } from '@heroicons/react/24/solid';
 import { useRouter } from 'next/navigation';
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
     FaGraduationCap,
     FaHandshake,
@@ -14,50 +15,7 @@ import {
     FaCheckCircle,
 } from 'react-icons/fa';
 
-// Job Categories
-const jobCategories = [
-    { icon: '/icons/cp.png', title: 'Channel Partners', description: 'Collaborate & Earn' },
-    { icon: '/icons/hrandop.png', title: 'HR & Operations', description: 'People & Process' },
-    { icon: '/icons/realestate.png', title: 'Real Estate Sales', description: 'Sell Property Faster' },
-    { icon: '/icons/tel.png', title: 'Tele Caller', description: 'Engage & Convert' },
-    { icon: '/icons/digital.png', title: 'Digital Marketing', description: 'Promote & Convert' },
-    { icon: '/icons/webdev.png', title: 'Web Development', description: 'Build Real Estate Tech' },
-    { icon: '/icons/crm.png', title: 'CRM Executive', description: 'Manage Client Relations' },
-    { icon: '/icons/accounts.png', title: 'Accounts & Auditing', description: 'Ensure Financial Clarity' },
-];
-
-// Utility: Random pick
-const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
-// Name pools
-const firstNames = ['Emma', 'Alex', 'Priya', 'Rahul', 'Anjali', 'Arjun', 'Sneha', 'Rohit', 'Neha', 'Vikram', 'Kiran', 'Meera', 'Suresh', 'Isha', 'Kabir'];
-const lastNames = ['Robin', 'Johnson', 'Mehta', 'Verma', 'Singh', 'Desai', 'Kapoor', 'Sharma', 'Dubey', 'Rao', 'Patel', 'Nair', 'Menon', 'Bose', 'Chopra'];
-
-// Cities
-const locations = [
-    'Hyderabad, Madhapur', 'Mumbai, Andheri', 'Bangalore, Koramangala', 'Pune, Baner',
-    'Delhi, Hauz Khas', 'Ahmedabad, Satellite', 'Chennai, T. Nagar', 'Kolkata, Salt Lake',
-    'Jaipur, Malviya Nagar', 'Nagpur, Dharampeth', 'Lucknow, Hazratganj', 'Surat, Adajan', 'Indore, Vijay Nagar'
-];
-
-// Generate image URLs
-const getImage = (gender, index) => `https://randomuser.me/api/portraits/${gender}/${index}.jpg`;
-
-// Generate candidates per category
-let candidateId = 1;
-const candidates = jobCategories.flatMap((category) => {
-    const numCandidates = Math.floor(Math.random() * 6) + 5; // 5–10
-    return Array.from({ length: numCandidates }, () => {
-        const gender = Math.random() > 0.5 ? 'men' : 'women';
-        return {
-            id: candidateId++,
-            name: `${getRandom(firstNames)} ${getRandom(lastNames)}`,
-            location: getRandom(locations),
-            image: getImage(gender, Math.floor(Math.random() * 90)),
-            category: category.title,
-        };
-    });
-});
+const candidates = candidatesData || []
 
 // Candidate Card
 const ApplicationCard = ({ candidate, onOpenChatWithCandidate }) => {
@@ -65,7 +23,7 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate }) => {
     const [status, setStatus] = useState('Interested');
     const isChatEnabled = status === 'Interested';
 
-    const handleViewProfile = () => router.push(`/profile/${candidate.id}`);
+    const handleViewProfile = () => router.push(`/profile/${candidate.id}/${candidate.category}`);
 
     return (
         <div className="border rounded-xl shadow-sm p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -130,6 +88,11 @@ const ApplicationList = () => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [selectedCandidateName, setSelectedCandidateName] = useState('');
     const [openCategory, setOpenCategory] = useState(''); // Accordion: currently open category
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const handleOpenChatWithCandidate = (name) => {
         setSelectedCandidateName(name);
@@ -144,7 +107,7 @@ const ApplicationList = () => {
     const toggleCategory = (category) => {
         setOpenCategory(openCategory === category ? '' : category);
     };
-
+    if (!isMounted) return null;
     return (
         <div className="w-full sm:w-[80%] mx-auto">
             {/* Accordion Category List */}
@@ -157,7 +120,7 @@ const ApplicationList = () => {
                         <div key={cat.title} className="flex flex-col gap-2">
                             {/* Accordion Header */}
                             <div
-                                className={`flex w-full cursor-pointer gap-5 justify-between text-left px-4 py-2 rounded font-semibold border items-center ${isOpen ? 'bg-blue-400 text-white' : 'bg-blue-600 text-white hover:bg-blue-500 hover:text-gray-800'
+                                className={`flex w-full cursor-pointer gap-5 justify-between text-left px-4 py-3 sm:text-xl rounded font-semibold border items-center ${isOpen ? 'bg-blue-400 text-white' : 'bg-blue-600 text-white hover:bg-blue-500 hover:text-gray-800'
                                     }`}
                                 onClick={() => toggleCategory(cat.title)}
                             >
