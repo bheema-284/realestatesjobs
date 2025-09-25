@@ -1,13 +1,12 @@
-import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Link from "next/link";
-import { UserIcon, UsersIcon } from "@heroicons/react/24/solid";
+import { UserIcon, UsersIcon, CheckCircleIcon } from "@heroicons/react/24/solid";
 
 export default function AboutPage() {
     return (
         <div className="font-nunito">
             {/* Inner Banner */}
-            <div className="relative bg-[url('https://realestatejobs.co.in/images/banner.avif')] bg-cover bg-center py-20 text-center text-white">
+            <div className="relative bg-[url('https://realestatejobs.co.in/images/banner.avif')] bg-cover bg-center py-26 text-center text-white">
                 {/* Overlay */}
                 <div className="absolute inset-0 bg-[#1c4676]/60"></div>
 
@@ -47,22 +46,17 @@ export default function AboutPage() {
             </div>
 
             {/* About RE Jobs with new design - Image Right, Inset, Red Dots */}
-            <div
-                className="relative bg-cover bg-center bg-no-repeat text-white py-12"
-                >
-                {/* Overlay for blur over entire section */}
-                <div className="absolute inset-0 backdrop-blur-sm bg-black/50"></div>
-
+            <div className="relative w-full sm:w-[90%] mx-auto bg-cover bg-center bg-no-repeat py-12">
                 <div className="relative z-10 max-w-7xl mx-auto py-12 px-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                         {/* Left Content */}
                         <div className="space-y-4">
                             <h2 className="text-3xl font-bold mb-3">
-                                About <span className="text-yellow-500">RE JOBS</span>
+                                About <span className="text-[#1c4676]">RE JOBS</span>
                             </h2>
-                            <p className="text-lg text-white leading-relaxed">
+                            <p className="text-lg leading-relaxed">
                                 Welcome to{" "}
-                                <Link href="/" className="text-yellow-500 underline inline">
+                                <Link href="/" className="text-[#1c4676] underline inline">
                                     www.realestatejobs.co.in
                                 </Link>{" "}
                                 – India’s first and only dedicated job portal exclusively designed
@@ -73,28 +67,30 @@ export default function AboutPage() {
                             </p>
                         </div>
 
-                        {/* Right Image - only this container has red dots */}
+                        {/* Right Side */}
                         <div className="relative flex justify-center md:justify-end">
-                            {/* Red dots overlay */}
+                            {/* Red Dots Background */}
                             <div
-                                className="absolute inset-0 opacity-70 pointer-events-none"
+                                className="absolute -top-10 -right-10 w-[420px] h-[460px] rounded-lg -z-10"
                                 style={{
-                                    backgroundImage: 'radial-gradient(#ff0000 2px, transparent 2px)',
-                                    backgroundSize: '15px 15px',
-                                    borderRadius: '0.5rem',
+                                    backgroundImage: 'radial-gradient(#fecaca 4px, transparent 4px)', // light red
+                                    backgroundSize: '20px 20px',
                                 }}
                             ></div>
 
-                            <img
-                                src="https://realestatejobs.co.in/images/banner.avif"
-                                alt="logo"
-                                className="rounded-lg shadow-inner-lg max-w-full h-auto transform scale-95 relative z-10" // keep image above the dots
-                               />
+
+                            {/* Image Box */}
+                            <div className="relative w-[420px] h-[360px] bg-black rounded-lg shadow-lg flex items-center justify-center">
+                                <img
+                                    src="https://realestatejobs.co.in/images/banner.avif"
+                                    alt="logo"
+                                    className="w-full h-full object-cover rounded-lg"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
 
             {/* Mission & Vision */}
             <div
@@ -115,7 +111,7 @@ export default function AboutPage() {
                             className="rounded-lg shadow-lg"
                         />
                         <div>
-                            <h2 className="text-2xl font-bold mb-3">Our Mission</h2>
+                            <h2 className="text-4xl font-bold mb-3">Our Mission</h2>
                             <p className="text-lg">
                                 To revolutionize recruitment in the real estate sector by providing a seamless and
                                 efficient platform that connects skilled professionals with the right employers.
@@ -127,7 +123,7 @@ export default function AboutPage() {
 
                     <div className="grid md:grid-cols-2 gap-8 items-center">
                         <div>
-                            <h2 className="text-2xl font-bold mb-3">Our Vision</h2>
+                            <h2 className="text-4xl font-bold mb-3">Our Vision</h2>
                             <p className="text-lg">
                                 To be the go-to hub for real estate employment across India, driving innovation,
                                 trust, and collaboration in the hiring process.
@@ -162,7 +158,7 @@ export default function AboutPage() {
                             <div key={idx} className="flex gap-3 items-start bg-white p-4 rounded shadow">
                                 <i className="fas fa-check-circle text-yellow-500 text-xl mt-1"></i>
                                 <div>
-                                    <div className="flex gap-3">
+                                    <div className="flex gap-3 text-lg">
                                         <CheckCircleIcon width={28} height={28} className="text-yellow-500" aria-hidden="true" />
                                         <h5 className="font-semibold">{item.title}</h5>
                                     </div>
