@@ -8,19 +8,12 @@ export default function AboutPage() {
             {/* Inner Banner */}
             <div className="relative bg-[url('https://realestatejobs.co.in/images/banner.avif')] bg-cover bg-center py-26 text-center text-white">
                 {/* Overlay */}
-                <div className="absolute inset-0 bg-[#1c4676]/60"></div>
+                <div className="absolute inset-0 bg-[#1c4676]/40"></div>
 
                 {/* Content */}
-                <div className="relative z-10">
-                    <h2 className="text-4xl font-bold mb-2">About Us</h2>
-                    <nav>
-                        <ol className="flex justify-center space-x-2">
-                            <li>
-                                <Link href="/" className="text-white hover:underline">Home</Link>
-                            </li>
-                            <li>/ About Us</li>
-                        </ol>
-                    </nav>
+                <div className="relative z-10 text-right pr-6 text-white">
+                    <h2 className="text-4xl font-bold mb-2 pr-4">About Us</h2>
+                    <p className="text-lg">Welcome to realestatejobs.co.in Your Gateway to Thriving realestate career!</p>                    
                 </div>
             </div>
 
