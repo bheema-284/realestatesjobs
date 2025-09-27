@@ -86,8 +86,6 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
     const employmentOptions = [
         { id: 'full-time', name: 'Full-time' },
         { id: 'part-time', name: 'Part-time' },
-        { id: 'on-demand', name: 'On demand' },
-        { id: 'negotiable', name: 'Negotiable' },
     ];
 
     // Options for salary frequency dropdown
@@ -216,8 +214,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                     className="w-full p-2.5 border cursor-not-allowed border-gray-300 opacity-75 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                     placeholder="e.g. &quot;Kitchen staff&quot;"
                                                     required
-                                                    disabled
-                                                />
+                                                    />
                                             </div>
                                         </div>
                                         <div className='border-b border-gray-300'></div>
@@ -361,7 +358,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                                     {checked && <span className="h-2 w-2 rounded-full bg-blue-600" />}
                                                                 </span>
                                                                 <RadioGroup.Label as="p" className={`ml-2 text-sm font-medium ${checked ? 'text-white' : 'text-gray-900'}`}>
-                                                                    Hourly
+                                                                    Salary
                                                                 </RadioGroup.Label>
                                                             </div>
                                                         )}

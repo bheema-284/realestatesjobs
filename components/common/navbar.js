@@ -79,7 +79,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                     </Link>}
                     {rootContext.authenticated ? (
                         <>
-                            {pathname !== "/applications" && (
+                            {(pathname !== "/applications" && rootContext?.user?.role === "recruiter") && (
                                 <div>
                                     {showLoader ? (
                                         <AnimatedBorderLoader title={"POST NEW JOB"} />
