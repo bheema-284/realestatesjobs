@@ -10,7 +10,8 @@ import CompanyJobs from './companyjobs';
 import CompanyServices from './companyservices';
 import { companyData } from '../config/data'
 import RootContext from '../config/rootcontext';
-const tabs = [
+
+const allTabs = [
     { name: 'About', component: AboutCompany },
     { name: 'New Projects', component: CompanyProjects },
     { name: 'Jobs', component: CompanyJobs },
@@ -20,7 +21,30 @@ const tabs = [
 
 export default function CompanyDetails({ companyId }) {
     const [activeTab, setActiveTab] = useState(0);
-    const { rootContext } = useContext(RootContext)
+    const { rootContext } = useContext(RootContext);
+
+    const tabs = React.useMemo(() => {
+        const role = rootContext?.user?.role;
+        const isRecruiter = role === "recruiter";
+
+        if (isRecruiter) {
+            // Recruiter sees all tabs as originally defined
+            return allTabs;
+        } else {
+            // Standard user (remove 'Premium Services', rename 'Investors')
+            return allTabs
+                .filter(tab => tab.name !== 'Premium Services')
+                .map(tab => {
+                    if (tab.name === 'Investors') {
+                        // Return a new object with the renamed tab name
+                        return { ...tab, name: 'Invest with Us' };
+                    }
+                    return tab;
+                });
+        }
+    }, [rootContext?.user?.role]); // Recalculate only when the user role changes
+
+
     const [companyProfile, setCompanyProfile] = useState({
         name: '', industry: '', location: '', image: '', summary: '', experience: [], education: [],
     });
@@ -40,7 +64,15 @@ export default function CompanyDetails({ companyId }) {
 
     return (
         <div className="bg-white mt-20 min-h-screen">
-            <div className="max-w-5xl border border-gray-200 rounded-t-xl mx-auto relative shadow-sm">
+
+            {/* ------------------ STICKY HEADER CONTAINER ------------------ */}
+            <div
+                className="
+                    max-w-5xl border border-gray-200 rounded-t-xl mx-auto 
+                    shadow-sm bg-white 
+                    sticky top-20 z-50  // <-- ADDED STICKY CLASSES
+                "
+            >
                 <div className="p-6 flex flex-col sm:flex-row items-center gap-4 relative z-10">
                     <div className="absolute -top-12 left-6 sm:left-6">
                         <img
@@ -73,7 +105,10 @@ export default function CompanyDetails({ companyId }) {
                                         <button
                                             className="px-3 py-1 bg-blue-600 text-white rounded"
                                             onClick={() => {
-                                                setProfile(tempCompanyProfile);
+                                                // Assuming you have a function called setProfile (or similar) to save data
+                                                // setProfile(tempCompanyProfile); 
+                                                // Using setCompanyProfile for immediate client-side update for demonstration
+                                                setCompanyProfile(tempCompanyProfile);
                                                 setEditingHeader(false);
                                             }}
                                         >
@@ -100,7 +135,8 @@ export default function CompanyDetails({ companyId }) {
                             <button
                                 onClick={() => {
                                     setEditingHeader(true);
-                                    setTempCompanyProfile(profile);
+                                    // You were using 'profile' here, but it should be 'companyProfile' or 'tempCompanyProfile'
+                                    setTempCompanyProfile(companyProfile);
                                 }}
                                 className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0"
                             >
@@ -110,12 +146,16 @@ export default function CompanyDetails({ companyId }) {
                     </div>
                 </div>
             </div>
+            {/* ------------------------------------------------------------- */}
 
-            {/* Tab / Accordion Section */}
+
+            {/* Tab / Accordion Section - Content below the sticky header */}
             <div className="bg-white border-b border-gray-200 max-w-5xl mx-auto px-4 py-6 rounded-b-md shadow-sm">
+
                 {/* Desktop Tabs */}
                 <div className="hidden sm:flex flex-col text-sm mb-6">
                     {/* Tab Navigation */}
+                    {/* Note: It might be better to make the tabs sticky too, by moving this div to its own sticky container. */}
                     <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
 
                     {/* Tab Content */}

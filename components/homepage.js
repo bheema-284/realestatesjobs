@@ -1,12 +1,16 @@
 'use client'
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import AutoScrollLogos from "./common/autoscrolllogs";
 import Slider from "./common/slider";
 import { motion, useAnimation } from "framer-motion";
 import { useInView } from "react-intersection-observer";
+import { useRouter } from "next/navigation";
+import { topRecruiters } from "./config/data";
+import RootContext from "./config/rootcontext";
 
 export default function HomePage() {
-
+    const router = useRouter();
+    const { rootContext, setRootContext } = useContext(RootContext);
     const dummyData = [
         { image: "/cover/add1.jpg" },
         { image: "/cover/add2.jpg" },
@@ -23,23 +27,6 @@ export default function HomePage() {
         { image: "/cover/add13.jpg" },
         { image: "/cover/add14.jpg" },
         { image: "/cover/add15.jpg" }
-    ];
-
-    const topRecruiters = [
-        { name: "DLF Ltd.", logo: "/company/dlf.png" },
-        { name: "Honer Properties", logo: "/company/honer.jpg" },
-        { name: "Brigade Group", logo: "/company/brigade.jpeg" },
-        { name: "Cyber City.", logo: "/company/cybercity.jpg" },
-        { name: "Jayabheri Properties", logo: "/company/jayabheri.jpg" },
-        { name: "Muppa Group", logo: "/company/muppa.jpeg" },
-        { name: "Prestige Group", logo: "/company/prestigegroup.png" },
-        { name: "My Home Group.", logo: "/company/myhomegroup.png" },
-        { name: "Radhey Properties", logo: "/company/radhey.jpg" },
-        { name: "Rajpushpa Group", logo: "/company/rajpushpagroup.jpg" },
-        { name: "NCC Ltd.", logo: "/company/ncc.jpg" },
-        { name: "Ramkey Group", logo: "/company/ramkeygroup.jpg" },
-        { name: "Lodha Group", logo: "/company/lodha.jpg" },
-        { name: "Phoenix Mills", logo: "/company/images.jpeg" },
     ];
 
     const ourServices = [
@@ -68,7 +55,6 @@ export default function HomePage() {
         { name: "Chennai", jobs: "100+ Jobs", imageBlack: "/cities/chennai_black.png", imageColor: "/cities/chennai_color.png" },
         { name: "Kolkata", jobs: "150+ Jobs", imageBlack: "/cities/kolkata_black.png", imageColor: "/cities/kolkata_color.png" },
     ];
-    const [hoveredCity, setHoveredCity] = useState(null);
 
     const jobCategories = [
         {
@@ -152,18 +138,36 @@ export default function HomePage() {
         'Jobs in Shirdi',
     ];
 
+    // Slug creation function - consistent across components
+    const createSlug = (title) => {
+        return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    };
+
+    // Handler for all location/city clicks
+    const handleLocationClick = (locationName) => {
+        // Example: "Jobs in Hyderabad" -> "hyderabad"
+        // Example: "Delhi NCR" -> "delhi-ncr"
+
+        // Strip "Jobs in " prefix if present
+        const cleanName = locationName.replace(/^Jobs in\s+/i, '').trim();
+        const slug = createSlug(cleanName);
+
+        // Navigate to the /jobs page with the location query parameter
+        router.push(`/jobs?location=${slug}`);
+    };
+
     const AllLocations = () => (
         <div className=" w-full sm:w-[80%] m-auto px-4">
             <h3 className="text-3xl md:text-4xl font-bold text-center mb-12">All Locations</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {locations.map((location, index) => (
-                    <a
+                    <button // Changed <a> to <button> for onClick handler
                         key={index}
-                        href="#"
+                        onClick={() => handleLocationClick(location)}
                         className={`bg-white text-center rounded-lg p-4 shadow-sm transition-transform duration-300 hover:scale-105 bg-gray-100 hover:bg-purple-700 hover:text-white`}
                     >
                         <span className="font-semibold text-lg">{location}</span>
-                    </a>
+                    </button>
                 ))}
             </div>
         </div>
@@ -190,6 +194,32 @@ export default function HomePage() {
             </div>
         </div>
     );
+
+    const viewSyllabus = () => {
+        setRootContext({
+            ...rootContext,
+            toast: {
+                show: true,
+                dismiss: true,
+                type: "info",
+                title: "Syllabus Status",
+                message: "The full curriculum syllabus is being finalized by our experts. Check back soon for the complete course structure and learning modules!",
+            },
+        });
+    }
+
+    const viewAbout = () => {
+        setRootContext({
+            ...rootContext,
+            toast: {
+                show: true,
+                dismiss: true,
+                type: "info",
+                title: "Certifications Program Update",
+                message: "Our professional certification program is currently under review and will be launched soon. Get ready to elevate your career!",
+            },
+        });
+    }
 
     const CertificationsCarousel = () => {
         // duplicate items for seamless loop
@@ -218,7 +248,7 @@ export default function HomePage() {
                     <h3 className="text-3xl md:text-4xl font-bold text-center">
                         Trending Certifications Programs
                     </h3>
-                    <div className="relative overflow-hidden rounded-3xl mt-16">
+                    <div className="relative overflow-hidden rounded-3xl mt-20">
                         <div className="flex animate-scroll">
                             {loopedCerts.map((cert, index) => (
                                 <div key={index} className="w-96 flex-shrink-0 px-4">
@@ -238,10 +268,10 @@ export default function HomePage() {
                                                 ))}
                                             </ul>
                                             <div className="mt-auto flex justify-between pt-4">
-                                                <button className="bg-purple-100 text-purple-700 px-4 py-2 rounded-full font-medium text-sm transition-colors duration-300 hover:bg-purple-200">
+                                                <button onClick={viewSyllabus} className="bg-purple-100 text-purple-700 px-4 py-2 rounded-full font-medium text-sm transition-colors duration-300 hover:bg-purple-200">
                                                     View Syllabus
                                                 </button>
-                                                <button className="bg-purple-700 text-white px-4 py-2 rounded-full font-medium text-sm transition-colors duration-300 hover:bg-purple-800">
+                                                <button onClick={viewAbout} className="bg-purple-700 text-white px-4 py-2 rounded-full font-medium text-sm transition-colors duration-300 hover:bg-purple-800">
                                                     Know More
                                                 </button>
                                             </div>
@@ -291,6 +321,20 @@ export default function HomePage() {
         }
     ];
 
+
+    const onMoreInfo = () => {
+        setRootContext({
+            ...rootContext,
+            toast: {
+                show: true,
+                dismiss: true,
+                type: "info",
+                title: "Access Restricted",
+                message: "Our Exclusive Services program is coming soon! Keep an eye out for premium features and expert consulting access.",
+            },
+        });
+    }
+
     const OurServices = () => {
         return (
             <div className="py-8 w-full mx-auto">
@@ -310,7 +354,7 @@ export default function HomePage() {
                                 <p className="text-gray-500">{service.description}</p>
                             </div>
                             <div className="my-3">
-                                <button className="bg-orange-700 text-white px-4 py-2 rounded-full font-medium text-sm transition-colors duration-300 hover:bg-orange-800">
+                                <button onClick={onMoreInfo} className="bg-orange-700 text-white px-4 py-2 rounded-full font-medium text-sm transition-colors duration-300 hover:bg-orange-800">
                                     More Info
                                 </button>
                             </div>
@@ -324,15 +368,15 @@ export default function HomePage() {
     const directions = [
         { x: -50, y: 0 }, // left
         { x: 0, y: -50 }, // top
-        { x: 50, y: 0 },  // right
-        { x: 0, y: 50 },  // bottom
+        { x: 50, y: 0 }, // right
+        { x: 0, y: 50 }, // bottom
     ];
 
     function JobCategories() {
         const controls = useAnimation();
         const [ref, inView] = useInView({
-            triggerOnce: true, // ✅ animate once
-            threshold: 0.2,    // ✅ adjust if needed
+            triggerOnce: true,
+            threshold: 0.2,
         });
 
         useEffect(() => {
@@ -340,6 +384,12 @@ export default function HomePage() {
                 controls.start("visible");
             }
         }, [inView, controls]);
+
+        const handleCategoryClick = (title) => {
+            const slug = createSlug(title);
+            // Uses category query parameter
+            router.push(`/jobs?category=${slug}`);
+        };
 
         return (
             <div
@@ -361,9 +411,11 @@ export default function HomePage() {
                         return (
                             <div
                                 key={index}
+                                // **Action:** Call the handler function
+                                onClick={() => handleCategoryClick(job.title)}
                                 className="flex flex-col group p-4 bg-white rounded-xl shadow-md hover:bg-blue-900 transition-shadow duration-300 transform hover:-translate-y-1 cursor-pointer text-center"
                             >
-                                {/* ✅ Only animate the image */}
+                                {/* ... (motion.img component remains the same) ... */}
                                 <motion.img
                                     src={job.icon}
                                     alt={job.title}
@@ -385,7 +437,6 @@ export default function HomePage() {
                                     }}
                                 />
 
-                                {/* ✅ Text stays static */}
                                 <div>
                                     <h3 className="text-lg font-medium text-gray-800 group-hover:text-white">
                                         {job.title}
@@ -408,9 +459,9 @@ export default function HomePage() {
         // Animation variants
         const directions = [
             { x: -50, y: 0 }, // from left
-            { x: 50, y: 0 },  // from right
+            { x: 50, y: 0 },  // from right
             { x: 0, y: -50 }, // from top
-            { x: 0, y: 50 },  // from bottom
+            { x: 0, y: 50 },  // from bottom
         ];
 
         return (
@@ -433,6 +484,8 @@ export default function HomePage() {
                                     className="relative rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105"
                                     onMouseEnter={() => setHoveredCity(city.name)}
                                     onMouseLeave={() => setHoveredCity(null)}
+                                    // **Action:** Call the handler function
+                                    onClick={() => handleLocationClick(city.name)}
                                 >
                                     <img
                                         src={hoveredCity === city.name ? city.imageColor : city.imageBlack}
@@ -450,6 +503,12 @@ export default function HomePage() {
             </div>
         );
     }
+
+    const handleLogoClick = (companyId) => {
+        const path = `/companies/${companyId}`;
+        router.push(`${path}`)
+    };
+
 
     return (
         <div className="w-full mx-auto w-full">
@@ -469,14 +528,15 @@ export default function HomePage() {
             {/* Our Top Recruiters Section with Auto-Scroll */}
             <div className="py-12">
                 <h2 className="text-4xl font-bold text-center mb-10">Our Top Recruiters</h2>
-                <AutoScrollLogos logos={topRecruiters} />
+                <AutoScrollLogos logos={topRecruiters} onLogoClick={handleLogoClick} />
             </div>
+            {/* All Locations Section */}
             <AllLocations />
             {/* Our Services Section */}
             <OurServices />
             <div className="my-10">
                 <h2 className="text-4xl font-bold text-center mb-10 text-gray-800">Our Exclusive Services</h2>
-                <div className="mx-auto w-full sm:w-[80%] rounded-lg mt-16">
+                <div className="mx-auto w-full sm:w-[80%] rounded-lg mt-20">
                     <Slider data={ads} imageSize={"200px"} rounded={"rounded-lg"} />
                 </div>
             </div>

@@ -1,7 +1,7 @@
 'use client';
 import { Fragment, useContext, useEffect, useRef } from 'react'
 import { Transition } from '@headlessui/react'
-import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon, ExclamationCircleIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
 import { XMarkIcon } from '@heroicons/react/20/solid'
 import RootContext from '../config/rootcontext';
 
@@ -28,15 +28,32 @@ export default function Toast() {
 
 
     const dismissToast = () => {
-        // const defaultToast = { toast: { show: false, dismiss: false, type: 'none', message: '' } }
         setRootContext((prevContext) => ({
             ...prevContext,
             toast: { show: false, dismiss: false, type: 'none', message: '' }
         }));
     }
 
+    const renderIcon = () => {
+        const type = rootContext.toast.type;
+        const iconSize = { width: 28, height: 28 };
+
+        switch (type) {
+            case "success":
+                return <CheckCircleIcon {...iconSize} className="text-green-400" aria-hidden="true" />;
+            case "error":
+                return <ExclamationCircleIcon {...iconSize} className="text-red-400" aria-hidden="true" />;
+            case "warning":
+                return <ExclamationCircleIcon {...iconSize} className="text-yellow-400" aria-hidden="true" />;
+            case "info":
+                return <InformationCircleIcon {...iconSize} className="text-blue-500" aria-hidden="true" />;
+            default:
+                return null;
+        }
+    };
+
     return (
-        (rootContext.toast) ? (
+        (rootContext.toast.show) ? (
             <div className="fixed top-[6rem] w-full left-1/2 transform -translate-x-1/2 pointer-events-none py-10 z-50">
                 <div className="flex flex-col items-center space-y-4">
                     <Transition
@@ -53,8 +70,8 @@ export default function Toast() {
                             <div className="p-4">
                                 <div className="flex items-start">
                                     <div className="flex-shrink-0">
-                                        {rootContext.toast.type == "success" && <CheckCircleIcon width={28} height={28} className="text-green-400" aria-hidden="true" />}
-                                        {(rootContext.toast.type == "error" || rootContext.toast.type == "warning") && <ExclamationCircleIcon width={28} height={28} className={`${rootContext.toast.type == "warning" ? "text-yellow-400" : "text-red-400"}`} aria-hidden="true" />}
+                                        {/* 3. Use the new renderIcon function */}
+                                        {renderIcon()}
                                     </div>
                                     <div className="ml-3 w-0 flex-1 pt-0.5">
                                         <p className="text-lg font-medium text-gray-900">{rootContext.toast.title}</p>

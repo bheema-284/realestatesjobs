@@ -758,9 +758,11 @@ export default function RootLayout({ children }) {
     if (!ready) return;
 
     const role = rootContext?.user?.role;
+    const category = "Channel Partners";
     const allowedRoutes = [
       `/home`,
       `/jobs`,
+      `/jobs/${category}`,
       `/services`,
       `/companies`,
       `/about`,
@@ -808,16 +810,21 @@ export default function RootLayout({ children }) {
           {(pathName !== "/login" && pathName !== "/signup") && (
             <Navbar rootContext={rootContext} showLoader={showLoader} logOut={logOut} />
           )}
-          <div className="flex pt-26 sm:pt-16">
+          <div className="flex pt-26 sm:pt-20">
             {!ready && <Loader />}
-            {/* Sidebar only when authenticated & not home */}
-            {(rootContext?.user?.role === "recruiter" && (rootContext.authenticated && pathName !== "/")) && (
-              <Sidebar
-                isMobileOpen={isMobileSidebarOpen}
-                toggleSidebar={setMobileSidebarOpen}
-              />
-            )}
-
+            {/* Sidebar only when authenticated & not home & not about & not services */}
+            {rootContext?.user?.role === "recruiter" &&
+              rootContext.authenticated &&
+              pathName !== "/" &&
+              pathName !== "/services" &&
+              pathName !== "/about" &&
+              pathName !== "/login" &&
+              pathName !== "/signup" && (
+                <Sidebar
+                  isMobileOpen={isMobileSidebarOpen}
+                  toggleSidebar={setMobileSidebarOpen}
+                />
+              )}
             {/* Main content */}
             <main className="w-full m-auto">
               {children}

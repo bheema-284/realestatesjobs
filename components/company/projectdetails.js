@@ -74,7 +74,7 @@ export default function ProjectDetailsPage() {
     };
 
     return (
-        <div className="mt-16">
+        <div className="mt-20">
             <Header company={company} />
             <div className="w-full sm:w-[80%] mx-auto">
                 {/* Project Slider */}

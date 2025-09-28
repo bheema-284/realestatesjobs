@@ -4,7 +4,12 @@ import React, { useContext, useState } from 'react';
 import { jobCategories } from '../config/data';
 import RootContext from '../config/rootcontext';
 
-// Job Card Component
+// Utility function (MUST match the one used for navigation/routing)
+const createSlug = (title) => {
+    return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+};
+
+// Job Card Component (remains unchanged)
 const JobCard = ({ job, logo }) => {
     const router = useRouter();
     const { rootContext, setRootContext } = useContext(RootContext);
@@ -65,32 +70,40 @@ const JobCard = ({ job, logo }) => {
 
 const JobsDetails = () => {
     const { category, title } = useParams();
-    const decodedCategory = category ? decodeURIComponent(category) : null;
-    const decodedTitle = title ? decodeURIComponent(title) : null;
-    // Filter the category
-    const filteredCategories = decodedCategory
+
+    // The params are already decoded, but let's confirm they are present
+    const categorySlug = category || null;
+    const titleSlug = title || null;
+
+    // Filter the category by comparing the SLUG from the URL to the SLUG of the category title
+    const filteredCategories = categorySlug
         ? jobCategories.filter(
-            (cat) => cat.title.toLowerCase() === decodedCategory.toLowerCase()
+            (cat) => createSlug(cat.title) === categorySlug
         )
         : jobCategories;
+
     return (
-        <div className="jobs-details">
+        <div className="jobs-details py-10">
             {filteredCategories.length === 0 && (
-                <p>No jobs found in this category.</p>
+                <p className='text-center text-lg text-gray-600'>
+                    No job category found matching the URL: "{categorySlug}"
+                </p>
             )}
 
             {filteredCategories.map((category) => {
-                // Filter jobs inside this category by title
-                const filteredJobs = decodedTitle
+                // Filter jobs inside this category by comparing the SLUG of the job title
+                const filteredJobs = titleSlug
                     ? category.jobs.filter(
-                        (job) => job.title.toLowerCase() === decodedTitle.toLowerCase()
+                        (job) => createSlug(job.title) === titleSlug
                     )
                     : category.jobs;
 
                 return (
-                    <div className='py-5' key={category.title}>
+                    <div className='py-5 space-y-8' key={category.title}>
                         {filteredJobs.length === 0 ? (
-                            <p>No jobs found matching "{decodedTitle}"</p>
+                            <p className='text-center text-lg text-gray-600'>
+                                No jobs found matching "{titleSlug}" in category "{category.title}"
+                            </p>
                         ) : (
                             filteredJobs.map((job, ind) => (
                                 <JobCard key={ind} job={job} category={category.title} logo={category.icon} />
@@ -102,7 +115,6 @@ const JobsDetails = () => {
         </div>
     );
 };
-
 
 
 export default JobsDetails;

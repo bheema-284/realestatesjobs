@@ -161,3 +161,8 @@ input[type="search"] {
     animation: drawLineLeft 0.6s linear 1.8s forwards;
   }
 }
+
+.no-focus-outline {
+  outline: none !important;
+  box-shadow: none !important;
+}

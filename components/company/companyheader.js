@@ -34,7 +34,7 @@ export default function Header({ company }) {
 
     return (
         <header
-            className={`fixed top-0 w-full z-20 transition-all border-b border-gray-200 duration-500 mt-16 ${scrolledDown
+            className={`fixed top-0 w-full z-20 transition-all border-b border-gray-200 duration-500 mt-20 ${scrolledDown
                 ? "bg-transparent backdrop-blur-md"
                 : "bg-gray-100/75 shadow-md"
                 }`}
@@ -45,9 +45,9 @@ export default function Header({ company }) {
                 {/* Logo wrapper (keeps flex intact) */}
                 <div className="relative">
                     <img
-                        src={company.logo}
+                        src={company.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
                         alt="Logo"
-                        className={`h-24 z-50 shadow-lg rounded-lg transform transition-all duration-500 ${scrolledDown
+                        className={`h-24 z-10 shadow-lg rounded-lg transform transition-all duration-500 ${scrolledDown
                             ? "scale-75 translate-y-2"
                             : "scale-100 translate-y-4"
                             }`}
@@ -56,15 +56,15 @@ export default function Header({ company }) {
 
                 {/* Right Side */}
                 <div className="flex items-center gap-4 ml-auto">
-                    <button className="border px-4 hover:bg-purple-100 py-2 text-xs font-semibold uppercase">
+                    <button className="border px-4 hover:bg-purple-200 hover:border hover:border-purple-200 hover:text-orange-500 py-2 text-xs font-semibold uppercase">
                         Upcoming Projects
                     </button>
                     <FaSearch
-                        onClick={() => setShowSearch(true)}
+                        onClick={(e) => { e.stopPropagation(); setShowSearch(!showSearch) }}
                         className="cursor-pointer search-trigger"
                     />
                     <FaBars
-                        onClick={() => setShowMenu(true)}
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
                         className="cursor-pointer text-lg"
                     />
                 </div>
@@ -72,8 +72,8 @@ export default function Header({ company }) {
 
             {/* Search Overlay */}
             {showSearch && (
-                <div className="w-full sm:w-[83%] mx-auto" ref={searchRef}>
-                    <div className="p-6 flex flex-col gap-6">
+                <div className="w-full sm:w-[83%] mx-auto z-50" ref={searchRef}>
+                    <div className="p-6 flex flex-col gap-6 z-50">
                         <div className="flex items-center gap-4">
                             <input
                                 type="text"
@@ -102,11 +102,11 @@ export default function Header({ company }) {
 
             {/* Right-Side Drawer Menu */}
             <div
-                className={`fixed top-0 right-0 h-full w-72 transform ${showMenu ? "translate-x-0" : "translate-x-full"
+                className={`fixed top-18 right-0 h-full w-72 transform ${showMenu ? "translate-x-0" : "translate-x-full"
                     } transition-transform duration-500 z-50`}
             >
                 <nav className="flex flex-col gap-4 p-2 text-sm bg-white">
-                    <div className="flex justify-between mt-3 items-center">
+                    <div className="flex justify-between items-center">
                         <h2 className="text-lg font-semibold">Menu</h2>
                         <FaTimes
                             onClick={() => setShowMenu(false)}

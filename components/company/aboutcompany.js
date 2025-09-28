@@ -19,7 +19,7 @@ export default function AboutCompany({ companyProfile }) {
             {/* Company Info */}
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6 bg-white shadow-lg rounded-2xl p-6">
                 <Image
-                    src={companyProfile.logo}
+                    src={companyProfile.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
                     alt={companyProfile.name}
                     width={120}
                     height={120}

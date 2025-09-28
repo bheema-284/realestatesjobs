@@ -337,7 +337,7 @@ function JobModal({ isOpen, setIsOpen, initialJobTitle = '', onSave }) {
                                                                 {checked && <span className="h-2 w-2 rounded-full bg-white" />}
                                                             </span>
                                                             <RadioGroup.Label as="p" className="ml-2 text-sm font-medium">
-                                                                Hourly
+                                                                Salary
                                                             </RadioGroup.Label>
                                                         </div>
                                                     )}
@@ -483,9 +483,6 @@ export default function Jobs() {
             ['full-time'],
             ['part-time'],
             ['full-time', 'part-time'],
-            ['part-time', 'negotiable'],
-            ['on-demand'],
-            ['full-time', 'negotiable'],
         ];
 
         const workingSchedules = [

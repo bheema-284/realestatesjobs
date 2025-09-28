@@ -48,7 +48,7 @@ function ProfilePage({ userId, category }) {
     const ActiveComponent = tabs[activeTab].component;
 
     return (
-        <div className="bg-white min-h-screen mt-16">
+        <div className="bg-white min-h-screen mt-20">
             {/* Card Content */}
             <div className="max-w-5xl border border-gray-200 rounded-t-xl mx-auto relative shadow-sm">
                 <div className="p-6 flex flex-col sm:flex-row items-center gap-4 relative z-10">

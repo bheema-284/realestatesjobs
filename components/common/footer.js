@@ -1,9 +1,35 @@
+'use client'; // <-- MUST be a client component to use useRouter and onClick handlers
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa';
+import { useRouter } from 'next/navigation'; // <-- 1. Import useRouter
 
-const Footer = () => (
-    <footer
+const Footer = () => {
+    const router = useRouter(); // <-- 2. Initialize router
+
+    const jobCategories = [
+        'Channel Partners',
+        'HR & Operations',
+        'Real Estate Sales',
+        'Tele Caller',
+        'Digital Marketing',
+        'Web Development',
+        'CRM Executive',
+        'Accounts & Auditing',
+    ];
+
+    const createSlug = (title) => {
+        return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    };
+
+    const handleCategoryClick = (title) => {
+        const slug = createSlug(title);
+        // Navigate to the /jobs page and set the category query parameter
+        router.push(`/jobs?category=${slug}`);
+    };
+
+    return (<footer
         className="text-white py-12 px-6 w-full z-50"
         style={{
             backgroundColor: "#1c4676",
@@ -47,14 +73,17 @@ const Footer = () => (
             <div className="col-span-1">
                 <h4 className="text-lg font-bold mb-4">Jobs by Category</h4>
                 <ul className="space-y-2 text-sm font-light w-full sm:w-34">
-                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Channel Partners</Link></li>
-                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">HR & Operations</Link></li>
-                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Real Estate Sales</Link></li>
-                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Tele Caller</Link></li>
-                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Digital Marketing</Link></li>
-                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Web Development</Link></li>
-                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">CRM Executive</Link></li>
-                    <li><Link href="#" className="hover:text-orange-400 transition-colors duration-300 hover:font-semibold">Accounts & Auditing</Link></li>
+                    {/* Iterate over jobCategories and use the onClick handler */}
+                    {jobCategories.map((category) => (
+                        <li key={category}>
+                            <button
+                                onClick={() => handleCategoryClick(category)}
+                                className="text-sm font-light p-0 border-none bg-transparent text-left w-full hover:text-orange-400 transition-colors duration-300 hover:font-semibold"
+                            >
+                                {category}
+                            </button>
+                        </li>
+                    ))}
                 </ul>
             </div>
 
@@ -72,7 +101,7 @@ const Footer = () => (
 
         {/* Bottom Section */}
         <div
-            className="p-3 my-5 rounded-lg text-center text-sm font-light flex flex-col md:flex-row justify-between items-center"
+            className="p-5 my-8 rounded-lg text-center text-sm font-light flex flex-col md:flex-row justify-between items-center"
             style={{ backgroundColor: 'rgba(99, 99, 144, 0.5)' }}
         >
             <p className="mb-4 md:mb-0">&copy; 2025 Real Estate Jobs. All rights reserved.</p>
@@ -83,7 +112,7 @@ const Footer = () => (
                 <FaLinkedin className="hover:text-amber-400 transition-colors duration-300" />
             </div>
         </div>
-    </footer>
-);
+    </footer>)
+}
 
 export default Footer;

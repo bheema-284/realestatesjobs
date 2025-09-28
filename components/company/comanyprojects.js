@@ -39,18 +39,18 @@ export default function ProjectsPage({ companyProfile }) {
                         {/* Image */}
                         <div className="relative cursor-pointer" onClick={() => projectDetails(p)}>
                             <Image
-                                src={p.image}
+                                src={p.image || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
                                 alt={p.title}
                                 width={600}
                                 height={400}
                                 className="w-full h-56 object-cover"
                             />
-                            <span className="absolute top-3 right-3 bg-yellow-600 text-white text-xs font-semibold px-3 py-1 rounded">
+                            <span className="absolute top-3 right-3 bg-yellow-500 text-white text-xs font-semibold px-3 py-1 rounded">
                                 {p.status}
                             </span>
                             <div className="absolute bottom-3 left-3 bg-yellow-600 text-white text-xs font-semibold">
                                 <Image
-                                    src={companyProfile.logo}
+                                    src={companyProfile.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
                                     alt={companyProfile.name}
                                     width={40}
                                     height={40}
@@ -64,63 +64,77 @@ export default function ProjectsPage({ companyProfile }) {
                             className="p-3 flex-1 cursor-pointer"
                             onClick={() => projectDetails(p)}
                         >
-                            <h3 className="text-md text-yellow-700 mb-1">{p.title}</h3>
+                            <h3 className="text-md text-red-700 mb-1">{p.title}</h3>
                             <p className="text-sm text-gray-600 mb-1">{p.location}</p>
-                            <p className="text-xs font-semibold text-yellow-700 mb-2">
+                            <p className="text-xs font-semibold text-red-700 mb-2">
                                 {p.price}
                             </p>
-                            <div className="border-t border-yellow-200" />
+                            <div className="border-t border-red-200" />
 
                             <div className="grid grid-cols-2 gap-3 text-sm text-gray-700 mt-3 text-xs">
                                 <div className="flex items-center gap-2">
-                                    <BuildingOfficeIcon className="w-8 h-8 text-gray-300" />
+                                    <BuildingOfficeIcon className="w-8 h-8 text-yellow-300" />
                                     <div>
                                         <p className="text-gray-500">Project Type</p>
-                                        <p className="font-semibold text-yellow-800">{p.projectType}</p>
+                                        <p className="font-semibold text-pink-800">{p.projectType}</p>
                                     </div>
                                 </div>
 
                                 {p.devSize && (
                                     <div className="flex items-center gap-2">
-                                        <Squares2X2Icon className="w-8 h-8 text-gray-300" />
+                                        <Squares2X2Icon className="w-8 h-8 text-red-300" />
                                         <div>
                                             <p className="text-gray-500">Development Size</p>
-                                            <p className="font-semibold text-yellow-800">{p.devSize}</p>
+                                            <p className="font-semibold text-pink-800">{p.devSize}</p>
                                         </div>
                                     </div>
                                 )}
 
                                 <div className="flex items-center gap-2">
-                                    <HomeModernIcon className="w-8 h-8 text-gray-300" />
+                                    <HomeModernIcon className="w-8 h-8 text-purple-300" />
                                     <div>
                                         <p className="text-gray-500">Bedrooms</p>
-                                        <p className="font-semibold text-yellow-800">{p.bedrooms}</p>
+                                        <p className="font-semibold text-pink-800">{p.bedrooms}</p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <BuildingLibraryIcon className="w-8 h-8 text-gray-300" />
+                                    <BuildingLibraryIcon className="w-8 h-8 text-pink-300" />
                                     <div>
                                         <p className="text-gray-500">Total Units</p>
-                                        <p className="font-semibold text-yellow-800">{p.totalUnits}</p>
+                                        <p className="font-semibold text-pink-800">{p.totalUnits}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Buttons appear on hover */}
-                        <div className="absolute bottom-0 left-0 w-full translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                            <div className="flex justify-between gap-2 p-2 border-t border-gray-200 bg-gray-50">
-                                <button className="flex items-center gap-1 border border-yellow-700 text-yellow-900 py-1 px-3 text-[9px] bg-orange-100">
+                        {/* ------------------- UPDATED BUTTON LOGIC ------------------- */}
+                        <div
+                            className={`
+                                relative w-full border-t border-gray-200 bg-gray-50 
+                                
+                                // MOBILE & TABLET (Default): Show the buttons normally
+                                
+                                // DESKTOP (md: and up): Use the hover effect
+                                md:absolute md:bottom-0 md:left-0 
+                                md:translate-y-full 
+                                md:group-hover:translate-y-0 
+                                md:transition-transform md:duration-300
+                            `}
+                        >
+                            <div className="flex justify-between gap-2 p-2">
+                                <button className="flex items-center gap-1 border border-purple-700 text-purple-900 py-1 px-3 text-[9px] bg-purple-100 whitespace-nowrap">
                                     <ChatBubbleLeftRightIcon className="w-4 h-4" /> Enquire Now
                                 </button>
-                                <button className="flex items-center gap-1 border border-yellow-700 text-yellow-900 py-1 px-3 text-[9px] bg-orange-100">
+                                <button className="flex items-center gap-1 border border-purple-700 text-purple-900 py-1 px-3 text-[9px] bg-purple-100 whitespace-nowrap">
                                     <CalendarDaysIcon className="w-4 h-4" /> Book Site Visit
                                 </button>
-                                <button className="flex items-center gap-1 border border-yellow-700 text-yellow-900 py-1 px-3 text-[9px] bg-orange-100">
-                                    <PhoneIcon className="w-4 h-4" /></button>
+                                <button className="flex items-center gap-1 border border-purple-700 text-purple-900 py-1 px-3 text-[9px] bg-purple-100 flex-shrink-0">
+                                    <PhoneIcon className="w-4 h-4" />
+                                </button>
                             </div>
                         </div>
+                        {/* ------------------------------------------------------------ */}
                     </div>
                 ))}
             </div>

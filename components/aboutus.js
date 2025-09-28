@@ -88,18 +88,18 @@ export default function AboutPage() {
             {/* Mission & Vision */}
             <div
                 className="relative bg-cover bg-center bg-no-repeat text-white py-12"
-                style={{ backgroundImage: "url('/cover/add11.jpg')" }}
+                style={{ backgroundImage: "url('/rejobs/bg-image.jpg')" }}
             >
                 {/* Overlay for better readability */}
-                <div className="absolute inset-0 backdrop-blur-md bg-black/10"></div>
+               <div className="absolute inset-0 bg-white/30"></div>
 
                 <div className="relative w-[90%] text-gray-800 mx-auto space-y-10">
                     <div className="grid md:grid-cols-2 gap-8 items-center">
                         {/* Mission Image */}
                         <Image
                             src="https://realestatejobs.co.in/images/mission.png"
-                            width={400}
-                            height={300}
+                            width={500}
+                            height={400}
                             alt="mission"
                             className="rounded-lg shadow-lg"
                         />
@@ -125,8 +125,8 @@ export default function AboutPage() {
                         {/* Vision Image */}
                         <Image
                             src="https://realestatejobs.co.in/images/vision.png"
-                            width={400}
-                            height={300}
+                            width={500}
+                            height={400}
                             alt="vision"
                             className="rounded-lg shadow-lg"
                         />

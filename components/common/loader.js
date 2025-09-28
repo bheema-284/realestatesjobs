@@ -3,7 +3,7 @@ import React from 'react';
 
 const Loader = () => {
   return (
-    <div className="absolute top-[15%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+    <div className="fixed top-[25%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[999999]">
       <div className="relative w-20 h-20 flex items-center justify-center">
         {/* Gradient Ring Spinner */}
         <div
