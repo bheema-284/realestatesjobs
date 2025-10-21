@@ -9,9 +9,9 @@ export default function ProjectDetailsPage() {
     const { id, title } = useParams();
     const [project, setProject] = useState({});
     const [activeTab, setActiveTab] = useState("About");
+    const [loadedSections, setLoadedSections] = useState(["About"]);
 
     const company = companyData.find((c) => String(c.id) === String(id || 1));
-    // Sections for tabs
     const sections = [
         "About",
         "Plans",
@@ -24,6 +24,8 @@ export default function ProjectDetailsPage() {
 
     // Refs for scrolling
     const sectionRefs = useRef({});
+    const isManualNav = useRef(false); // 🚫 prevents scroll flicker after click
+
     sections.forEach((sec) => {
         sectionRefs.current[sec] = sectionRefs.current[sec] || createRef();
     });
@@ -32,22 +34,26 @@ export default function ProjectDetailsPage() {
         const data = company?.projects.find(
             (c) => String(c.title) === decodeURIComponent(String(title || ""))
         );
-        if (data) {
-            setProject(data);
-        }
+        if (data) setProject(data);
     }, [id, title, company]);
 
-    // Track active section
+    // Track active section + load content when visible
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
+                if (isManualNav.current) return; // 🧠 ignore updates after manual nav
+
                 entries.forEach((entry) => {
+                    const section = entry.target.dataset.section;
                     if (entry.isIntersecting) {
-                        setActiveTab(entry.target.dataset.section);
+                        setActiveTab(section);
+                        setLoadedSections((prev) =>
+                            prev.includes(section) ? prev : [...prev, section]
+                        );
                     }
                 });
             },
-            { threshold: 0.6 }
+            { threshold: 0.4 }
         );
 
         sections.forEach((sec) => {
@@ -65,120 +71,109 @@ export default function ProjectDetailsPage() {
         };
     }, []);
 
-    // Scroll on tab click
+    // ✅ Scroll to section + lock observer temporarily
     const handleTabClick = (sec) => {
-        sectionRefs.current[sec]?.current.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-        });
+        isManualNav.current = true; // 🚫 stop IntersectionObserver temporarily
+
+        setLoadedSections((prev) =>
+            prev.includes(sec) ? prev : [...prev, sec]
+        );
+
+        setActiveTab(sec); // immediately highlight tab
+
+        setTimeout(() => {
+            sectionRefs.current[sec]?.current.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        }, 100);
+
+        // 🔓 Re-enable scroll detection after animation
+        setTimeout(() => {
+            isManualNav.current = false;
+        }, 1200);
     };
 
     return (
         <div className="mt-20">
             <Header company={company} />
+
             <div className="w-full sm:w-[80%] mx-auto">
                 {/* Project Slider */}
                 <Slider data={company?.projects || []} imageSize={"400px"} />
+
                 {/* Tabs */}
-                <div className="flex flex-wrap gap-4 justify-center mt-8 sticky top-0 bg-white py-3 z-10 border-b">
+                <div className="flex flex-wrap gap-4 justify-center mt-8 sticky top-32 bg-white py-3 z-10 border-b">
                     {sections.map((sec) => (
                         <button
                             key={sec}
                             onClick={() => handleTabClick(sec)}
-                            className={`px-4 py-2 rounded-full border text-sm font-medium transition ${activeTab === sec
-                                ? "bg-yellow-600 text-white border-yellow-600"
-                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                                }`}
+                            className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                                activeTab === sec
+                                    ? "bg-yellow-600 text-white border-yellow-600"
+                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                            }`}
                         >
                             {sec}
                         </button>
                     ))}
                 </div>
 
-                {/* Section Content */}
+                {/* Sections */}
                 <div className="space-y-20 mt-10">
-                    {/* ABOUT */}
-                    <div
-                        ref={sectionRefs.current["About"]}
-                        data-section="About"
-                        className="scroll-mt-24"
-                    >
-                        <h2 className="text-2xl font-semibold mb-4">About</h2>
-                        <p className="text-gray-700 mb-3">
-                            <strong>{project.title}</strong> is a premium{" "}
-                            {project.projectType?.toLowerCase()} project located at{" "}
-                            <strong>{project.location}</strong>.
-                        </p>
-                        <ul className="list-disc pl-6 text-gray-600 space-y-1">
-                            <li>Status: {project.status}</li>
-                            <li>Price: {project.price}</li>
-                            <li>Configuration: {project.bedrooms}</li>
-                            <li>Development Size: {project.devSize}</li>
-                            <li>Total Units: {project.totalUnits}</li>
-                        </ul>
-                    </div>
+                    {sections.map((sec) => (
+                        <div
+                            key={sec}
+                            ref={sectionRefs.current[sec]}
+                            data-section={sec}
+                            className="scroll-mt-24 min-h-[50vh] flex flex-col justify-center"
+                        >
+                            <h2 className="text-2xl font-semibold mb-4">{sec}</h2>
 
-                    {/* PLANS */}
-                    <div
-                        ref={sectionRefs.current["Plans"]}
-                        data-section="Plans"
-                        className="scroll-mt-24"
-                    >
-                        <h2 className="text-2xl font-semibold mb-4">Plans</h2>
-                        <p className="text-gray-600">Floor plans and layouts go here.</p>
-                    </div>
-
-                    {/* AMENITIES */}
-                    <div
-                        ref={sectionRefs.current["Amenities"]}
-                        data-section="Amenities"
-                        className="scroll-mt-24"
-                    >
-                        <h2 className="text-2xl font-semibold mb-4">Amenities</h2>
-                        <p className="text-gray-600">Amenities list goes here.</p>
-                    </div>
-
-                    {/* SPECIFICATIONS */}
-                    <div
-                        ref={sectionRefs.current["Specifications"]}
-                        data-section="Specifications"
-                        className="scroll-mt-24"
-                    >
-                        <h2 className="text-2xl font-semibold mb-4">Specifications</h2>
-                        <p className="text-gray-600">Project specifications go here.</p>
-                    </div>
-
-                    {/* LOCATION */}
-                    <div
-                        ref={sectionRefs.current["Location"]}
-                        data-section="Location"
-                        className="scroll-mt-24"
-                    >
-                        <h2 className="text-2xl font-semibold mb-4">Location</h2>
-                        <p className="text-gray-600">
-                            Located at {project.location}, well connected to major hubs.
-                        </p>
-                    </div>
-
-                    {/* GALLERY */}
-                    <div
-                        ref={sectionRefs.current["Gallery"]}
-                        data-section="Gallery"
-                        className="scroll-mt-24"
-                    >
-                        <h2 className="text-2xl font-semibold mb-4">Gallery</h2>
-                        <p className="text-gray-600">Image gallery goes here.</p>
-                    </div>
-
-                    {/* WALKTHROUGH VIDEO */}
-                    <div
-                        ref={sectionRefs.current["Walkthrough Video"]}
-                        data-section="Walkthrough Video"
-                        className="scroll-mt-24"
-                    >
-                        <h2 className="text-2xl font-semibold mb-4">Walkthrough Video</h2>
-                        <p className="text-gray-600">Video embed goes here.</p>
-                    </div>
+                            {!loadedSections.includes(sec) ? (
+                                <div className="text-gray-400 italic">Loading...</div>
+                            ) : (
+                                <>
+                                    {sec === "About" && (
+                                        <div>
+                                            <p className="text-gray-700 mb-3">
+                                                <strong>{project.title}</strong> is a premium{" "}
+                                                {project.projectType?.toLowerCase()} project located at{" "}
+                                                <strong>{project.location}</strong>.
+                                            </p>
+                                            <ul className="list-disc pl-6 text-gray-600 space-y-1">
+                                                <li>Status: {project.status}</li>
+                                                <li>Price: {project.price}</li>
+                                                <li>Configuration: {project.bedrooms}</li>
+                                                <li>Development Size: {project.devSize}</li>
+                                                <li>Total Units: {project.totalUnits}</li>
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {sec === "Plans" && (
+                                        <p className="text-gray-600">Floor plans and layouts go here.</p>
+                                    )}
+                                    {sec === "Amenities" && (
+                                        <p className="text-gray-600">Amenities list goes here.</p>
+                                    )}
+                                    {sec === "Specifications" && (
+                                        <p className="text-gray-600">Project specifications go here.</p>
+                                    )}
+                                    {sec === "Location" && (
+                                        <p className="text-gray-600">
+                                            Located at {project.location}, well connected to major hubs.
+                                        </p>
+                                    )}
+                                    {sec === "Gallery" && (
+                                        <p className="text-gray-600">Image gallery goes here.</p>
+                                    )}
+                                    {sec === "Walkthrough Video" && (
+                                        <p className="text-gray-600">Video embed goes here.</p>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

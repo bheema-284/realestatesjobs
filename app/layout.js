@@ -810,7 +810,7 @@ export default function RootLayout({ children }) {
           {(pathName !== "/login" && pathName !== "/signup") && (
             <Navbar rootContext={rootContext} showLoader={showLoader} logOut={logOut} />
           )}
-          <div className="flex pt-26 sm:pt-20">
+          <div className={`${(pathName === "/login" || pathName === "/signup") ? "pt-0" : "pt-26 sm:pt-20"} flex`}>
             {!ready && <Loader />}
             {/* Sidebar only when authenticated & not home & not about & not services */}
             {rootContext?.user?.role === "recruiter" &&

@@ -70,7 +70,7 @@ export default function CompanyDetails({ companyId }) {
                 className="
                     max-w-5xl border border-gray-200 rounded-t-xl mx-auto 
                     shadow-sm bg-white 
-                    sticky top-20 z-50  // <-- ADDED STICKY CLASSES
+                    sticky top-20 z-40  // <-- ADDED STICKY CLASSES
                 "
             >
                 <div className="p-6 flex flex-col sm:flex-row items-center gap-4 relative z-10">

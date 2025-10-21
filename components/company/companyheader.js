@@ -34,21 +34,21 @@ export default function Header({ company }) {
 
     return (
         <header
-            className={`fixed top-0 w-full z-20 transition-all border-b border-gray-200 duration-500 mt-20 ${scrolledDown
+            className={`fixed top-0 w-full z-50 transition-all duration-500 mt-20 ${scrolledDown
                 ? "bg-transparent backdrop-blur-md"
-                : "bg-gray-100/75 shadow-md"
+                : "bg-gray-50/10"
                 }`}
         >
             {/* Navbar with fixed height */}
             <div className="flex justify-between items-center mx-auto w-[80%] h-14 relative">
 
                 {/* Logo wrapper (keeps flex intact) */}
-                <div className="relative">
+                <div className="relative h-20 w-auto">
                     <img
                         src={company.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
                         alt="Logo"
-                        className={`h-24 z-10 shadow-lg rounded-lg transform transition-all duration-500 ${scrolledDown
-                            ? "scale-75 translate-y-2"
+                        className={`h-full z-50 shadow-lg rounded-lg transform transition-all duration-500 ${scrolledDown
+                            ? "scale-75 translate-y-1"
                             : "scale-100 translate-y-4"
                             }`}
                     />

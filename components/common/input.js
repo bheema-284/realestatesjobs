@@ -26,13 +26,13 @@ function Input(props) {
   return (
     <div className={containerstyle}>
       <div
-        className={`relative border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 shadow-sm focus-within:ring-1 focus-within:ring-purple-600 focus-within:border-purple-600 dark:focus-within:ring-purple-400 dark:focus-within:border-purple-400 ${disabled ? "opacity-50" : "opacity-100"
-          } bg-white dark:bg-gray-800`}
+        className={`relative border border-gray-300 rounded-md px-3 py-2 shadow-sm focus-within:ring-1 focus-within:ring-purple-600 focus-within:border-purple-600 ${disabled ? "opacity-50" : "opacity-100"
+          } bg-white`}
       >
         <label
           htmlFor={id}
-          className={`label capitalize text-gray-500 dark:text-gray-400
-            absolute -top-2 left-2 -mt-px inline-block bg-white dark:bg-gray-800 px-1 text-xs font-medium`}
+          className={`label capitalize text-gray-500
+            absolute -top-2 left-2 -mt-px inline-block bg-white px-1 text-xs font-medium`}
         >
           {title}
           {required ? "*" : null}
@@ -43,8 +43,8 @@ function Input(props) {
           id={id}
           className={
             nocaps
-              ? `block w-full border-0 p-0 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-0 text-[1.125rem] mt-[0.188rem] bg-transparent`
-              : `block w-full border-0 p-0 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-0 text-[1.125rem] mt-[0.188rem] ${!value && value?.length === 0 ? "opacity-50" : "opacity-100"
+              ? `block w-full border-0 p-0 text-gray-900 placeholder-gray-500 focus:ring-0 text-[1.125rem] mt-[0.188rem] bg-transparent`
+              : `block w-full border-0 p-0 text-gray-900 placeholder-gray-500 focus:ring-0 text-[1.125rem] mt-[0.188rem] ${!value && value?.length === 0 ? "opacity-50" : "opacity-100"
               } bg-transparent`
           }
           placeholder={placeholder}

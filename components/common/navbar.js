@@ -113,7 +113,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                             <NotificationBell count={3} />
 
                             {/* User Dropdown */}
-                            <Menu as="div" className="relative ml-4 no-focus-outline">
+                            <Menu as="div" className="relative ml-4 no-focus-outline z-50">
                                 <Menu.Button className="flex items-center gap-1 cursor-pointer">
                                     <div className="sm:hidden w-6 h-6 rounded-full bg-indigo-900 text-white flex items-center justify-center font-semibold">
                                         {(rootContext?.user?.name || "U")

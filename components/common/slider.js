@@ -110,7 +110,7 @@ function Slider({ data, imageSize = "400px", rounded }) {
         >
             <div className="relative w-full" style={{ height: imageSize }}>
                 {/* Fixed label (always top-left, doesn’t move with images) */}
-                {data[currentSlide - 1]?.status && <span className="absolute top-3 left-3 bg-orange-300 text-white text-[9px] font-semibold px-3 border border-white py-1 z-40">
+                {data[currentSlide - 1]?.status && <span className="absolute top-3 left-3 bg-orange-300 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30">
                     {/* we use currentSlide-1 since slides array has extra clone at start */}
                     {data[currentSlide - 1]?.status}
                 </span>}

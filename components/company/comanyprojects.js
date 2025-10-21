@@ -9,10 +9,18 @@ import {
     PhoneIcon,
     CalendarDaysIcon,
     ChatBubbleLeftRightIcon,
+    XMarkIcon,
 } from "@heroicons/react/24/solid";
+import { useState } from "react";
+import EnquiryForm from "../common/enquirynow";
 
 export default function ProjectsPage({ companyProfile }) {
     const router = useRouter();
+    const [drawerOpen, setDrawerOpen] = useState({
+        open: false,
+        image: ""
+    });
+
     if (!companyProfile?.projects?.length) {
         return (
             <div className="py-12 px-6 text-center">
@@ -29,28 +37,68 @@ export default function ProjectsPage({ companyProfile }) {
     };
 
     return (
-        <div className="w-full mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="relative w-full mx-auto">
+            {/* ✅ Floating Enquiry Button */}
+            <button
+                onClick={() => setDrawerOpen({
+                    open: true,
+                    image: ""
+                })}
+                className="fixed top-1/2 right-0 z-50 transform -translate-y-1/2 bg-yellow-800 text-white px-3 py-2 rotate-180 [writing-mode:vertical-rl] tracking-wider font-medium hover:bg-yellow-700 transition-all duration-300"
+            >
+                ENQUIRE NOW
+            </button>
+
+            {/* ✅ Enquiry Drawer */}
+            <div
+                className={`fixed top-0 right-0 h-full w-80 sm:w-96 bg-white shadow-2xl z-50 transform transition-transform duration-500 ease-in-out ${drawerOpen.open ? "translate-x-0" : "translate-x-full"
+                    }`}
+            >
+                <EnquiryForm drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} />
+            </div>
+
+            {/* ✅ Overlay (click outside to close) */}
+            {drawerOpen.open && (
+                <div
+                    onClick={() => setDrawerOpen({
+                        open: false,
+                        image: ""
+                    })}
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity"
+                />
+            )}
+
+            {/* ✅ Project Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4">
                 {companyProfile.projects.map((p) => (
                     <div
                         key={p.id}
                         className="group relative cursor-pointer bg-white border border-gray-300 overflow-hidden hover:shadow-xl transition flex flex-col"
                     >
                         {/* Image */}
-                        <div className="relative cursor-pointer" onClick={() => projectDetails(p)}>
+                        <div
+                            className="relative cursor-pointer"
+                            onClick={() => projectDetails(p)}
+                        >
                             <Image
-                                src={p.image || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
+                                src={
+                                    p.image ||
+                                    "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
+                                }
                                 alt={p.title}
                                 width={600}
                                 height={400}
                                 className="w-full h-56 object-cover"
                             />
-                            <span className="absolute top-3 right-3 bg-yellow-500 text-white text-xs font-semibold px-3 py-1 rounded">
+                            <span className="absolute top-3 right-3 bg-yellow-600 text-white text-xs font-semibold px-3 py-1 rounded">
                                 {p.status}
                             </span>
                             <div className="absolute bottom-3 left-3 bg-yellow-600 text-white text-xs font-semibold">
                                 <Image
-                                    src={companyProfile.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
+                                    src={
+                                        companyProfile.logo ||
+                                        "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
+                                    }
                                     alt={companyProfile.name}
                                     width={40}
                                     height={40}
@@ -108,22 +156,23 @@ export default function ProjectsPage({ companyProfile }) {
                             </div>
                         </div>
 
-                        {/* ------------------- UPDATED BUTTON LOGIC ------------------- */}
+                        {/* Card Buttons */}
                         <div
-                            className={`
-                                relative w-full border-t border-gray-200 bg-gray-50 
-                                
-                                // MOBILE & TABLET (Default): Show the buttons normally
-                                
-                                // DESKTOP (md: and up): Use the hover effect
+                            className={`relative w-full border-t border-gray-200 bg-gray-50 
                                 md:absolute md:bottom-0 md:left-0 
-                                md:translate-y-full 
-                                md:group-hover:translate-y-0 
+                                md:translate-y-full md:group-hover:translate-y-0 
                                 md:transition-transform md:duration-300
                             `}
                         >
                             <div className="flex justify-between gap-2 p-2">
-                                <button className="flex items-center gap-1 border border-purple-700 text-purple-900 py-1 px-3 text-[9px] bg-purple-100 whitespace-nowrap">
+                                <button
+                                    onClick={() => setDrawerOpen({
+                                        open: true,
+                                        image: `${p.image ||
+                                            "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}`
+                                    })}
+                                    className="flex items-center gap-1 border border-purple-700 text-purple-900 py-1 px-3 text-[9px] bg-purple-100 whitespace-nowrap"
+                                >
                                     <ChatBubbleLeftRightIcon className="w-4 h-4" /> Enquire Now
                                 </button>
                                 <button className="flex items-center gap-1 border border-purple-700 text-purple-900 py-1 px-3 text-[9px] bg-purple-100 whitespace-nowrap">
@@ -134,7 +183,6 @@ export default function ProjectsPage({ companyProfile }) {
                                 </button>
                             </div>
                         </div>
-                        {/* ------------------------------------------------------------ */}
                     </div>
                 ))}
             </div>

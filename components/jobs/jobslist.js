@@ -160,7 +160,7 @@ const JobsList = () => {
             )}
 
             {/* Sticky Tabs Navigation */}
-            <div className={`fixed left-0 right-0 w-full sm:w-[80%] mx-auto z-50 bg-white top-20`}>
+            <div className={`fixed left-0 right-0 w-full sm:w-[80%] mx-auto z-30 bg-white top-20`}>
                 {/* setActiveTab changes the state, which triggers the useEffect */}
                 <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
