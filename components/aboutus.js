@@ -51,8 +51,16 @@ export default function AboutPage() {
             <div className="bg-white py-10">
                 <div className="w-[90%] mx-auto">
                     <p className="text-center text-lg leading-relaxed">
-                        Welcome to <b>Real Estate Jobs, Inc</b> – India’s first and only dedicated job portal exclusively designed
-                        for the real estate industry.Whether you are a job seeker looking to build a career in real estate or an employer searching for top talent, we are here to connect you with the right opportunities and resources
+                        Welcome to <b>Real Estate Jobs, Inc</b> – India’s first and only dedicated job portal exclusively designed for the real estate industry.
+                    </p>
+                    <p className="text-center text-lg leading-relaxed">
+                        We serve as the bridge between real estate professionals and leading employers, offering a specialized platform where opportunities meet expertise. Whether you are a job seeker aspiring to build a rewarding career in real estate or an employer looking to hire skilled professionals, our mission is to connect you with the right people, positions, and resources.
+                    </p>
+                    <p className="text-center text-lg leading-relaxed">
+                        From sales and marketing roles to property management, construction, architecture, and interior design, Real Estate Jobs, Inc. provides a one-stop destination for everything related to real estate careers. With a user-friendly interface, verified listings, and industry insights, we help you navigate the property job market with confidence and precision.
+                    </p>
+                    <p className="text-center text-lg leading-relaxed">
+                        Join us today and be part of India’s fastest-growing real estate career network – where every opportunity is built to last.
                     </p>
                 </div>
             </div>
@@ -62,8 +70,16 @@ export default function AboutPage() {
                 <div className="w-[90%] mx-auto text-center">
                     <h2 className="text-5xl font-bold mb-4">Who We Are</h2>
                     <p className="text-lg leading-relaxed">
-                        At <b>Real Estate Jobs</b>, we understand the specialized needs of the real estate sector.
-                        From sales and marketing roles to technical and managerial positions, we cater to the entire spectrum of real estate job opportunities. Our platform is the brainchild of <b>Vikrant Rathod</b>, a recruitment expert with over 15 years of experience, who envisioned a one-stop destination for matching real estate professionals with companies.
+                        At <b>Real Estate Jobs</b>, we understand that the real estate industry is unlike any other — dynamic, evolving, and deeply dependent on skilled professionals who can turn visions into value. From sales and marketing executives who drive business growth to technical experts, architects, engineers, and project managers who shape the skyline, we cater to the entire spectrum of real estate job opportunities across India.
+                    </p>
+                    <p className="text-lg leading-relaxed">
+                        The platform is the brainchild of Vikrant Rathod — a Real Estate Expert, Technology Inventor & Product Builder, HR & Operations Leader, holder of 3 HR Tech Patents, Event Management Strategist, and Creative Designer who has been at the forefront of driving transformative ventures across multiple industries. With over 15 years of experience, Vikrant combines his deep understanding of human capital, business operations, and technology innovation to revolutionize how real estate professionals and companies connect.
+                    </p>
+                    <p className="text-lg leading-relaxed">
+                        His vision for Real Estate Jobs was to create a one-stop, technology-driven destination that bridges the gap between talent and opportunity — offering a reliable, transparent, and insight-driven ecosystem tailored exclusively for the real estate sector.
+                    </p>
+                    <p className="text-lg leading-relaxed">
+                        At Real Estate Jobs, our mission goes beyond listings. We aim to empower careers, strengthen organizations, and elevate the standards of recruitment in the real estate industry through innovation, data intelligence, and a people-first approach.
                     </p>
                 </div>
             </div>
@@ -87,6 +103,12 @@ export default function AboutPage() {
                                 build a career in real estate or an employer searching for top
                                 talent, we are here to connect you with the right opportunities and
                                 resources.
+                            </p>
+                            <p className="text-lg leading-relaxed">
+                                At RE JOBS, we bridge the gap between real estate professionals and industry-leading employers, creating a trusted platform that unites opportunity, talent, and growth under one roof. Whether you are a job seeker aiming to build a strong and rewarding career in real estate, or an employer searching for qualified and verified candidates, RE JOBS connects you to the right people and positions with precision and purpose.
+                            </p>
+                            <p className="text-lg leading-relaxed">
+                                Our platform caters to every segment of the real estate ecosystem — from sales, marketing, brokerage, and property management to construction, architecture, project planning, finance, and facility operations. By focusing exclusively on the real estate sector, RE JOBS ensures that every listing, profile, and connection is highly relevant, industry-specific, and result-driven.
                             </p>
                         </div>
 
@@ -215,28 +237,25 @@ export default function AboutPage() {
                     <li>
                         <p className="mb-2 text-lg font-semibold">Exclusive Real Estate Focus</p>
                         <p className="text-gray-700">
-                            Unlike generic job portals, our platform is dedicated solely to the real estate sector,
-                            ensuring specialized opportunities for candidates and a highly targeted talent pool for employers.
+                            At RE JOBS, we don’t just list jobs — we specialize in the real estate industry. Unlike generic job portals, our platform is built exclusively for real estate professionals, ensuring relevant opportunities for candidates and a precisely targeted talent pool for employers. Every listing, connection, and feature is designed to meet the unique needs of this dynamic sector.
                         </p>
                     </li>
                     <li>
-                        <p className="mb-2 text-lg font-semibold">Comprehensive Job Listings</p>
+                        <p className="mb-2 text-lg font-semibold">Comprehensive Career Opportunities</p>
                         <p className="text-gray-700">
-                            From entry-level positions to senior leadership roles, we cover all aspects of real estate,
-                            including sales, marketing, construction, HR, legal, operations, and more.
+                            From entry-level associates to senior leadership positions, RE JOBS covers the full spectrum of real estate roles. Explore opportunities across sales, marketing, construction, architecture, HR, finance, legal, operations, and property management — all under one trusted platform.
                         </p>
                     </li>
                     <li>
-                        <p className="mb-2 text-lg font-semibold">Easy-to-Use Platform</p>
+                        <p className="mb-2 text-lg font-semibold">Smart & User-Friendly Platform</p>
                         <p className="text-gray-700">
-                            Designed with simplicity and efficiency in mind, our portal makes job searching and hiring a hassle-free experience.
+                            Our technology-driven, intuitive platform makes job searching and hiring effortless. With advanced filters, easy navigation, and seamless communication tools, RE JOBS ensures that both candidates and employers can connect quickly, efficiently, and transparently.
                         </p>
                     </li>
                     <li>
-                        <p className="mb-2 text-lg font-semibold">Insights &amp; Resources</p>
+                        <p className="mb-2 text-lg font-semibold">Insights, Resources & Industry Updates</p>
                         <p className="text-gray-700">
-                            We provide industry updates, career advice, and tips to help job seekers and employers
-                            stay ahead in the ever-evolving real estate landscape.
+                            Stay informed and ahead of the curve with our curated industry insights, career guidance, and market trends. Whether you’re building your career or scaling your organization, RE JOBS provides expert advice, data-driven resources, and growth-oriented tools to support your journey in the real estate domain.
                         </p>
                     </li>
                 </ul>
