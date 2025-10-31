@@ -9,7 +9,6 @@ import { Inter } from 'next/font/google';
 import Footer from "@/components/common/footer";
 import Sidebar from "@/components/common/sidebar";
 import { Navbar } from "@/components/common/navbar";
-import Head from "next/head";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -825,10 +824,6 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en" className={inter.variable}>
-      <Head>
-        {/* ✅ Add favicon here */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-      </Head>
       <body className="w-full mx-auto">
         <RootContext.Provider value={{ rootContext, setRootContext }}>
           {(pathName !== "/login" && pathName !== "/signup") && (
