@@ -36,14 +36,14 @@ const Footer = () => {
                 backgroundColor: "#1c4676",
             }}
         >
-            <div className="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 z-50">
+            <div className="w-full sm:w-[85%] mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 z-50">
                 {/* Logo + About */}
                 <div className="col-span-1 md:col-span-1">
                     <Image
-                        src="https://realestatejobs.co.in/images/logo.png"
+                        src="/logo.webp"
                         alt="logo"
-                        width={120}
-                        height={30}
+                        width={300}
+                        height={100}
                         priority
                     />
                     <div className="my-5">
@@ -89,7 +89,7 @@ const Footer = () => {
                     <address className="not-italic text-sm font-light space-y-2">
                         <p>
                             <strong>Corporate Office:</strong><br />
-                            7th Floor, Block 2, My Home Hub, Madhapur, Patrika Nagar, HITEC City, Hyderabad
+                            2nd Floor, YS RAO Towers, Madhapur Rd, Sri Rama Colony, Jubilee Hills, Hyderabad, Telangana 500033
                         </p>
                     </address>
                 </div>
@@ -97,7 +97,7 @@ const Footer = () => {
 
             {/* Bottom Section */}
             <div
-                className="p-5 my-8 rounded-lg text-center text-sm font-light flex flex-col md:flex-row justify-between items-center"
+                className="p-5 my-8 w-full sm:w-[85%] mx-auto rounded-lg text-center text-sm font-light flex flex-col md:flex-row justify-between items-center"
                 style={{ backgroundColor: 'rgba(99, 99, 144, 0.5)' }}
             >
                 <p className="mb-4 md:mb-0">&copy; 2025 Real Estate Jobs. All rights reserved.</p>

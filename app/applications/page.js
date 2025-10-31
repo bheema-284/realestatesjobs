@@ -27,14 +27,14 @@ const Icons = {
 // Data for the job category cards
 const jobCategories = [
     {
+        icon: '/icons/tel.png',
+        title: 'Tele Caller',
+        description: 'Engage & Convert',
+    },
+    {
         icon: '/icons/cp.png',
         title: 'Channel Partners',
         description: 'Collaborate & Earn',
-    },
-    {
-        icon: '/icons/hrandop.png',
-        title: 'HR & Operations',
-        description: 'People & Process',
     },
     {
         icon: '/icons/realestate.png',
@@ -42,9 +42,9 @@ const jobCategories = [
         description: 'Sell Property Faster',
     },
     {
-        icon: '/icons/tel.png',
-        title: 'Tele Caller',
-        description: 'Engage & Convert',
+        icon: '/icons/crm.png',
+        title: 'CRM Executive',
+        description: 'Manage Client Relations',
     },
     {
         icon: '/icons/digital.png',
@@ -52,20 +52,30 @@ const jobCategories = [
         description: 'Promote & Convert',
     },
     {
-        icon: '/icons/webdev.png',
-        title: 'Web Development',
-        description: 'Build Real Estate Tech',
-    },
-    {
-        icon: '/icons/crm.png',
-        title: 'CRM Executive',
-        description: 'Manage Client Relations',
+        icon: '/icons/hrandop.png',
+        title: 'HR & Operations',
+        description: 'People & Process',
     },
     {
         icon: '/icons/accounts.png',
         title: 'Accounts & Auditing',
         description: 'Ensure Financial Clarity',
     },
+    {
+        icon: '/icons/legal.png',
+        title: 'Legal',
+        description: 'Safeguard Deals & Compliance',
+    },
+    {
+        icon: '/icons/architects.png',
+        title: 'Architects',
+        description: 'Design Smart & Aesthetic Spaces',
+    },
+    {
+        icon: '/icons/webdev.png',
+        title: 'Web Development',
+        description: 'Build Real Estate Tech',
+    }
 ];
 
 

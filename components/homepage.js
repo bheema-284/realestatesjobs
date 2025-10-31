@@ -58,14 +58,14 @@ export default function HomePage() {
 
     const jobCategories = [
         {
+            icon: '/icons/tel.png',
+            title: 'Tele Caller',
+            description: 'Engage & Convert',
+        },
+        {
             icon: '/icons/cp.png',
             title: 'Channel Partners',
             description: 'Collaborate & Earn',
-        },
-        {
-            icon: '/icons/hrandop.png',
-            title: 'HR & Operations',
-            description: 'People & Process',
         },
         {
             icon: '/icons/realestate.png',
@@ -73,9 +73,9 @@ export default function HomePage() {
             description: 'Sell Property Faster',
         },
         {
-            icon: '/icons/tel.png',
-            title: 'Tele Caller',
-            description: 'Engage & Convert',
+            icon: '/icons/crm.png',
+            title: 'CRM Executive',
+            description: 'Manage Client Relations',
         },
         {
             icon: '/icons/digital.png',
@@ -83,20 +83,30 @@ export default function HomePage() {
             description: 'Promote & Convert',
         },
         {
-            icon: '/icons/webdev.png',
-            title: 'Web Development',
-            description: 'Build Real Estate Tech',
-        },
-        {
-            icon: '/icons/crm.png',
-            title: 'CRM Executive',
-            description: 'Manage Client Relations',
+            icon: '/icons/hrandop.png',
+            title: 'HR & Operations',
+            description: 'People & Process',
         },
         {
             icon: '/icons/accounts.png',
             title: 'Accounts & Auditing',
             description: 'Ensure Financial Clarity',
         },
+        {
+            icon: '/icons/legal.png',
+            title: 'Legal',
+            description: 'Safeguard Deals & Compliance',
+        },
+        {
+            icon: '/icons/architects.png',
+            title: 'Architects',
+            description: 'Design Smart & Aesthetic Spaces',
+        },
+        {
+            icon: '/icons/webdev.png',
+            title: 'Web Development',
+            description: 'Build Real Estate Tech',
+        }
     ];
 
     const certifications = [
@@ -246,7 +256,7 @@ export default function HomePage() {
             <div className="mx-auto py-5 rounded-3xl bg-white cursor-pointer w-full my-10">
                 <div className="container mx-auto px-4">
                     <h3 className="text-3xl md:text-4xl font-bold text-center">
-                        Trending Certifications Programs
+                        Real Estate Certifications Programs
                     </h3>
                     <div className="relative overflow-hidden rounded-3xl mt-20">
                         <div className="flex animate-scroll">
@@ -404,7 +414,7 @@ export default function HomePage() {
                     below
                 </h1>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl w-full mt-5">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-5 w-full mt-5">
                     {jobCategories.map((job, index) => {
                         const dir = directions[index % directions.length];
 
@@ -436,7 +446,6 @@ export default function HomePage() {
                                         },
                                     }}
                                 />
-
                                 <div>
                                     <h3 className="text-lg font-medium text-gray-800 group-hover:text-white">
                                         {job.title}
@@ -528,7 +537,7 @@ export default function HomePage() {
             {/* Our Top Recruiters Section with Auto-Scroll */}
             <div className="py-12">
                 <h2 className="text-4xl font-bold text-center mb-10">Our Top Recruiters</h2>
-                <AutoScrollLogos logos={topRecruiters} onLogoClick={handleLogoClick} />
+                <AutoScrollLogos logos={topRecruiters} onLogoClick={rootContext?.user?.role !== "recruiter" && handleLogoClick} />
             </div>
             {/* All Locations Section */}
             <AllLocations />

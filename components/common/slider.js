@@ -135,14 +135,14 @@ function Slider({ data, imageSize = "400px", rounded }) {
                                     <img
                                         src={item.image}
                                         alt={`carousel-${index}`}
-                                        className="object-cover w-full h-full select-none" // select-none prevents text selection while dragging
+                                        className="object-fit w-full h-full select-none" // select-none prevents text selection while dragging
                                         draggable="false" // Prevents default browser drag behavior on images
                                     />
                                 ) : (
                                     <img
                                         src="https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
                                         alt="error"
-                                        className="object-cover w-full h-full select-none"
+                                        className="object-fit w-full h-full select-none"
                                         draggable="false"
                                     />
                                 )}

@@ -785,6 +785,25 @@ export default function RootLayout({ children }) {
     const updatedContext = {
       ...rootContext,
       authenticated: false,
+      loader: true,
+      user: {
+        name: "",
+        email: "",
+        mobile: "",
+        role: "",
+        password: "",
+        token: "",
+        isAdmin: "",
+      },
+      accessToken: '',
+      remember: false,
+      toast: {
+        show: false,
+        dismiss: true,
+        type: '',
+        title: '',
+        message: ''
+      }
     };
 
     setRootContext(updatedContext);

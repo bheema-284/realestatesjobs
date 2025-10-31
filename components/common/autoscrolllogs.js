@@ -1,3 +1,4 @@
+import Image from "next/image";
 import React, { useState, useRef, useEffect } from "react";
 
 const AutoScrollLogos = ({ logos, scrollSpeed = 0.5, onLogoClick }) => {
@@ -9,7 +10,7 @@ const AutoScrollLogos = ({ logos, scrollSpeed = 0.5, onLogoClick }) => {
     // Duplicate logos for seamless loop
     const loopedLogos = [...logos, ...logos];
 
-    // Automatic scrolling
+    // Automatic scrolling (same as above)
     useEffect(() => {
         let animationFrameId;
         const animateScroll = () => {
@@ -30,7 +31,7 @@ const AutoScrollLogos = ({ logos, scrollSpeed = 0.5, onLogoClick }) => {
         return () => cancelAnimationFrame(animationFrameId);
     }, [isDragging, scrollSpeed]);
 
-    // MOUSE EVENTS
+    // Event handlers (same as above)
     const handleMouseDown = (e) => {
         if (containerRef.current) {
             setIsDragging(true);
@@ -50,7 +51,6 @@ const AutoScrollLogos = ({ logos, scrollSpeed = 0.5, onLogoClick }) => {
         handleScrollLogic(x);
     };
 
-    // TOUCH EVENTS (for mobile)
     const handleTouchStart = (e) => {
         if (containerRef.current) {
             setIsDragging(true);
@@ -67,7 +67,6 @@ const AutoScrollLogos = ({ logos, scrollSpeed = 0.5, onLogoClick }) => {
 
     const handleTouchEnd = () => setIsDragging(false);
 
-    // Common scroll logic (used by both mouse and touch)
     const handleScrollLogic = (x) => {
         const walk = x - startX;
         const newScrollLeft = scrollLeft - walk;
@@ -87,7 +86,7 @@ const AutoScrollLogos = ({ logos, scrollSpeed = 0.5, onLogoClick }) => {
     return (
         <div
             ref={containerRef}
-            className="relative w-full overflow-hidden py-6 bg-transparent"
+            className="relative w-full overflow-hidden py-12 bg-transparent"
             onMouseDown={handleMouseDown}
             onMouseLeave={handleMouseLeave}
             onMouseUp={handleMouseUp}
@@ -101,19 +100,25 @@ const AutoScrollLogos = ({ logos, scrollSpeed = 0.5, onLogoClick }) => {
             <div className="pointer-events-none absolute left-0 top-0 h-full w-24 bg-gradient-to-r from-white to-transparent z-10" />
             <div className="pointer-events-none absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-white to-transparent z-10" />
 
-            {/* Logos */}
-            <div className="flex w-max">
+            {/* Logos Container - Using regular img tag for full control */}
+            <div className="flex w-max items-center h-32">
                 {loopedLogos.map((recruiter, index) => (
                     <div
                         key={index}
-                        className="flex-shrink-0 mx-10 flex items-center justify-center"
-                        style={{ width: 200 }}
-                        onClick={() => onLogoClick(recruiter.id)}
+                        className="flex-shrink-0 mx-12 flex items-center justify-center p-6 hover:scale-110 transition-transform duration-300 cursor-pointer"
+                        onClick={() => onLogoClick && onLogoClick(recruiter.id)}
                     >
+                        {/* Using regular img tag for full image display */}
                         <img
                             src={recruiter.logo}
                             alt={recruiter.name}
-                            className="h-28 w-auto object-contain"
+                            className="max-h-20 w-auto object-contain"
+                            style={{
+                                maxWidth: '200px',
+                                maxHeight: '80px',
+                                height: 'auto',
+                                width: 'auto'
+                            }}
                         />
                     </div>
                 ))}

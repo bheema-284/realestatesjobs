@@ -1,19 +1,49 @@
+'use client'
 import Image from "next/image";
 import Link from "next/link";
 import { UserIcon, UsersIcon, CheckCircleIcon } from "@heroicons/react/24/solid";
+import RootContext from "./config/rootcontext";
+import { useContext } from "react";
 
 export default function AboutPage() {
+    const { rootContext } = useContext(RootContext);
+    const isLoggedIn = rootContext.authenticated;
+    const handleRedirect = (path) => {
+        if (isLoggedIn) {
+            router.push('/'); // Redirect to home if already logged in
+        } else {
+            router.push(path); // Otherwise go to signup/login
+        }
+    };
     return (
-        <div className="font-nunito">
+        <div className="w-screen">
             {/* Inner Banner */}
-            <div className="relative bg-[url('https://realestatejobs.co.in/images/banner.avif')] bg-cover bg-center py-26 text-center text-white">
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-[#1c4676]/40"></div>
+            <div
+                className="relative flex items-start justify-end w-full h-[70vh] bg-no-repeat bg-right bg-cover px-6 sm:px-12"
+                style={{
+                    backgroundImage: "url('/about/aboutbgimage.jpeg')",
+                    backgroundSize: "cover", // ensures full image visible
+                    backgroundRepeat: "no-repeat",
+                }}
+            >
+                {/* Optional overlay for text readability */}
+                <div className="absolute inset-0 bg-gradient-to-l from-white/60 via-white/40 to-transparent"></div>
 
-                {/* Content */}
-                <div className="relative z-10 text-right pr-6 text-white">
-                    <h2 className="text-4xl font-bold mb-2 pr-4">About Us</h2>
-                    <p className="text-lg">Welcome to realestatejobs.co.in Your Gateway to Thriving realestate career!</p>                    
+                {/* Top-right content */}
+                <div className="relative text-right z-10">
+                    <div className="w-auto h-24 mb-2">
+                        <Image
+                            src="/about/aboutus.png"
+                            width={200}
+                            height={10}
+                            alt="About Us"
+                            className="ml-auto"
+                        />
+                    </div>
+                    <p className="text-xl leading-snug text-black">
+                        Welcome to <span className="font-semibold">realestatejobs.co.in</span> —
+                        Your Gateway to a Thriving Real Estate Career!
+                    </p>
                 </div>
             </div>
 
@@ -75,7 +105,7 @@ export default function AboutPage() {
                             {/* Image Box */}
                             <div className="relative w-[420px] h-[360px] bg-black rounded-lg shadow-lg flex items-center justify-center">
                                 <img
-                                    src="https://realestatejobs.co.in/images/banner.avif"
+                                    src="/about/banner.avif"
                                     alt="logo"
                                     className="w-full h-full object-cover rounded-lg"
                                 />
@@ -88,23 +118,31 @@ export default function AboutPage() {
             {/* Mission & Vision */}
             <div
                 className="relative bg-cover bg-center bg-no-repeat text-white py-12"
-                style={{ backgroundImage: "url('/rejobs/bg-image.jpg')" }}
+                style={{ backgroundImage: "url('/about/bgimage.jpeg')" }}
             >
                 {/* Overlay for better readability */}
-               <div className="absolute inset-0 bg-white/30"></div>
+                <div className="absolute inset-0 bg-white/30"></div>
 
                 <div className="relative w-[90%] text-gray-800 mx-auto space-y-10">
                     <div className="grid md:grid-cols-2 gap-8 items-center">
                         {/* Mission Image */}
                         <Image
-                            src="https://realestatejobs.co.in/images/mission.png"
-                            width={500}
-                            height={400}
+                            src="/about/mission.webp"
+                            width={600}
+                            height={500}
                             alt="mission"
                             className="rounded-lg shadow-lg"
                         />
                         <div>
-                            <h2 className="text-4xl font-bold mb-3">Our Mission</h2>
+                            <div className="w-full h-26 text-left">
+                                <Image
+                                    src="/about/ourmission.png"
+                                    width={200}
+                                    height={100}
+                                    alt="Our Mission"
+                                    className="mr-auto scale-116" // aligns image to right
+                                />
+                            </div>
                             <p className="text-lg">
                                 To revolutionize recruitment in the real estate sector by providing a seamless and
                                 efficient platform that connects skilled professionals with the right employers.
@@ -114,9 +152,17 @@ export default function AboutPage() {
                         </div>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-8 items-center">
+                    <div className="grid md:grid-cols-2 gap-8 items-center text-right">
                         <div>
-                            <h2 className="text-4xl font-bold mb-3">Our Vision</h2>
+                            <div className="w-full h-26 text-left">
+                                <Image
+                                    src="/about/ourvision.png"
+                                    width={200}
+                                    height={100}
+                                    alt="Our Vision"
+                                    className="ml-auto scale-116" // aligns image to right
+                                />
+                            </div>
                             <p className="text-lg">
                                 To be the go-to hub for real estate employment across India, driving innovation,
                                 trust, and collaboration in the hiring process.
@@ -124,9 +170,9 @@ export default function AboutPage() {
                         </div>
                         {/* Vision Image */}
                         <Image
-                            src="https://realestatejobs.co.in/images/vision.png"
-                            width={500}
-                            height={400}
+                            src="/about/vision.webp"
+                            width={600}
+                            height={500}
                             alt="vision"
                             className="rounded-lg shadow-lg"
                         />
@@ -202,23 +248,19 @@ export default function AboutPage() {
 
                 <div className="flex flex-wrap justify-center gap-6 py-5">
                     {/* Applicants Card */}
-                    <div className="w-full md:w-1/3 sm:h-24">
-                        <Link href="/signup">
-                            <div className="bg-[#1c4676] text-white h-full rounded-xl shadow-lg hover:shadow-xl transition p-6 flex flex-col items-center">
-                                <UserIcon className="h-12 w-12 mb-3" />
-                                <h5 className="text-lg font-semibold">Real Estate APPLICANTS</h5>
-                            </div>
-                        </Link>
+                    <div className="w-full md:w-1/3 sm:h-32">
+                        <div onClick={() => handleRedirect('/login')} className="bg-[#1c4676] text-white h-full rounded-xl shadow-lg hover:shadow-xl transition flex flex-col items-center">
+                            <UserIcon className="h-20 w-20 mt-2" />
+                            <h5 className="text-lg font-semibold mb-5">Real Estate APPLICANTS</h5>
+                        </div>
                     </div>
 
                     {/* Recruiters Card */}
-                    <div className="w-full md:w-1/3 sm:h-24">
-                        <Link href="/login">
-                            <div className="bg-[#1c4676] text-white h-full rounded-xl shadow-lg hover:shadow-xl transition p-6 flex flex-col items-center">
-                                <UsersIcon className="h-12 w-12 mb-3" />
-                                <h5 className="text-lg font-semibold">Real Estate RECRUITERS</h5>
-                            </div>
-                        </Link>
+                    <div className="w-full md:w-1/3 sm:h-32">
+                        <div onClick={() => handleRedirect('/login')} className="bg-[#1c4676] text-white h-full rounded-xl shadow-lg hover:shadow-xl transition flex flex-col items-center">
+                            <UsersIcon className="h-20 w-20 mt-2" />
+                            <h5 className="text-lg font-semibold mb-5">Real Estate RECRUITERS</h5>
+                        </div>
                     </div>
                 </div>
             </div>

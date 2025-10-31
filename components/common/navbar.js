@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { usePathname, useRouter } from "next/navigation";
-import { FaBell, FaThLarge, FaSuitcase, FaUsers, FaTasks, FaCalendarAlt, FaChartBar, FaCog } from "react-icons/fa"; // Added necessary icon imports
+import { FaBell } from "react-icons/fa"; // Added necessary icon imports
 import { Menu, Transition } from "@headlessui/react";
 import AnimatedBorderLoader from "./animatedbutton";
 import JobPostingModal from "../createjob";
@@ -59,12 +59,12 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                 {/* Logo */}
                 <Link href="/" className="flex items-center">
                     <Image
-                        src="https://realestatejobs.co.in/images/logo.png"
+                        src="/logo.webp"
                         alt="logo"
-                        width={200}
-                        height={80}
+                        width={150}
+                        height={10}
                         priority
-                        className="scale-105"
+                        className="object-cover"
                     />
                 </Link>
 
@@ -113,7 +113,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                             <NotificationBell count={3} />
 
                             {/* User Dropdown */}
-                            <Menu as="div" className="relative ml-4 no-focus-outline z-50">
+                            <Menu as="div" className="relative no-focus-outline z-50">
                                 <Menu.Button className="flex items-center gap-1 cursor-pointer">
                                     <div className="sm:hidden w-6 h-6 rounded-full bg-indigo-900 text-white flex items-center justify-center font-semibold">
                                         {(rootContext?.user?.name || "U")
@@ -121,14 +121,14 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                                             .toUpperCase()}
                                     </div>
                                     <div className="hidden sm:flex flex-col capitalize">
-                                        <p className="font-semibold">
+                                        <p className="font-semibold flex items-center">
                                             {rootContext?.user?.name || "User"}
+                                            <ChevronDownIcon className="w-4 h-4 text-gray-400 hidden sm:block" />
                                         </p>
-                                        <p className="text-gray-500 text-xs">
+                                        <p className="text-gray-500 text-xs text-right">
                                             {role || "role"}
                                         </p>
                                     </div>
-                                    <ChevronDownIcon className="w-4 h-4 text-gray-400 hidden sm:block" />
                                 </Menu.Button>
 
                                 <Transition
