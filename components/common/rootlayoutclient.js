@@ -770,27 +770,30 @@ export default function RootLayoutClient({ children }) {
 
     // ✅ Route check logic (regex-based)
     useEffect(() => {
-        if (!ready || !rootContext) return;
+        if (!ready) return;
 
+        const role = rootContext?.user?.role;
         const category = "Channel Partners";
-
-        const allowedPatterns = [
-            /^\/$/,                         // Home
-            /^\/home$/,                     // /home
-            /^\/jobs$/,                     // /jobs
-            new RegExp(`^/jobs/${category}$`), // /jobs/Channel Partners
-            /^\/services$/,
-            /^\/companies$/,
-            /^\/about$/,
-            /^\/login$/,
-            /^\/signup$/,
-            /^\/details$/,                   // /details
-            new RegExp(`^/details/${rootContext?.user?.id || 1}/${rootContext?.user?.name || ""}$`),
+        const allowedRoutes = [
+            `/home`,
+            `/jobs`,
+            `/jobs/${category}`,
+            `/services`,
+            `/companies`,
+            `/about`,
+            `/details`,
+            `/details/${rootContext?.user?.id || 1}/${rootContext?.user?.name || ""}`
         ];
 
-        const matched = allowedPatterns.some((pattern) => pattern.test(pathName));
-        setIsAllowed(matched);
-    }, [ready, rootContext, pathName]);
+        if (role !== "recruiter" && rootContext?.authenticated) {
+            const isAllowed = allowedRoutes.some((route) =>
+                pathName.startsWith(route)
+            );
+            if (!isAllowed && rootContext?.authenticated) {
+                router.push("/");
+            }
+        }
+    }, [ready, rootContext, pathName, router]);
 
     // Logout function
     const logOut = () => {
@@ -833,14 +836,6 @@ export default function RootLayoutClient({ children }) {
                             logOut={logOut}
                         />
                     )}
-                    {/* ✅ Main content — show 404 if path not allowed */}
-                    <main className="w-full m-auto">
-                        {isAllowed ? (
-                            children
-                        ) : (
-                            <NotFoundPage pathname={pathName} />
-                        )}
-                    </main>
                     <div
                         className={`${pathName === "/login" || pathName === "/signup"
                             ? "pt-0"
