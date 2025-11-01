@@ -833,7 +833,14 @@ export default function RootLayoutClient({ children }) {
                             logOut={logOut}
                         />
                     )}
-
+                    {/* ✅ Main content — show 404 if path not allowed */}
+                    <main className="w-full m-auto">
+                        {isAllowed ? (
+                            children
+                        ) : (
+                            <NotFoundPage pathname={pathName} />
+                        )}
+                    </main>
                     <div
                         className={`${pathName === "/login" || pathName === "/signup"
                             ? "pt-0"
@@ -853,15 +860,6 @@ export default function RootLayoutClient({ children }) {
                                     toggleSidebar={setMobileSidebarOpen}
                                 />
                             )}
-
-                        {/* ✅ Main content — show 404 if path not allowed */}
-                        <main className="w-full m-auto">
-                            {isAllowed ? (
-                                children
-                            ) : (
-                                <NotFoundPage pathname={pathName} />
-                            )}
-                        </main>
                     </div>
 
                     {(pathName !== "/login" && pathName !== "/signup") && <Footer />}
