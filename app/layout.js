@@ -15,7 +15,7 @@ export const metadata = {
     siteName: "Job Portal",
     images: [
       {
-        url: "/logo.webp",
+        url: "/dp.jpg",
         width: 1200,
         height: 630,
         alt: "Job Portal Dashboard",
@@ -28,7 +28,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Job Portal — Find Jobs & Recruit",
     description: "Search jobs or hire top candidates.",
-    images: ["/logo.webp"],
+    images: ["/dp.jpg"],
   },
   icons: {
     icon: "/favicon.ico",
