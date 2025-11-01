@@ -839,6 +839,19 @@ export const jobCategories = [
             { title: "Financial Controller", location: "Noida", type: "Full-time", salary: "₹12-15 LPA", experience: "7+ Years", company: getRandomCompany() },
         ],
     },
+    {
+        icon: '/icons/architects.png',
+        title: 'Architects',
+        description: 'Design Smart & Aesthetic Spaces',
+        jobs: [],
+    },
+    {
+        icon: '/icons/legal.png',
+        title: 'Legal',
+        description: 'Safeguard Deals & Compliance',
+        description: "Ensure Financial Clarity",
+        jobs: [],
+    },
 ];
 
 

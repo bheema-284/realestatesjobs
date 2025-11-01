@@ -65,10 +65,10 @@ const tabs = jobCategories.map((job, index) => ({
                 <img
                     src={job.icon}
                     alt={job.title}
-                    className="h-12 w-auto object-contain mx-auto"
+                    className="h-4 sm:h-6 md:h-8 lg:h-10 w-auto object-contain mx-auto"
                 />
-                <span className="text-sm font-semibold">{job.title}</span>
-                <span className="text-xs text-gray-500">{job.description}</span>
+                <span className="text-xs xl:text-sm font-semibold">{job.title}</span>
+                <span className="text-[9px] xl:text-xs text-gray-500">{job.description}</span>
             </div>
         </div>
     ),

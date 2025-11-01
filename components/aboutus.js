@@ -30,14 +30,14 @@ export default function AboutPage() {
                 <div className="absolute inset-0 bg-gradient-to-l from-white/60 via-white/40 to-transparent"></div>
 
                 {/* Top-right content */}
-                <div className="relative text-right z-10">
+                <div className="relative text-center sm:text-right z-10">
                     <div className="w-auto h-24 mb-2">
                         <Image
                             src="/about/aboutus.png"
                             width={200}
                             height={10}
                             alt="About Us"
-                            className="ml-auto"
+                            className="sm:ml-auto text-center"
                         />
                     </div>
                     <p className="text-xl leading-snug text-black">
@@ -87,12 +87,12 @@ export default function AboutPage() {
             {/* About RE Jobs with new design - Image Right, Inset, Red Dots */}
             <div className="relative w-full sm:w-[90%] mx-auto bg-cover bg-center bg-no-repeat py-12">
                 <div className="relative z-10 max-w-7xl mx-auto py-12 px-4">
+                    <h2 className="text-3xl font-bold mb-3 text-center">
+                        About <span className="text-[#1c4676]">RE JOBS</span>
+                    </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                         {/* Left Content */}
                         <div className="space-y-4">
-                            <h2 className="text-3xl font-bold mb-3">
-                                About <span className="text-[#1c4676]">RE JOBS</span>
-                            </h2>
                             <p className="text-lg leading-relaxed">
                                 Welcome to{" "}
                                 <Link href="/" className="text-[#1c4676] underline inline">
@@ -145,27 +145,32 @@ export default function AboutPage() {
                 {/* Overlay for better readability */}
                 <div className="absolute inset-0 bg-white/30"></div>
 
-                <div className="relative w-[90%] text-gray-800 mx-auto space-y-10">
+                <div className="relative w-[90%] text-gray-800 mx-auto space-y-16">
+                    {/* Mission Section */}
                     <div className="grid md:grid-cols-2 gap-8 items-center">
-                        {/* Mission Image */}
-                        <Image
-                            src="/about/mission.webp"
-                            width={600}
-                            height={500}
-                            alt="mission"
-                            className="rounded-lg shadow-lg"
-                        />
-                        <div>
-                            <div className="w-full h-26 text-left">
+                        {/* Mission Image - shown above on mobile */}
+                        <div className="order-1 md:order-1 flex justify-center">
+                            <Image
+                                src="/about/mission.webp"
+                                width={600}
+                                height={500}
+                                alt="mission"
+                                className="rounded-lg shadow-lg w-full h-auto object-cover"
+                            />
+                        </div>
+
+                        {/* Mission Content */}
+                        <div className="order-2 md:order-2 flex flex-col items-start space-y-6">
+                            <div className="w-full h-24 text-left sm:pl-6 sm:pl-14">
                                 <Image
                                     src="/about/ourmission.png"
-                                    width={200}
-                                    height={100}
+                                    width={250}
+                                    height={10}
                                     alt="Our Mission"
-                                    className="mr-auto scale-116" // aligns image to right
+                                    className="scale-110 sm:scale-125 md:scale-150 transition-transform duration-300"
                                 />
                             </div>
-                            <p className="text-lg">
+                            <p className="text-base sm:text-lg leading-relaxed text-left">
                                 To revolutionize recruitment in the real estate sector by providing a seamless and
                                 efficient platform that connects skilled professionals with the right employers.
                                 We aim to support the growth of real estate businesses by helping them build
@@ -174,30 +179,35 @@ export default function AboutPage() {
                         </div>
                     </div>
 
+                    {/* Vision Section */}
                     <div className="grid md:grid-cols-2 gap-8 items-center text-right">
-                        <div>
-                            <div className="w-full h-26 text-left">
+                        {/* Vision Image - shown above on mobile */}
+                        <div className="order-1 md:order-2 flex justify-center">
+                            <Image
+                                src="/about/vision.webp"
+                                width={600}
+                                height={500}
+                                alt="vision"
+                                className="rounded-lg shadow-lg w-full h-auto object-cover"
+                            />
+                        </div>
+
+                        {/* Vision Content */}
+                        <div className="order-2 md:order-1 flex flex-col items-end space-y-6">
+                            <div className="w-full h-24 text-start sm:text-right pr-6 sm:pr-14">
                                 <Image
                                     src="/about/ourvision.png"
-                                    width={200}
-                                    height={100}
+                                    width={250}
+                                    height={10}
                                     alt="Our Vision"
-                                    className="ml-auto scale-116" // aligns image to right
+                                    className="sm:ml-auto scale-110 sm:scale-125 md:scale-150 transition-transform duration-300"
                                 />
                             </div>
-                            <p className="text-lg">
+                            <p className="text-base sm:text-lg leading-relaxed text-start sm:text-right">
                                 To be the go-to hub for real estate employment across India, driving innovation,
                                 trust, and collaboration in the hiring process.
                             </p>
                         </div>
-                        {/* Vision Image */}
-                        <Image
-                            src="/about/vision.webp"
-                            width={600}
-                            height={500}
-                            alt="vision"
-                            className="rounded-lg shadow-lg"
-                        />
                     </div>
                 </div>
             </div>
@@ -206,7 +216,7 @@ export default function AboutPage() {
             {/* Core Values */}
             <div className="bg-gray-100 py-12">
                 <div className="w-[90%] mx-auto">
-                    <h2 className="text-5xl font-bold text-center mb-6">Our Core Values</h2>
+                    <h2 className="text-3xl sm:text-5xl font-bold text-center mb-6">Our Core Values</h2>
                     <div className="grid md:grid-cols-2 gap-6">
                         {[
                             { title: "Service Beyond Self", value: "We prioritize the needs of our community and clients above personal gain, striving to make a positive impact through compassion, dedication, and meaningful action." },
@@ -217,13 +227,13 @@ export default function AboutPage() {
                             { title: "Transparency", value: "We foster trust through open communication, clarity in our processes, and a commitment to honesty in all that we do." },
                         ].map((item, idx) => (
                             <div key={idx} className="flex gap-3 items-start bg-white p-4 rounded shadow">
-                                <i className="fas fa-check-circle text-yellow-500 text-xl mt-1"></i>
+                                <i className="fas fa-check-circle text-yellow-500 text-xl sm:text-2xl md:text-3xl mt-1"></i>
                                 <div>
-                                    <div className="flex gap-3 text-lg">
+                                    <div className="flex gap-3 text-lg sm:text-xl md:text-2xl">
                                         <CheckCircleIcon width={28} height={28} className="text-yellow-500" aria-hidden="true" />
                                         <h5 className="font-semibold">{item.title}</h5>
                                     </div>
-                                    <p className="text-gray-600 text-sm">{item.value}</p>
+                                    <p className="text-gray-600 text-sm sm:text-md md:text-lg">{item.value}</p>
                                 </div>
                             </div>
                         ))}
@@ -260,12 +270,12 @@ export default function AboutPage() {
                     </li>
                 </ul>
             </div>
-            <div className="container mx-auto text-center py-10">
+            <div className="container mx-auto text-center py-10 px-2">
                 <h2 className="font-bold text-xl md:text-2xl mb-6">
                     TO EXPLORE REAL ESTATE JOB PORTAL CREATE YOUR ACCOUNT BELOW
                 </h2>
 
-                <div className="flex flex-wrap justify-center gap-6 py-5">
+                <div className="flex flex-wrap justify-center gap-6 py-5 px-2">
                     {/* Applicants Card */}
                     <div className="w-full md:w-1/3 sm:h-32">
                         <div onClick={() => handleRedirect('/login')} className="bg-[#1c4676] text-white h-full rounded-xl shadow-lg hover:shadow-xl transition flex flex-col items-center">
