@@ -1,17 +1,17 @@
 'use client';
 import "../../app/globals.css";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import RootContext from "@/components/config/rootcontext";
 import Loader from "@/components/common/loader";
 import Toast from "@/components/common/toast";
 import { usePathname, useRouter } from "next/navigation";
-import { Inter } from "next/font/google";
+import { Inter } from 'next/font/google';
 import Footer from "@/components/common/footer";
 import Sidebar from "@/components/common/sidebar";
 import { Navbar } from "@/components/common/navbar";
-import NotFoundPage from "./errorpage";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
+
 
 export default function RootLayoutClient({ children }) {
     const pathName = usePathname();
@@ -25,7 +25,6 @@ export default function RootLayoutClient({ children }) {
             name: "",
             email: "",
             mobile: "",
-            role: "",
             password: "",
             token: "",
             isAdmin: "",
@@ -269,7 +268,7 @@ export default function RootLayoutClient({ children }) {
             {
                 "id": "job-1753249543262-4nto179",
                 "jobTitle": "Real Estate Sales",
-                "jobDescription": "<p><em>Help clients buy dream homes while achieving sales goals.</em></p>",
+                "jobDescription": "Help clients buy dream homes while achieving sales goals.",
                 "employmentTypes": [
                     "part-time"
                 ],
@@ -321,7 +320,7 @@ export default function RootLayoutClient({ children }) {
                     "custom": ""
                 },
                 "salaryType": "fixed",
-                "salaryAmount": "25,000",
+                "salaryAmount": "95,000",
                 "salaryFrequency": "Yearly",
                 "hiringMultiple": true,
                 "location": "Mumbai",
@@ -706,7 +705,7 @@ export default function RootLayoutClient({ children }) {
                 startDate: '2025-07-19',
                 endDate: '2025-07-19',
                 category: 'Business',
-                allDay: true,
+                allDay: false,
                 url: 'https://example.com/event-1893',
                 guests: 'guest1',
                 location: 'Location V',
@@ -739,15 +738,9 @@ export default function RootLayoutClient({ children }) {
             }
         ]
     });
-    const [showLoader, setShowLoader] = useState(true);
-    const [isAllowed, setIsAllowed] = useState(true); // 👈 404 control
 
-    // Initialize context
     useEffect(() => {
-        const user_details =
-            typeof window !== "undefined" &&
-            JSON.parse(localStorage.getItem("user_details"));
-
+        const user_details = typeof window !== "undefined" && JSON.parse(localStorage.getItem("user_details"));
         const updatedContext = { ...rootContext, loader: false };
 
         if (user_details) {
@@ -761,14 +754,6 @@ export default function RootLayoutClient({ children }) {
         setReady(true);
     }, []);
 
-    // Loader delay
-    useEffect(() => {
-        setShowLoader(true);
-        const timer = setTimeout(() => setShowLoader(false), 1500);
-        return () => clearTimeout(timer);
-    }, [pathName]);
-
-    // ✅ Route check logic (regex-based)
     useEffect(() => {
         if (!ready) return;
 
@@ -795,7 +780,6 @@ export default function RootLayoutClient({ children }) {
         }
     }, [ready, rootContext, pathName, router]);
 
-    // Logout function
     const logOut = () => {
         localStorage.clear();
         const updatedContext = {
@@ -811,52 +795,60 @@ export default function RootLayoutClient({ children }) {
                 token: "",
                 isAdmin: "",
             },
-            accessToken: "",
+            accessToken: '',
             remember: false,
             toast: {
                 show: false,
                 dismiss: true,
-                type: "",
-                title: "",
-                message: "",
-            },
+                type: '',
+                title: '',
+                message: ''
+            }
         };
+
         setRootContext(updatedContext);
         router.push(`/`);
     };
+
+    const [showLoader, setShowLoader] = useState(true);
+
+    useEffect(() => {
+        setShowLoader(true);
+        const timer = setTimeout(() => {
+            setShowLoader(false);
+        }, 3000); // Loader displays for 3 seconds
+
+        return () => clearTimeout(timer);
+    }, [pathName]);
+
 
     return (
         <html lang="en" className={inter.variable}>
             <body className="w-full mx-auto">
                 <RootContext.Provider value={{ rootContext, setRootContext }}>
                     {(pathName !== "/login" && pathName !== "/signup") && (
-                        <Navbar
-                            rootContext={rootContext}
-                            showLoader={showLoader}
-                            logOut={logOut}
-                        />
+                        <Navbar rootContext={rootContext} showLoader={showLoader} logOut={logOut} />
                     )}
-                    <div
-                        className={`${pathName === "/login" || pathName === "/signup"
-                            ? "pt-0"
-                            : "pt-26 sm:pt-20"
-                            } flex`}
-                    >
+                    <div className={`${(pathName === "/login" || pathName === "/signup") ? "pt-0" : "pt-26 sm:pt-20"} flex`}>
                         {!ready && <Loader />}
-
-                        {/* Sidebar visible for recruiter only */}
+                        {/* Sidebar only when authenticated & not home & not about & not services */}
                         {rootContext?.user?.role === "recruiter" &&
-                            rootContext?.authenticated &&
-                            !["/", "/services", "/about", "/login", "/signup"].includes(
-                                pathName
-                            ) && (
+                            rootContext.authenticated &&
+                            pathName !== "/" &&
+                            pathName !== "/services" &&
+                            pathName !== "/about" &&
+                            pathName !== "/login" &&
+                            pathName !== "/signup" && (
                                 <Sidebar
                                     isMobileOpen={isMobileSidebarOpen}
                                     toggleSidebar={setMobileSidebarOpen}
                                 />
                             )}
+                        {/* Main content */}
+                        <main className="w-full m-auto">
+                            {children}
+                        </main>
                     </div>
-
                     {(pathName !== "/login" && pathName !== "/signup") && <Footer />}
                     {rootContext?.toast && <Toast />}
                 </RootContext.Provider>

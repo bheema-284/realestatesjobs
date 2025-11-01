@@ -43,7 +43,7 @@ export default function NotFoundPage() {
                 <div className="flex items-center justify-center gap-4">
                     <button
                         onClick={() => router.push('/')}
-                        className="px-5 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-all"
+                        className="px-5 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 transition-all"
                     >
                         Go Home
                     </button>
