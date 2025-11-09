@@ -12,9 +12,9 @@ const RegisterForm = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    role: "applicant",
     password: "",
-    confirmPassword: "",
-    termsAccepted: false,
+    confirmPassword: ""
   });
 
   const [isEmail, setIsemail] = useState({
@@ -45,19 +45,42 @@ const RegisterForm = () => {
     setFormData(updatedformData);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.confirmPassword === formData.password) {
-      setIsPassword({ isErr: true, errVisible: false });
-      users.push({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        isAdmin: false,
-      });
-      router.push("/login");
-    } else {
+
+    // Check password match
+    if (formData.confirmPassword !== formData.password) {
       setIsPassword({ isErr: false, errVisible: true });
+      return;
+    }
+
+    setIsPassword({ isErr: true, errVisible: false });
+
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          role: formData.role || "applicant",  // or recruiter
+          password: formData.password
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Something went wrong");
+        return;
+      }
+
+      // ✅ Saved successfully
+      router.push("/login");
+
+    } catch (err) {
+      console.error("❌ Error:", err);
+      alert("Server error, try again.");
     }
   };
 

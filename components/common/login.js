@@ -6,16 +6,18 @@ import RootContext from "../config/rootcontext";
 import { contextObject } from "../config/contextobject";
 import { useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
-import { candidatesData, companyData, users } from "../config/data";
+import { candidatesData, companyData } from "../config/data";
 import Image from "next/image";
 import Link from "next/link";
+import { useSWRFetch } from "../config/useswrfetch";
+import ForgetPassword from "./forgetpassword";
 
 const SignIn = () => {
   const { setRootContext } = useContext(RootContext);
   const router = useRouter();
-
+  const { data: users = [], error, isLoading } = useSWRFetch(`/api/users`);
+  const [screen, setScreen] = useState("login");
   const [formData, setFormData] = useState({
-    mobile: "",
     email: "",
     password: "",
     remember: false,
@@ -26,6 +28,7 @@ const SignIn = () => {
     errVisible: false,
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const emailregex = () => /^[\w-.]+@[\w.]+/gm;
 
@@ -47,74 +50,100 @@ const SignIn = () => {
     setFormData(updated);
   };
 
-  const onSave = (e) => {
-    e.preventDefault();
+  const authenticateUser = async (email, password) => {
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const userByEmail = users.find((u) => u.email === formData.email);
-    const userByPassword = users.find((u) => u.password === formData.password);
-    const allUsers = [...(candidatesData || []), ...(companyData || [])];
-    const userDetail = allUsers.find((c) => c.email.includes(formData.email));
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Authentication failed');
+      }
 
-    if (!userByEmail && !userByPassword) {
-      return setRootContext((prev) => ({
-        ...prev,
-        toast: {
-          show: true,
-          type: "error",
-          title: "Login Failed",
-          message: "User not found. Please sign up.",
-        },
-      }));
-    } else if (!userByEmail) {
-      return setRootContext((prev) => ({
-        ...prev,
-        toast: {
-          show: true,
-          type: "error",
-          title: "Login Failed",
-          message: "Email not found. Please sign up.",
-        },
-      }));
-    } else if (!userByPassword) {
-      return setRootContext((prev) => ({
-        ...prev,
-        toast: {
-          show: true,
-          type: "error",
-          title: "Login Failed",
-          message: "Incorrect password. Please try again.",
-        },
-      }));
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      throw error;
     }
+  };
 
-    // Success
-    const username = formData.name || userByEmail.email.split("@")[0];
-    const resp = {
-      ...contextObject,
-      authenticated: true,
-      user: {
-        name: userDetail?.name || username,
-        email: userByEmail.email,
-        mobile: userByEmail.mobile,
-        password: userByEmail.password,
-        role: userByEmail.role,
-        token: userByEmail.token,
-        id: userDetail?.id || 1,
-      },
-      remember: formData.remember,
-    };
+  const onSave = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-    setRootContext({
-      ...resp,
-      toast: {
-        show: true,
-        type: "success",
-        title: "Login Successful",
-        message: "Welcome back!",
-      },
-    });
-    localStorage.setItem("user_details", JSON.stringify(resp.user));
-    router.push("/");
+    try {
+      // Basic validation
+      if (!formData.email || !formData.password) {
+        throw new Error('Please fill in all fields');
+      }
+
+      if (!emailregex().test(formData.email)) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      // Authenticate user via API
+      const authResult = await authenticateUser(formData.email, formData.password);
+
+      // Find user details from local data (for name, etc.)
+      const allUsers = [...(candidatesData || []), ...(companyData || [])];
+      const userDetail = allUsers.find((c) => c.email.includes(formData.email));
+
+      // Success - Create user session
+      const username = userDetail?.name || formData.email.split("@")[0];
+      const resp = {
+        ...contextObject,
+        authenticated: true,
+        user: {
+          name: username,
+          email: formData.email,
+          mobile: userDetail?.mobile || "",
+          role: authResult.user?.role || "applicant",
+          token: authResult.token,
+          id: userDetail?._id || authResult.user?._id || 1,
+        },
+        remember: formData.remember,
+      };
+
+      setRootContext({
+        ...resp,
+        toast: {
+          show: true,
+          type: "success",
+          title: "Login Successful",
+          message: "Welcome back!",
+        },
+      });
+
+      // Store user details
+      if (formData.remember) {
+        localStorage.setItem("user_details", JSON.stringify(resp.user));
+      } else {
+        sessionStorage.setItem("user_details", JSON.stringify(resp.user));
+      }
+
+      // Store auth token
+      localStorage.setItem("auth_token", authResult.token);
+
+      router.push("/");
+
+    } catch (error) {
+      setRootContext((prev) => ({
+        ...prev,
+        toast: {
+          show: true,
+          type: "error",
+          title: "Login Failed",
+          message: error.message || "Invalid email or password. Please try again.",
+        },
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const Button = ({ title, type, disabled, onClick }) => (
@@ -124,10 +153,10 @@ const SignIn = () => {
         bg-gradient-to-r from-orange-400 via-purple-500 to-purple-700 
         hover:from-orange-500 hover:via-purple-600 hover:to-purple-800 
         ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-      disabled={disabled}
+      disabled={disabled || isSubmitting}
       onClick={onClick}
     >
-      {title}
+      {isSubmitting ? "Signing In..." : title}
     </button>
   );
 
@@ -137,7 +166,7 @@ const SignIn = () => {
       style={{
         backgroundImage: "url('/login/bg.jpg')",
         backgroundSize: "100% auto",
-        backgroundPosition: "center 00px", // pushes image 80px down
+        backgroundPosition: "center 00px",
         backgroundRepeat: "no-repeat",
       }}
     >
@@ -151,7 +180,7 @@ const SignIn = () => {
         </div>
 
         {/* Right Side - Login Form */}
-        <div className="w-full md:w-[45%] p-8 md:p-10 bg-white/80 flex flex-col justify-center">
+        {screen === "login" ? <div className="w-full md:w-[45%] p-8 md:p-10 bg-white/80 flex flex-col justify-center">
           <div className="mb-6 flex justify-center">
             <Image
               alt="logo"
@@ -180,7 +209,7 @@ const SignIn = () => {
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter Password"
                 value={formData.password}
-                onChange={(e) => handleChange(e, "password")}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
               />
               <span
@@ -203,14 +232,18 @@ const SignIn = () => {
                 />
                 <label className="ml-2 text-sm text-gray-500">Remember me</label>
               </div>
-              <Link href="/" className="text-sm text-purple-500 hover:underline">
-                Forgot password?
-              </Link>
+              <button
+                type="button"
+                onClick={() => setScreen("otp")}
+                className="text-sm font-semibold text-purple-500 hover:underline"
+              >
+                Forgot Password?
+              </button>
             </div>
 
             <div className="flex justify-center pt-2">
               <Button
-                disabled={!formData.email || !formData.password}
+                disabled={!formData.email || !formData.password || isEmail.errVisible}
                 type="button"
                 onClick={onSave}
                 title="Sign In"
@@ -227,7 +260,7 @@ const SignIn = () => {
               </span>
             </p>
           </form>
-        </div>
+        </div> : <div className="w-full md:w-[45%] p-8 md:p-10 bg-white/80 flex flex-col justify-center">  <ForgetPassword setScreen={setScreen} /></div>}
       </div>
     </section>
   );
