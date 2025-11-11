@@ -6,9 +6,8 @@ import RootContext from "../config/rootcontext";
 import { contextObject } from "../config/contextobject";
 import { useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
-import { candidatesData, companyData } from "../config/data";
+import { companyData } from "../config/data";
 import Image from "next/image";
-import Link from "next/link";
 import { useSWRFetch } from "../config/useswrfetch";
 import ForgetPassword from "./forgetpassword";
 
@@ -90,7 +89,7 @@ const SignIn = () => {
       const authResult = await authenticateUser(formData.email, formData.password);
 
       // Find user details from local data (for name, etc.)
-      const allUsers = [...(candidatesData || []), ...(companyData || [])];
+      const allUsers = [...(users || []), ...(companyData || [])];
       const userDetail = allUsers.find((c) => c.email.includes(formData.email));
 
       // Success - Create user session
@@ -125,7 +124,7 @@ const SignIn = () => {
       } else {
         sessionStorage.setItem("user_details", JSON.stringify(resp.user));
       }
-
+      localStorage.setItem("user_details", JSON.stringify(resp.user));
       // Store auth token
       localStorage.setItem("auth_token", authResult.token);
 

@@ -4,6 +4,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 function Slider({ data, imageSize = "400px", rounded }) {
     const [currentSlide, setCurrentSlide] = useState(1);
     const [isTransitioning, setIsTransitioning] = useState(true);
+    const [loadedImages, setLoadedImages] = useState(new Set()); // Track loaded images
 
     // State for swiping logic
     const [isDragging, setIsDragging] = useState(false);
@@ -52,8 +53,41 @@ function Slider({ data, imageSize = "400px", rounded }) {
         }
     };
 
-    // --- SWIPE HANDLERS ---
+    // --- Image Loading Handlers ---
+    const handleImageLoad = (imageUrl) => {
+        setLoadedImages(prev => new Set(prev).add(imageUrl));
+    };
 
+    const handleImageError = (e, imageUrl) => {
+        console.warn(`Failed to load image: ${imageUrl}`);
+        // Set error image
+        e.target.src = "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg";
+        // Mark as loaded to prevent loading attempts
+        setLoadedImages(prev => new Set(prev).add(imageUrl));
+    };
+
+    // Preload adjacent images for smoother transitions
+    useEffect(() => {
+        const preloadImages = () => {
+            const currentIndex = currentSlide;
+            const prevIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : slides.length - 1;
+            const nextIndex = (currentIndex + 1) % slides.length;
+
+            [currentIndex, prevIndex, nextIndex].forEach(index => {
+                const imageUrl = slides[index]?.image;
+                if (imageUrl && !loadedImages.has(imageUrl)) {
+                    const img = new Image();
+                    img.src = imageUrl;
+                    img.onload = () => handleImageLoad(imageUrl);
+                    img.onerror = () => handleImageLoad(imageUrl); // Still mark as attempted
+                }
+            });
+        };
+
+        preloadImages();
+    }, [currentSlide, slides, loadedImages]);
+
+    // --- SWIPE HANDLERS ---
     const handleDragStart = (clientX) => {
         setIsTransitioning(false); // Disable transition for drag
         setIsDragging(true);
@@ -100,6 +134,18 @@ function Slider({ data, imageSize = "400px", rounded }) {
     // Calculate the total translation including the swipe offset
     const totalTranslateX = `calc(-${currentSlide * slideWidth}% + ${dragDistance}px)`;
 
+    // Get current slide data (adjusting for cloned slides)
+    const getCurrentSlideData = () => {
+        let actualIndex = currentSlide - 1;
+        if (currentSlide === 0) {
+            actualIndex = data.length - 1; // Last real slide
+        } else if (currentSlide === slides.length - 1) {
+            actualIndex = 0; // First real slide
+        }
+        return data[actualIndex];
+    };
+
+    const currentSlideData = getCurrentSlideData();
 
     return (
         <div
@@ -109,11 +155,19 @@ function Slider({ data, imageSize = "400px", rounded }) {
             onMouseLeave={onMouseLeave}
         >
             <div className="relative w-full" style={{ height: imageSize }}>
-                {/* Fixed label (always top-left, doesn’t move with images) */}
-                {data[currentSlide - 1]?.status && <span className="absolute top-3 left-3 bg-orange-300 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30">
-                    {/* we use currentSlide-1 since slides array has extra clone at start */}
-                    {data[currentSlide - 1]?.status}
-                </span>}
+                {/* Fixed label (always top-left, doesn't move with images) */}
+                {currentSlideData?.status && (
+                    <span className="absolute top-3 left-3 bg-orange-300 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30">
+                        {currentSlideData.status}
+                    </span>
+                )}
+
+                {/* Loading indicator */}
+                {!loadedImages.has(slides[currentSlide]?.image) && slides[currentSlide]?.image && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+                    </div>
+                )}
 
                 {/* Slides wrapper - Swiping enabled here */}
                 <div
@@ -135,16 +189,21 @@ function Slider({ data, imageSize = "400px", rounded }) {
                                     <img
                                         src={item.image}
                                         alt={`carousel-${index}`}
-                                        className="object-fit w-full h-full select-none" // select-none prevents text selection while dragging
+                                        className="object-cover w-full h-full select-none" // Fixed: object-fit to object-cover
                                         draggable="false" // Prevents default browser drag behavior on images
+                                        onLoad={() => handleImageLoad(item.image)}
+                                        onError={(e) => handleImageError(e, item.image)}
+                                        loading="lazy" // Add lazy loading for better performance
                                     />
                                 ) : (
-                                    <img
-                                        src="https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
-                                        alt="error"
-                                        className="object-fit w-full h-full select-none"
-                                        draggable="false"
-                                    />
+                                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                        <img
+                                            src="https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
+                                            alt="error"
+                                            className="object-contain w-1/2 h-1/2 select-none"
+                                            draggable="false"
+                                        />
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -157,20 +216,22 @@ function Slider({ data, imageSize = "400px", rounded }) {
                 <>
                     <button
                         type="button"
-                        className="absolute top-0 left-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group"
+                        className="absolute top-0 left-0 z-20 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none"
                         onClick={prevSlide}
+                        aria-label="Previous slide"
                     >
-                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50">
+                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50 transition-colors">
                             <ChevronLeftIcon className="w-6 h-6 text-white" />
                         </span>
                     </button>
 
                     <button
                         type="button"
-                        className="absolute top-0 right-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group"
+                        className="absolute top-0 right-0 z-20 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none"
                         onClick={nextSlide}
+                        aria-label="Next slide"
                     >
-                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50">
+                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50 transition-colors">
                             <ChevronRightIcon className="w-6 h-6 text-white" />
                         </span>
                     </button>
