@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { PencilIcon, EyeIcon, EyeSlashIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { ChevronDownIcon, ArrowPathIcon, ArrowsPointingOutIcon } from '@heroicons/react/20/solid';
 import AboutMe from './aboutme';
 import Applications from './applications';
@@ -10,11 +10,10 @@ import Projects from './projects';
 import Services from './services';
 import Marketing from './marketing';
 import ButtonTab from '../common/buttontab';
-import { candidatesData } from '../config/data';
 import RootContext from '../config/rootcontext';
-import { Mutated, useSWRFetch } from '../config/useswrfetch';
-import Loader from '../common/loader';
+import { Mutated } from '../config/useswrfetch';
 import { useParams } from 'next/navigation';
+import Loading from '../common/loading';
 
 const tabs = [
     { name: 'About Me', component: AboutMe },
@@ -420,7 +419,7 @@ function ProfilePage({ userData }) {
 
     return (
         <div className="bg-white min-h-screen mt-20">
-            {serviceCall && <Loader />}
+            {serviceCall && <Loading />}
 
             {/* Card Content */}
             <div className="max-w-5xl border border-gray-200 rounded-t-xl mx-auto relative shadow-sm">
@@ -533,14 +532,14 @@ function ProfilePage({ userData }) {
             {/* Tabs / Resume Section */}
             <div className="bg-white border-b border-gray-200 max-w-5xl mx-auto px-4 py-6 rounded-b-md shadow-sm">
                 {rootContext?.user?.role === "recruiter" ? (
-                    <AboutMe profile={profile} />
+                    <AboutMe profile={profile} setRootContext={setRootContext} mutated={mutated} />
                 ) : (
                     <>
                         {/* Desktop Tabs */}
                         <div className="hidden sm:block">
                             <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                             <div className="py-3">
-                                <ActiveComponent profile={profile} />
+                                <ActiveComponent profile={profile} setRootContext={setRootContext} mutated={mutated} />
                             </div>
                         </div>
 
@@ -562,7 +561,7 @@ function ProfilePage({ userData }) {
                                         </button>
                                         {isOpen && (
                                             <div className="p-2">
-                                                <Component profile={profile} />
+                                                <Component profile={profile} setRootContext={setRootContext} mutated={mutated} />
                                             </div>
                                         )}
                                     </div>

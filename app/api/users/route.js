@@ -158,81 +158,56 @@ export async function PUT(request) {
         let userId;
         let updateFields = {};
 
-        // ✅ Multipart (FormData) case - Handle profile updates + documents
+        // ✅ Handle Multipart (FormData) - Profile updates + documents
         if (contentType.includes("multipart/form-data")) {
             const formData = await request.formData();
             userId = formData.get("id") || formData.get("userId");
             if (!userId)
                 return new Response(JSON.stringify({ error: "User ID required" }), { status: 400 });
 
-            // Get existing user data first to preserve existing data
             const existingUser = await usersCollection.findOne({ _id: new ObjectId(userId) });
             if (!existingUser)
                 return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
 
-            // Build update object - only update provided fields
             updateFields.updatedAt = new Date();
 
-            // Text fields - only update if provided
             const textFields = [
-                "name", "email", "mobile", "gender", "summary", "dateOfBirth",
-                "company", "position", "role"
+                "name", "email", "mobile", "gender", "summary",
+                "dateOfBirth", "company", "position", "role"
             ];
             textFields.forEach(key => {
                 const value = formData.get(key);
-                if (value !== null && value !== undefined && value !== "") {
+                if (value !== null && value !== undefined && value !== "")
                     updateFields[key] = value;
+            });
+
+            // 🔹 Handle password
+            const password = formData.get("password");
+            if (password) updateFields.password = await bcrypt.hash(password, 10);
+
+            // 🔹 Parse and merge JSON data fields
+            const jsonFields = ["experience", "education", "services", "applications", "projects", "marketing"];
+            jsonFields.forEach(field => {
+                const raw = formData.get(field);
+                if (raw) {
+                    const data = parseJSON(raw);
+                    if (Array.isArray(data)) {
+                        updateFields[field] = data;
+                    }
+                } else {
+                    updateFields[field] = existingUser[field];
                 }
             });
 
-            // 🔹 Handle Password update (hash if provided)
-            const password = formData.get("password");
-            if (password) {
-                updateFields.password = await bcrypt.hash(password, 10);
-            }
-
-            // 🔹 Handle Experience Data with Documents - MERGE with existing
-            const experienceData = parseJSON(formData.get("experience"));
-            if (experienceData && Array.isArray(experienceData)) {
-                const experienceWithDocs = await processExperienceDocuments(
-                    formData,
-                    experienceData,
-                    userId,
-                    existingUser.experience || []
-                );
-                updateFields.experience = experienceWithDocs;
-            } else {
-                // Preserve existing experience if no new data provided
-                updateFields.experience = existingUser.experience;
-            }
-
-            // 🔹 Handle Education Data with Documents - MERGE with existing
-            const educationData = parseJSON(formData.get("education"));
-            if (educationData && Array.isArray(educationData)) {
-                const educationWithDocs = await processEducationDocuments(
-                    formData,
-                    educationData,
-                    userId,
-                    existingUser.education || []
-                );
-                updateFields.education = educationWithDocs;
-            } else {
-                // Preserve existing education if no new data provided
-                updateFields.education = existingUser.education;
-            }
-
-            // 🔹 Handle Skills (sent as JSON string in formData)
+            // 🔹 Skills
             const skillsData = formData.get("skills");
             if (skillsData) {
                 try {
                     updateFields.skills = JSON.parse(skillsData);
-                } catch (err) {
-                    console.warn("Invalid skills JSON, using as string array");
+                } catch {
                     updateFields.skills = Array.isArray(skillsData) ? skillsData : [skillsData];
                 }
-            } else {
-                updateFields.skills = existingUser.skills;
-            }
+            } else updateFields.skills = existingUser.skills;
 
             // 🔹 Handle profile image upload
             const file = formData.get("image");
@@ -246,9 +221,7 @@ export async function PUT(request) {
                     uploadStream.end(buffer);
                 });
                 updateFields.profileImage = result.secure_url;
-            } else {
-                updateFields.profileImage = existingUser.profileImage;
-            }
+            } else updateFields.profileImage = existingUser.profileImage;
 
             // 🔹 Handle resume upload
             const resumeFile = formData.get("resume");
@@ -266,12 +239,9 @@ export async function PUT(request) {
                     uploadStream.end(buffer);
                 });
                 updateFields.resume = result.secure_url;
-            } else {
-                updateFields.resume = existingUser.resume;
-            }
+            } else updateFields.resume = existingUser.resume;
 
-            console.log("Updating user fields:", Object.keys(updateFields));
-
+            // ✅ Save updates
             const result = await usersCollection.updateOne(
                 { _id: new ObjectId(userId) },
                 { $set: updateFields }
@@ -283,130 +253,54 @@ export async function PUT(request) {
             return new Response(JSON.stringify({
                 success: true,
                 message: "Profile updated successfully",
-                updatedFields: Object.keys(updateFields).filter(key => key !== 'updatedAt')
+                updatedFields: Object.keys(updateFields).filter(k => k !== 'updatedAt')
             }), { status: 200 });
         }
 
-        // ✅ JSON body case (normal update or password reset)
+        // ✅ Handle JSON request
         const body = await request.json();
-
-        // ✅ Password reset logic
-        if (body.newPassword && (body.email || body.mobile)) {
-            const { error, value } = resetPasswordSchema.validate(body);
-            if (error)
-                return new Response(JSON.stringify({ error: error.details[0].message }), { status: 400 });
-
-            const query = {};
-            if (value.email) query.email = value.email;
-            if (value.mobile) query.mobile = value.mobile;
-
-            const existingUser = await usersCollection.findOne(query);
-            if (!existingUser)
-                return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
-
-            const hashedPassword = await bcrypt.hash(value.newPassword, 10);
-
-            await usersCollection.updateOne(
-                { _id: existingUser._id },
-                { $set: { password: hashedPassword, updatedAt: new Date() } }
-            );
-
-            return new Response(JSON.stringify({ success: true, message: "Password reset successful" }), { status: 200 });
-        }
-
-        // ✅ Normal JSON update request
         userId = body.id || body.userId;
         if (!userId)
             return new Response(JSON.stringify({ error: "User ID required" }), { status: 400 });
 
-        // Get existing user data first to preserve existing documents
         const existingUser = await usersCollection.findOne({ _id: new ObjectId(userId) });
         if (!existingUser)
             return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
 
         updateFields.updatedAt = new Date();
 
-        // Only update provided fields, preserve others
         const allowedFields = [
             "name", "email", "mobile", "role", "summary", "password",
             "experience", "education", "skills", "company", "position",
-            "dateOfBirth", "gender", "resume"
+            "dateOfBirth", "gender", "resume", "services", "applications", "projects", "marketing"
         ];
 
-        allowedFields.forEach(field => {
+        for (const field of allowedFields) {
             if (body[field] !== undefined && body[field] !== null) {
-                // Hash password if it's being updated
                 if (field === "password" && body[field]) {
-                    updateFields[field] = bcrypt.hash(body[field], 10);
+                    updateFields.password = await bcrypt.hash(body[field], 10);
+                } else if (Array.isArray(body[field])) {
+                    // Merge array fields (for new services/applications/projects/marketing)
+                    updateFields[field] = body[field].length
+                        ? body[field]
+                        : existingUser[field] || [];
                 } else {
                     updateFields[field] = body[field];
                 }
             } else {
-                // Preserve existing field if not provided
                 updateFields[field] = existingUser[field];
             }
-        });
-
-        // 🔹 Handle Experience - preserve document URLs and merge with existing
-        if (body.experience && Array.isArray(body.experience)) {
-            updateFields.experience = body.experience.map((newExp, index) => {
-                const existingExp = existingUser.experience?.[index];
-                // If we have existing experience at this index, merge with new data
-                if (existingExp) {
-                    return {
-                        ...existingExp, // Start with existing data
-                        ...newExp, // Override with new data
-                        documentUrl: newExp.documentUrl || existingExp.documentUrl, // Preserve existing document URL if new one not provided
-                        logo: newExp.logo || existingExp.logo || dummyLogos[index % dummyLogos.length],
-                        showDescription: newExp.showDescription !== undefined ? newExp.showDescription : existingExp.showDescription
-                    };
-                } else {
-                    // New experience entry
-                    return {
-                        ...newExp,
-                        logo: newExp.logo || dummyLogos[index % dummyLogos.length],
-                        showDescription: newExp.showDescription || false
-                    };
-                }
-            });
-        } else {
-            updateFields.experience = existingUser.experience;
         }
 
-        // 🔹 Handle Education - preserve document URLs and merge with existing
-        if (body.education && Array.isArray(body.education)) {
-            updateFields.education = body.education.map((newEdu, index) => {
-                const existingEdu = existingUser.education?.[index];
-                // If we have existing education at this index, merge with new data
-                if (existingEdu) {
-                    return {
-                        ...existingEdu, // Start with existing data
-                        ...newEdu, // Override with new data
-                        documentUrl: newEdu.documentUrl || existingEdu.documentUrl, // Preserve existing document URL if new one not provided
-                        years: newEdu.years || `${newEdu.startYear || ''} - ${newEdu.endYear || ''}` || existingEdu.years
-                    };
-                } else {
-                    // New education entry
-                    return {
-                        ...newEdu,
-                        years: newEdu.years || `${newEdu.startYear || ''} - ${newEdu.endYear || ''}`
-                    };
-                }
-            });
-        } else {
-            updateFields.education = existingUser.education;
-        }
-
-        // 🔹 Handle Skills - merge with existing
+        // ✅ Merge skills uniquely
         if (body.skills) {
             updateFields.skills = [
                 ...(existingUser.skills || []),
                 ...(Array.isArray(body.skills) ? body.skills : [body.skills])
-            ].filter((skill, index, arr) => arr.indexOf(skill) === index); // Remove duplicates
-        } else {
-            updateFields.skills = existingUser.skills;
+            ].filter((v, i, arr) => arr.indexOf(v) === i);
         }
 
+        // ✅ Update DB
         const result = await usersCollection.updateOne(
             { _id: new ObjectId(userId) },
             { $set: updateFields }
@@ -418,7 +312,7 @@ export async function PUT(request) {
         return new Response(JSON.stringify({
             success: true,
             message: "Profile updated successfully",
-            updatedFields: Object.keys(updateFields).filter(key => key !== 'updatedAt')
+            updatedFields: Object.keys(updateFields).filter(k => k !== 'updatedAt')
         }), { status: 200 });
 
     } catch (err) {
@@ -426,6 +320,7 @@ export async function PUT(request) {
         return new Response(JSON.stringify({ error: err.message }), { status: 500 });
     }
 }
+
 
 // --------------------------------------------------------------------
 // ✅ DELETE – Delete experience/education entries or documents
