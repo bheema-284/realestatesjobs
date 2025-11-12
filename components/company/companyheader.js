@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { FaBars, FaTimes, FaSearch } from "react-icons/fa";
 
@@ -113,13 +114,13 @@ export default function Header({ company }) {
                             className="cursor-pointer"
                         />
                     </div>
-                    <a href="#">About</a>
-                    <a href="#">Residential</a>
-                    <a href="#">Commercial</a>
-                    <a href="#">Rentals</a>
-                    <a href="#">Hospitality</a>
-                    <a href="#">Retail</a>
-                    <a href="#">Blogs</a>
+                    <Link href="#">About</Link>
+                    <Link href="#">Residential</Link>
+                    <Link href="#">Commercial</Link>
+                    <Link href="#">Rentals</Link>
+                    <Link href="#">Hospitality</Link>
+                    <Link href="#">Retail</Link>
+                    <Link href="#">Blogs</Link>
                 </nav>
             </div>
         </header>

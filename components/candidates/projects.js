@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import React from 'react';
 
 export default function Projects({ profile }) {
@@ -13,7 +14,7 @@ export default function Projects({ profile }) {
               <p className="text-sm text-gray-700 mt-1">{project.description}</p>
               {project.link && (
                 <p className="text-xs mt-2 text-gray-600">
-                  <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View Project</a>
+                  <Link href={project.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View Project</Link>
                 </p>
               )}
               {project.technologies && project.technologies.length > 0 && (

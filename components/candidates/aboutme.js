@@ -5,6 +5,7 @@ import { Mutated } from '../config/useswrfetch';
 import RootContext from '../config/rootcontext';
 import { formatDateTime } from '../config/sitesettings';
 import Loader from '../common/loader';
+import Link from 'next/link';
 
 const dummyLogos = [
     'https://placehold.co/48x48/F0F0F0/000000?text=Google',
@@ -1214,7 +1215,7 @@ export default function AboutMe({ profile }) {
 
                                                         {tempExperience.documentUrl && (
                                                             <div className="flex items-center gap-2">
-                                                                <a
+                                                                <Link
                                                                     href={tempExperience.documentUrl}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
@@ -1222,7 +1223,7 @@ export default function AboutMe({ profile }) {
                                                                 >
                                                                     <DocumentIcon className="w-4 h-4" />
                                                                     View Document
-                                                                </a>
+                                                                </Link>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => handleRemoveExperienceDocument(index)}
@@ -1276,7 +1277,7 @@ export default function AboutMe({ profile }) {
                                                         )}
                                                         {tempExperience.documentUrl && (
                                                             <div className="mt-3">
-                                                                <a
+                                                                <Link
                                                                     href={tempExperience.documentUrl}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
@@ -1284,7 +1285,7 @@ export default function AboutMe({ profile }) {
                                                                 >
                                                                     <DocumentIcon className="w-4 h-4" />
                                                                     View Document
-                                                                </a>
+                                                                </Link>
                                                             </div>
                                                         )}
                                                     </div>
@@ -1375,7 +1376,7 @@ export default function AboutMe({ profile }) {
                                                 {/* Document display for non-editing mode */}
                                                 {exp.documentUrl && (
                                                     <div className="mt-3">
-                                                        <a
+                                                        <Link
                                                             href={`${exp.documentUrl.replace(
                                                                 "/upload/",
                                                                 "/upload/fl_attachment:original_document/"
@@ -1386,7 +1387,7 @@ export default function AboutMe({ profile }) {
                                                         >
                                                             <DocumentIcon className="w-4 h-4" />
                                                             View Document
-                                                        </a>
+                                                        </Link>
                                                     </div>
                                                 )}
                                             </div>
@@ -1520,7 +1521,7 @@ export default function AboutMe({ profile }) {
 
                                                     {tempEducation.documentUrl && (
                                                         <div className="flex items-center gap-2">
-                                                            <a
+                                                            <Link
                                                                 href={`${tempEducation.documentUrl.replace(
                                                                     "/upload/",
                                                                     "/upload/fl_attachment:original_document/"
@@ -1531,7 +1532,7 @@ export default function AboutMe({ profile }) {
                                                             >
                                                                 <DocumentIcon className="w-4 h-4" />
                                                                 View Document
-                                                            </a>
+                                                            </Link>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRemoveEducationDocument(index)}
@@ -1563,7 +1564,7 @@ export default function AboutMe({ profile }) {
                                                     </p>
                                                     {tempEducation.documentUrl && (
                                                         <div className="mt-2">
-                                                            <a
+                                                            <Link
                                                                 href={tempEducation.documentUrl}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
@@ -1571,7 +1572,7 @@ export default function AboutMe({ profile }) {
                                                             >
                                                                 <DocumentIcon className="w-4 h-4" />
                                                                 View Education Document
-                                                            </a>
+                                                            </Link>
                                                         </div>
                                                     )}
                                                 </div>
@@ -1603,7 +1604,7 @@ export default function AboutMe({ profile }) {
                                             {/* Document display for non-editing mode */}
                                             {edu.documentUrl && (
                                                 <div className="mt-2">
-                                                    <a
+                                                    <Link
                                                         href={`${edu.documentUrl.replace(
                                                             "/upload/",
                                                             "/upload/fl_attachment:original_document/"
@@ -1614,7 +1615,7 @@ export default function AboutMe({ profile }) {
                                                     >
                                                         <DocumentIcon className="w-4 h-4" />
                                                         View
-                                                    </a>
+                                                    </Link>
                                                 </div>
                                             )}
                                         </div>

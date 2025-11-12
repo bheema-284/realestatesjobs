@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import React from 'react';
 import { companyData } from '../config/data'
+import Link from 'next/link';
 
 // Dummy company data (remains the same)
 const companys = companyData || [];
@@ -54,14 +55,14 @@ const CompanyCard = ({ company }) => {
                         <p>🏢 Established: {company.established}</p>
                         <p className="truncate break-all">
                             🌐 Website:{" "}
-                            <a
+                            <Link
                                 href={company.website}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-600 hover:underline break-all"
                             >
                                 {company.website}
-                            </a>
+                            </Link>
                         </p>
                     </div>
                 </div>

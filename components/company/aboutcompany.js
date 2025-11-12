@@ -35,14 +35,14 @@ export default function AboutCompany({ companyProfile }) {
                         <span className="font-semibold">Established:</span>{" "}
                         {companyProfile.established}
                     </p>
-                    <a
+                    <Link
                         href={companyProfile.website}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-block mt-3 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                         Visit Website
-                    </a>
+                    </Link>
                 </div>
             </div>
         </div>

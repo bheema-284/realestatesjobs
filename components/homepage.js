@@ -171,7 +171,7 @@ export default function HomePage() {
             <h3 className="text-3xl md:text-4xl font-bold text-center mb-12">All Locations</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {locations.map((location, index) => (
-                    <button // Changed <a> to <button> for onClick handler
+                    <button
                         key={index}
                         onClick={() => handleLocationClick(location)}
                         className={`bg-white text-center rounded-lg p-4 shadow-sm transition-transform duration-300 hover:scale-105 bg-gray-100 hover:bg-purple-700 hover:text-white`}
