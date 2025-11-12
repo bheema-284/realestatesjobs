@@ -490,33 +490,6 @@ function CandidateProfilePage({ userData }) {
                                         />
                                     </div>
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Password</label>
-                                        <div className="relative">
-                                            <input
-                                                type={showPassword ? "text" : "password"}
-                                                placeholder="Enter new password"
-                                                className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
-                                                value={tempProfile.password || ""}
-                                                onChange={(e) => handleInputChange('password', e.target.value)}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-                                            >
-                                                {showPassword ? (
-                                                    <EyeSlashIcon className="w-5 h-5" />
-                                                ) : (
-                                                    <EyeIcon className="w-5 h-5" />
-                                                )}
-                                            </button>
-                                        </div>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Leave blank to keep current password
-                                        </p>
-                                    </div>
-
                                     <div className="flex gap-3 mt-2">
                                         <button
                                             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
