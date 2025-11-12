@@ -565,6 +565,7 @@ export default function AboutMe({ profile }) {
     };
 
     // Document Preview Modal Component
+    // Document Preview Modal Component
     const DocumentPreviewModal = ({
         isOpen,
         onClose,
@@ -574,16 +575,25 @@ export default function AboutMe({ profile }) {
         index,
         uploading,
     }) => {
+        // Move useEffect to the top level - before any conditional returns
+        useEffect(() => {
+            if (isOpen) {
+                document.body.style.overflow = "hidden";
+            } else {
+                document.body.style.overflow = "auto";
+            }
+
+            // Cleanup function
+            return () => {
+                document.body.style.overflow = "auto";
+            };
+        }, [isOpen]); // Add isOpen as dependency
+
+        // Now the conditional return can come after all hooks
         if (!isOpen || !file) return null;
 
         const isPDF = file.type === "application/pdf";
         const fileUrl = URL.createObjectURL(file);
-
-        useEffect(() => {
-            if (isOpen) document.body.style.overflow = "hidden";
-            else document.body.style.overflow = "auto";
-            return () => (document.body.style.overflow = "auto");
-        }, [isOpen]);
 
         return (
             <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
