@@ -463,142 +463,147 @@ function JobModal({ isOpen, setIsOpen, initialJobTitle = '', onSave }) {
 
 
 // Main Jobs Component (combining categories and table)
+// Main Jobs Component with API integration
 export default function Jobs() {
-    const [isModalOpen, setIsModalOpen] = useState(false); // Keep for potential future manual modal open
-    const [currentJobCategory, setCurrentJobCategory] = useState(''); // Still used to identify category
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [currentJobCategory, setCurrentJobCategory] = useState('');
     const { rootContext, setRootContext } = useContext(RootContext);
     const [activeTab, setActiveTab] = useState(0);
-    const jobList = rootContext.jobs || []
-    const tabName = jobCategories[activeTab].title
-    const filterJobs = jobList.filter((item) => item.jobTitle === tabName);
     const [editData, setEditData] = useState({});
     const [mode, setMode] = useState("create");
     const [isOpen, setIsOpen] = useState(false);
     const [accordionOpen, setAccordionOpen] = useState(null);
-    const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    const generateDummyJob = (categoryTitle) => {
-        const salaryOptions = {
-            'Real Estate Sales': ['80,000 + Commission', '85,000 + Bonus', '75,000 + Incentives'],
-            'Channel Partners': ['70,000', '75,000', '78,000'],
-            'Tele Caller': ['20', '25', '30'],
-            'HR & Operations': ['60,000', '65,000', '68,000'],
-            'CRM Executive': ['45,000', '48,000', '50,000'],
-            'Web Development': ['85,000', '90,000', '95,000'],
-            'Digital Marketing': ['65,000', '70,000', '75,000'],
-            'Accounts & Auditing': ['50,000', '55,000', '58,000'],
-        };
+    // Get company ID from context (adjust based on your context structure)
+    const companyId = rootContext?.user?.companyId || rootContext?.user?.id;
+    const companyName = rootContext?.user?.companyName || rootContext?.user?.name;
 
-        const employmentTypesList = [
-            ['full-time'],
-            ['part-time'],
-            ['full-time', 'part-time'],
-        ];
+    const tabName = jobCategories[activeTab]?.title || '';
 
-        const workingSchedules = [
-            { dayShift: true, nightShift: false, weekendAvailability: false, custom: '' },
-            { dayShift: false, nightShift: true, weekendAvailability: true, custom: 'Night shift only' },
-            { dayShift: true, nightShift: true, weekendAvailability: true, custom: 'Flexible' },
-            { dayShift: true, nightShift: false, weekendAvailability: true, custom: 'Flexible weekends' },
-        ];
+    // Filter jobs from context or fetch from API
+    const jobList = rootContext.jobs || [];
+    const filterJobs = jobList.filter((item) => item.jobTitle === tabName);
 
-        const salaryTypes = ['custom', 'hourly', 'monthly', 'fixed'];
+    // Fetch company jobs on component mount
+    useEffect(() => {
+        if (companyId) {
+            fetchCompanyJobs();
+        }
+    }, [companyId]);
 
-        const jobDescriptions = {
-            'Real Estate Sales': [
-                'Drive property sales and meet targets.',
-                'Sell properties in a fast-paced real estate market.',
-                'Help clients buy dream homes while achieving sales goals.'
-            ],
-            'Channel Partners': [
-                'Manage and grow channel partnerships.',
-                'Expand the business through new partnerships.',
-                'Develop B2B networks and alliances.'
-            ],
-            'Tele Caller': [
-                'Convert leads to appointments via calls.',
-                'Engage prospects over phone and pitch services.',
-                'Contact and follow up with clients effectively.'
-            ],
-            // Add more as needed...
-        };
+    const fetchCompanyJobs = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await companyJobsService.getCompanyJobs(companyId);
 
-        const baseJob = {
-            id: `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            jobTitle: categoryTitle,
-            jobDescription: getRandomElement(jobDescriptions[categoryTitle] || [
-                `This is an auto-generated description for a ${categoryTitle} role.`,
-                `Join our team as a ${categoryTitle} specialist.`,
-            ]),
-            employmentTypes: getRandomElement(employmentTypesList),
-            workingSchedule: getRandomElement(workingSchedules),
-            salaryType: getRandomElement(salaryTypes),
-            salaryAmount: getRandomElement(salaryOptions[categoryTitle] || ['50,000', '60,000', '70,000']),
-            salaryFrequency: getRandomElement(['Monthly', 'Yearly', 'Weekly']),
-            hiringMultiple: Math.random() < 0.5, // 50% chance
-            location: getRandomElement(['Mumbai', 'Hyderabad', 'Remote', 'Bangalore', 'Pune']),
-            postedOn: new Date().toISOString().split('T')[0], // Today's date
-        };
-
-        return baseJob;
+            if (response.success) {
+                setRootContext((prevContext) => ({
+                    ...prevContext,
+                    jobs: response.jobs || [],
+                }));
+            }
+        } catch (err) {
+            setError(err.message);
+            console.error('Error fetching company jobs:', err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-
     const handleCategoryClick = (categoryTitle) => {
-        const newJob = generateDummyJob(categoryTitle);
-        // setJobList((prevList) => [...prevList, newJob]); // Add the auto-generated job to the list
-        setEditData(newJob);
-        // modal opening here
+        setEditData({
+            jobTitle: categoryTitle,
+            companyId: companyId,
+            companyName: companyName,
+            postedBy: rootContext?.user?.id,
+            postedByRole: rootContext?.user?.role,
+        });
+        setMode("create");
         setIsOpen(true);
     };
 
-    // The handleNewJobPost function is now only relevant if you add a separate button to open the modal manually
-    // For this request, it's not directly used by category clicks.
-    const handleNewJobPost = (newJob) => {
-        // setJobList((prevList) => [...prevList, newJob]);
-        setRootContext((prevContext) => ({
-            ...prevContext,
-            jobs: [...prevContext.jobs, newJob],
-        }));
-        // No modal closing here, as it's assumed to be closed by its own internal state or a separate trigger
+    const handleJobSave = async (jobData) => {
+        try {
+            setLoading(true);
+            let response;
+
+            if (mode === "create") {
+                response = await companyJobsService.createJob(jobData);
+            } else {
+                response = await companyJobsService.updateJob(jobData);
+            }
+
+            if (response.success) {
+                // Refresh the jobs list
+                await fetchCompanyJobs();
+                setIsOpen(false);
+
+                // Show success message (you can add a toast notification here)
+                console.log(`Job ${mode === 'create' ? 'created' : 'updated'} successfully!`);
+            }
+        } catch (err) {
+            setError(err.message);
+            console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} job:`, err);
+        } finally {
+            setLoading(false);
+        }
     };
 
+    const editForm = (index, mode) => {
+        const jobListToEdit = filterJobs[index];
+        setEditData({
+            ...jobListToEdit,
+            companyId: companyId,
+            companyName: companyName,
+            postedBy: rootContext?.user?.id,
+            postedByRole: rootContext?.user?.role,
+        });
+        setMode(mode);
+        setIsOpen(true);
+    };
 
-    // Helper function to format employment types for table display
+    const deleteItem = async (filterIndex) => {
+        const isConfirmed = confirm("Are you sure you want to delete this job?");
+        if (!isConfirmed) return;
+
+        const jobToDelete = filterJobs[filterIndex];
+
+        try {
+            setLoading(true);
+            const response = await companyJobsService.deleteJob(jobToDelete.id, companyId);
+
+            if (response.success) {
+                // Refresh the jobs list
+                await fetchCompanyJobs();
+
+                // Show success message
+                console.log('Job deleted successfully!');
+            }
+        } catch (err) {
+            setError(err.message);
+            console.error('Error deleting job:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Helper functions (keep your existing ones)
     const formatEmploymentTypes = (types) => {
         if (!types || types.length === 0) return 'N/A';
         return types.map(type => type.charAt(0).toUpperCase() + type.slice(1).replace('-', ' ')).join(', ');
     };
 
-    // Helper function to format working schedule for table display
     const formatWorkingSchedule = (schedule) => {
         const parts = [];
-        if (schedule.dayShift) parts.push('Day');
-        if (schedule.nightShift) parts.push('Night');
-        if (schedule.weekendAvailability) parts.push('Weekend');
-        if (schedule.custom) parts.push(schedule.custom);
+        if (schedule?.dayShift) parts.push('Day');
+        if (schedule?.nightShift) parts.push('Night');
+        if (schedule?.weekendAvailability) parts.push('Weekend');
+        if (schedule?.custom) parts.push(schedule.custom);
         return parts.length > 0 ? parts.join(', ') : 'Flexible';
     };
-
-    const editForm = (index, mode) => {
-        const jobListToEdit = filterJobs[index];
-        setEditData(jobListToEdit);
-        setMode(mode)
-        setIsOpen(true)
-    };
-
-    const deleteItem = (filterIndex) => {
-        // Find the job to delete from the filtered list
-        const isConfirmed = confirm("Are you sure you want to delete?");
-        const jobToDelete = filterJobs[filterIndex];
-        if (isConfirmed) {
-            setRootContext((prevContext) => ({
-                ...prevContext,
-                jobs: prevContext.jobs.filter((job) => job !== jobToDelete),
-            }));
-        }
-    };
-
 
     const tabs = jobCategories.map((job, index) => ({
         name: (
@@ -620,6 +625,28 @@ export default function Jobs() {
         <>
             {/* Job Categories Section */}
             <div className="bg-gray-50 min-h-screen flex flex-col font-sans">
+                {/* Loading and Error States */}
+                {loading && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white p-4 rounded-lg">
+                            <p>Loading...</p>
+                        </div>
+                    </div>
+                )}
+
+                {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative m-4">
+                        <strong className="font-bold">Error: </strong>
+                        <span className="block sm:inline">{error}</span>
+                        <button
+                            onClick={() => setError(null)}
+                            className="absolute top-0 right-0 px-4 py-3"
+                        >
+                            ×
+                        </button>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="hidden sm:flex flex-col text-sm w-full z-10 bg-white shadow text-center">
                     <h1 className="text-xl sm:text-2xl md:text-3xl mb-3 sm:mb-5 font-normal text-gray-800 leading-tight">
@@ -629,6 +656,7 @@ export default function Jobs() {
                         <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                     </div>
                 </div>
+
                 {/* Mobile Accordion */}
                 <div className="sm:hidden">
                     {tabs.map((tab, index) => {
@@ -657,6 +685,7 @@ export default function Jobs() {
                                             jobList={filterJobs}
                                             handleCategoryClick={handleCategoryClick}
                                             setIsOpen={setIsOpen}
+                                            loading={loading}
                                         />
                                     </div>
                                 )}
@@ -678,20 +707,25 @@ export default function Jobs() {
                             jobList={filterJobs}
                             handleCategoryClick={handleCategoryClick}
                             setIsOpen={setIsOpen}
+                            loading={loading}
                         />
                     )}
                 </div>
             </div>
 
-            {/* Job Posting Modal (rendered but not opened by category clicks) */}
-            {/* You can add a separate button to open this modal for manual job creation if needed */}
-            <JobModal
-                isOpen={isModalOpen}
-                setIsOpen={setIsModalOpen}
-                initialJobTitle={currentJobCategory}
-                onSave={handleNewJobPost}
-            />
-            {isOpen && <JobPostingModal title={tabName} editData={editData} mode={mode} isOpen={isOpen} setIsOpen={setIsOpen} />}
+            {/* Job Posting Modal */}
+            {isOpen && (
+                <JobPostingModal
+                    title={tabName}
+                    editData={editData}
+                    mode={mode}
+                    isOpen={isOpen}
+                    setIsOpen={setIsOpen}
+                    userProfile={rootContext?.user}
+                    onJobSaved={handleJobSave}
+                    loading={loading}
+                />
+            )}
         </>
     );
 }

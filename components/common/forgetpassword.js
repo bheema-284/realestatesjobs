@@ -20,10 +20,25 @@ export default function ForgetPassword({ setScreen }) {
     const toggleInputType = () => {
         setInputType(inputType === "email" ? "mobile" : "email");
         setInputValue("");
+        setIsUserNotFound(false); // Reset user not found state when switching input type
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!inputValue) {
+            setRootContext(prev => ({
+                ...prev,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    title: "Error",
+                    message: `Please enter your ${inputType === "email" ? "email address" : "mobile number"}.`,
+                },
+            }));
+            return;
+        }
 
         if (newPassword !== confirmPassword) {
             setRootContext(prev => ({
@@ -55,10 +70,22 @@ export default function ForgetPassword({ setScreen }) {
 
         try {
             setLoading(true);
+            setIsUserNotFound(false);
+
+            // Prepare payload with resetPassword flag
             const payload = {
-                [inputType]: inputValue,
-                newPassword,
+                resetPassword: true,
+                newPassword: newPassword
             };
+
+            // Add either email or mobile based on input type
+            if (inputType === "email") {
+                payload.email = inputValue;
+            } else {
+                payload.mobile = inputValue;
+            }
+
+            console.log("Sending reset password request:", payload);
 
             const res = await fetch("/api/users", {
                 method: "PUT",
@@ -67,22 +94,34 @@ export default function ForgetPassword({ setScreen }) {
             });
 
             const data = await res.json();
-            if (res.ok) {
+
+            if (res.ok && data.success) {
                 setRootContext(prev => ({
                     ...prev,
                     toast: {
                         show: true,
                         dismiss: true,
                         type: "success",
-                        title: "Successful",
-                        message: `${data.message || "Password updated successfully!"}`,
+                        title: "Success",
+                        message: "Password reset successfully! You can now login with your new password.",
                     },
                 }));
                 setNewPassword("");
                 setConfirmPassword("");
+                setInputValue("");
                 setScreen("login");
             } else if (res.status === 404) {
                 setIsUserNotFound(true);
+                setRootContext(prev => ({
+                    ...prev,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        title: "User Not Found",
+                        message: `No user found with this ${inputType === "email" ? "email address" : "mobile number"}.`,
+                    },
+                }));
             } else {
                 setRootContext(prev => ({
                     ...prev,
@@ -91,19 +130,20 @@ export default function ForgetPassword({ setScreen }) {
                         dismiss: true,
                         type: "error",
                         title: "Failed",
-                        message: `${data.error || "Something went wrong."}`,
+                        message: data.error || "Something went wrong. Please try again.",
                     },
                 }));
             }
         } catch (err) {
+            console.error("Reset password error:", err);
             setRootContext(prev => ({
                 ...prev,
                 toast: {
                     show: true,
                     dismiss: true,
                     type: "error",
-                    title: "Failed",
-                    message: "Network error, please try again.",
+                    title: "Network Error",
+                    message: "Unable to connect. Please check your internet connection and try again.",
                 },
             }));
         } finally {
@@ -121,6 +161,7 @@ export default function ForgetPassword({ setScreen }) {
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 required
+                minLength={6}
             />
             <button
                 type="button"
@@ -141,67 +182,113 @@ export default function ForgetPassword({ setScreen }) {
         </div>
     );
 
-    return (<div >
-        <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-lg p-6">
-            {/* Close Button (inside white div, top-right corner) */}
-            <button
-                onClick={() => setScreen("login")}
-                className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-purple-500 text-white hover:bg-purple-700"
-            >
-                <XMarkIcon className="w-5 h-5" />
-            </button>
+    return (
+        <div>
+            <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-lg p-6">
+                {/* Close Button (inside white div, top-right corner) */}
+                <button
+                    onClick={() => setScreen("login")}
+                    className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-purple-500 text-white hover:bg-purple-700 transition-colors"
+                >
+                    <XMarkIcon className="w-5 h-5" />
+                </button>
 
-            <p className="mb-6 text-sm text-gray-600">
-                Enter your{" "}
-                {inputType === "email" ? "email" : "mobile number"} and we'll send you a
-                link to reset your password.
-            </p>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Reset Password</h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4 text-left">
-                <input
-                    type={inputType === "email" ? "email" : "tel"}
-                    placeholder={inputType === "email" ? "Email address" : "Mobile number"}
-                    className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    required
-                />
+                <p className="mb-6 text-sm text-gray-600">
+                    Enter your{" "}
+                    <span className="font-semibold">
+                        {inputType === "email" ? "email address" : "mobile number"}
+                    </span>{" "}
+                    and create a new password.
+                </p>
 
-                {renderPasswordInput("newPassword", "New Password", newPassword, setNewPassword, "new")}
-                {renderPasswordInput("confirmPassword", "Confirm Password", confirmPassword, setConfirmPassword, "confirm")}
+                <form onSubmit={handleSubmit} className="space-y-4 text-left">
+                    {/* Email/Mobile Input */}
+                    <div>
+                        <label htmlFor="userInput" className="block text-sm font-medium text-gray-700 mb-1">
+                            {inputType === "email" ? "Email Address" : "Mobile Number"}
+                        </label>
+                        <input
+                            type={inputType === "email" ? "email" : "tel"}
+                            id="userInput"
+                            placeholder={inputType === "email" ? "Enter your email" : "Enter your mobile number"}
+                            className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                            value={inputValue}
+                            onChange={(e) => {
+                                setInputValue(e.target.value);
+                                setIsUserNotFound(false); // Reset error when user starts typing
+                            }}
+                            required
+                        />
+                    </div>
+
+                    {/* New Password */}
+                    <div>
+                        <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                            New Password
+                        </label>
+                        {renderPasswordInput("newPassword", "Enter new password", newPassword, setNewPassword, "new")}
+                        <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters long</p>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div>
+                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                            Confirm Password
+                        </label>
+                        {renderPasswordInput("confirmPassword", "Confirm new password", confirmPassword, setConfirmPassword, "confirm")}
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={loading || !inputValue || !newPassword || !confirmPassword}
+                        className="w-full rounded-lg bg-purple-500 p-3 font-semibold text-white shadow-md transition duration-200 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? (
+                            <span className="flex items-center justify-center">
+                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Resetting Password...
+                            </span>
+                        ) : (
+                            "Reset Password"
+                        )}
+                    </button>
+                </form>
 
                 <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full rounded-lg bg-purple-500 p-3 font-semibold text-white shadow-md transition duration-200 hover:rounded-full hover:bg-purple-700 disabled:opacity-50"
+                    onClick={toggleInputType}
+                    className="mt-4 w-full border border-purple-500 rounded-lg p-3 text-sm font-semibold text-purple-500 transition-colors duration-200 hover:bg-purple-500 hover:text-white"
                 >
-                    {loading ? "Updating..." : "Update Password"}
+                    Use {inputType === "email" ? "mobile number" : "email address"} instead
                 </button>
-            </form>
 
-            <button
-                onClick={toggleInputType}
-                className="mt-4 w-full border border-purple-500 rounded-lg hover:rounded-full p-3 text-sm font-semibold text-purple-500 transition-colors duration-200 hover:bg-purple-500 hover:text-white"
+                <div className="mt-4 text-center">
+                    <button
+                        onClick={() => setScreen("login")}
+                        className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                        ← Back to Login
+                    </button>
+                </div>
+            </div>
+
+            {/* User Not Found Modal */}
+            <Modal
+                isOpen={isUserNotFound}
+                onClose={() => setIsUserNotFound(false)}
+                title="User Not Found"
+                icon={<InformationCircleIcon className="h-10 w-10 text-purple-500" />}
             >
-                Search by{" "}
-                {inputType === "email"
-                    ? "mobile number instead"
-                    : "email address instead"}
-            </button>
+                <p className="text-gray-600">
+                    We couldn't find an account with the {inputType === "email" ? "email address" : "mobile number"} you provided.
+                    Please check the information and try again, or use a different {inputType === "email" ? "email address" : "mobile number"}.
+                </p>
+            </Modal>
         </div>
-
-        {/* User Not Found Modal */}
-        <Modal
-            isOpen={isUserNotFound}
-            onClose={() => setIsUserNotFound(false)}
-            title="User Not Found"
-            icon={<InformationCircleIcon className="h-10 w-10 text-purple-500" />}
-        >
-            <p>
-                The user you are trying to find was not found. Please check the {inputType} and try again.
-            </p>
-        </Modal>
-    </div>
     );
 }
 
@@ -238,7 +325,7 @@ function Modal({ isOpen, onClose, title, icon, children }) {
                             {/* Close button inside modal */}
                             <button
                                 onClick={onClose}
-                                className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-purple-500 text-white hover:bg-purple-700"
+                                className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-purple-500 text-white hover:bg-purple-700 transition-colors"
                             >
                                 <XMarkIcon className="w-5 h-5" />
                             </button>
@@ -257,7 +344,7 @@ function Modal({ isOpen, onClose, title, icon, children }) {
 
                             <button
                                 onClick={onClose}
-                                className="mt-6 w-full rounded-lg bg-purple-500 p-3 font-semibold text-white shadow-md hover:bg-purple-700"
+                                className="mt-6 w-full rounded-lg bg-purple-500 p-3 font-semibold text-white shadow-md hover:bg-purple-700 transition-colors"
                             >
                                 Close
                             </button>

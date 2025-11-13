@@ -29,13 +29,11 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const emailregex = () => /^[\w-.]+@[\w.]+/gm;
-
   const handleChange = (e, field) => {
     const updated = { ...formData };
 
     if (field === "email") {
-      if (updated.email !== "" && emailregex().test(e.target.value)) {
+      if (updated.email !== "") {
         setIsemail({ isErr: true, errVisible: false });
       } else {
         setIsemail({ isErr: false, errVisible: true });
@@ -81,10 +79,6 @@ const SignIn = () => {
         throw new Error('Please fill in all fields');
       }
 
-      if (!emailregex().test(formData.email)) {
-        throw new Error('Please enter a valid email address');
-      }
-
       // Authenticate user via API
       const authResult = await authenticateUser(formData.email, formData.password);
 
@@ -108,15 +102,25 @@ const SignIn = () => {
         remember: formData.remember,
       };
 
-      setRootContext({
-        ...resp,
+      setRootContext(prev => ({
+        ...prev,
+        authenticated: true,
+        user: {
+          name: username,
+          email: formData.email,
+          mobile: userDetail?.mobile || "",
+          role: authResult.user?.role || "applicant",
+          token: authResult.token,
+          id: userDetail?._id || authResult.user?._id || 1,
+        },
         toast: {
           show: true,
+          dismiss: true,
           type: "success",
           title: "Login Successful",
           message: "Welcome back!",
         },
-      });
+      }));
 
       // Store user details
       if (formData.remember) {

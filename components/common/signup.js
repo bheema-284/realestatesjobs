@@ -3,9 +3,8 @@ import React, { useState } from "react";
 import Input from "./input";
 import { useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
-import { users } from "../config/data";
 import Image from "next/image";
-import Link from "next/link";
+import { RadioGroup } from "@headlessui/react";
 
 const RegisterForm = () => {
   const router = useRouter();
@@ -17,7 +16,7 @@ const RegisterForm = () => {
     confirmPassword: ""
   });
 
-  const [isEmail, setIsemail] = useState({
+  const [isEmail, setIsEmail] = useState({
     isErr: false,
     errVisible: false,
   });
@@ -27,22 +26,31 @@ const RegisterForm = () => {
     errVisible: false,
   });
 
-  const emailregex = () => /^[\w-.]+@[\w.]+/gm;
+  const [showPassword, setShowPassword] = useState(false);
+  const [showCPassword, setShowCPassword] = useState(false);
+
+  const emailRegex = () => /^[\w-.]+@[\w.]+/gm;
+
+  const roles = [
+    { value: "applicant", label: "Applicant", description: "Job Seeker" },
+    { value: "company", label: "Company", description: "Real Estate Company" },
+  ];
 
   const handleChange = (e, field) => {
-    const updatedformData = { ...formData };
+    const updatedFormData = { ...formData };
+
     if (field === "email") {
-      if (updatedformData.email !== "" && emailregex().test(e.target.value)) {
-        setIsemail({ isErr: true, errVisible: false });
+      updatedFormData.email = e.target.value;
+      if (updatedFormData.email !== "" && emailRegex().test(e.target.value)) {
+        setIsEmail({ isErr: true, errVisible: false });
       } else {
-        setIsemail({ isErr: false, errVisible: true });
+        setIsEmail({ isErr: false, errVisible: true });
       }
     } else if (field === "password") {
-      updatedformData[field] = e.target.value;
-    } else if (field === "termsAccepted") {
-      updatedformData[field] = e;
+      updatedFormData[field] = e.target.value;
     }
-    setFormData(updatedformData);
+
+    setFormData(updatedFormData);
   };
 
   const handleSubmit = async (e) => {
@@ -63,7 +71,7 @@ const RegisterForm = () => {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
-          role: formData.role || "applicant",  // or recruiter
+          role: formData.role,
           password: formData.password
         }),
       });
@@ -84,9 +92,6 @@ const RegisterForm = () => {
     }
   };
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showCPassword, setShowCPassword] = useState(false);
-
   const Button = ({ title, type, disabled, onClick }) => (
     <button
       type={type}
@@ -101,13 +106,69 @@ const RegisterForm = () => {
     </button>
   );
 
+  // Headless UI Radio Group Component
+  const RoleToggle = () => (
+    <div className="w-full">
+      <RadioGroup value={formData.role} onChange={(role) => setFormData(prev => ({ ...prev, role }))}>
+        <RadioGroup.Label className="block text-sm font-medium text-gray-700 mb-3">
+          Select Your Role *
+        </RadioGroup.Label>
+        <div className="grid grid-cols-2 gap-3">
+          {roles.map((role) => (
+            <RadioGroup.Option
+              key={role.value}
+              value={role.value}
+              className={({ active, checked }) =>
+                `relative flex cursor-pointer rounded-lg border-2 px-3 py-3 focus:outline-none transition-all duration-200 ${checked
+                  ? 'border-purple-500 bg-purple-50 shadow-md'
+                  : 'border-gray-300 bg-white hover:border-purple-300 hover:bg-gray-50'
+                } ${active ? 'ring-2 ring-purple-200 ring-opacity-60' : ''}`
+              }
+            >
+              {({ checked }) => (
+                <div className="flex w-full flex-col items-center justify-center text-center">
+                  <RadioGroup.Label
+                    as="h3"
+                    className={`font-semibold text-sm ${checked ? 'text-purple-700' : 'text-gray-700'
+                      }`}
+                  >
+                    {role.label}
+                  </RadioGroup.Label>
+                  <RadioGroup.Description
+                    as="p"
+                    className={`text-xs mt-1 ${checked ? 'text-purple-600' : 'text-gray-500'
+                      }`}
+                  >
+                    {role.description}
+                  </RadioGroup.Description>
+
+                  {/* Check indicator */}
+                  {checked && (
+                    <div className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-purple-500">
+                      <svg className="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              )}
+            </RadioGroup.Option>
+          ))}
+        </div>
+      </RadioGroup>
+      <p className="text-xs text-gray-500 mt-2 text-center">
+        Selected: <span className="font-semibold capitalize">{formData.role}</span>
+      </p>
+    </div>
+  );
+
   return (
     <section
       className="flex items-center justify-center w-screen h-screen bg-no-repeat"
       style={{
         backgroundImage: "url('/login/bg.jpg')",
         backgroundSize: "100% auto",
-        backgroundPosition: "center 00px", // pushes image 80px down
+        backgroundPosition: "center 00px",
         backgroundRepeat: "no-repeat",
       }}
     >
@@ -142,7 +203,10 @@ const RegisterForm = () => {
             />
           </div>
 
-          <form className="space-y-5 bg-white p-6 rounded-lg">
+          <form className="space-y-5 bg-white p-6 rounded-lg shadow-md">
+            {/* Headless UI Role Toggle */}
+            <RoleToggle />
+
             <Input
               title="Your Name"
               type="text"
@@ -212,6 +276,17 @@ const RegisterForm = () => {
                   <EyeSlashIcon className="w-4 h-4" />
                 )}
               </span>
+            </div>
+
+            {/* Role-based information */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs font-semibold text-blue-800 mb-1">
+                Role Information:
+              </p>
+              <p className="text-xs text-blue-600">
+                {formData.role === 'applicant' && 'Apply for real estate jobs and manage your applications'}
+                {formData.role === 'company' && 'Manage recruiters and company projects'}
+              </p>
             </div>
 
             <div className="flex justify-center pt-2">

@@ -19,7 +19,7 @@ export default function AboutMe({ profile }) {
     // State for Summary section
     const [editingSummary, setEditingSummary] = useState(false);
     const [tempSummary, setTempSummary] = useState('');
-    const [summary, setSummary] = useState(profile.summary || 'Write a brief summary about yourself, your skills, and your professional goals.');
+    const [summary, setSummary] = useState(profile?.summary || 'Write a brief summary about yourself, your skills, and your professional goals.');
     const [previewSummary, setPreviewSummary] = useState(false);
 
     // State for Experience section
@@ -61,7 +61,7 @@ export default function AboutMe({ profile }) {
         email: profile?.email || '',
         mobile: profile?.mobile || '',
         gender: profile?.gender || '',
-        dateOfBirth: profile?.dateOfBirth ? profile.dateOfBirth.split('T')[0] : '',
+        dateOfBirth: profile?.dateOfBirth ? profile?.dateOfBirth.split('T')[0] : '',
         company: profile?.company || '',
         position: profile?.position || ''
     });
@@ -73,7 +73,7 @@ export default function AboutMe({ profile }) {
 
 
     // Use users API instead of employees API
-    const mutated = Mutated(profile._id ? `/api/users?id=${profile._id}` : null);
+    const mutated = Mutated(profile?._id ? `/api/users?id=${profile?._id}` : null);
 
     // Sort experiences by start date (most recent first)
     const sortExperiences = (experiences) => {
@@ -95,10 +95,10 @@ export default function AboutMe({ profile }) {
 
     // Effect to update states when profile prop changes
     useEffect(() => {
-        setSummary(profile.summary || 'Write a brief summary about yourself, your skills, and your professional goals.');
+        setSummary(profile?.summary || 'Write a brief summary about yourself, your skills, and your professional goals.');
 
-        const sortedExperiences = sortExperiences(profile.experience || []);
-        const sortedEducation = sortEducation(profile.education || []);
+        const sortedExperiences = sortExperiences(profile?.experience || []);
+        const sortedEducation = sortEducation(profile?.education || []);
 
         setExperience(sortedExperiences);
         setEducation(sortedEducation);
@@ -108,7 +108,7 @@ export default function AboutMe({ profile }) {
             email: profile?.email || '',
             mobile: profile?.mobile || '',
             gender: profile?.gender || '',
-            dateOfBirth: profile?.dateOfBirth ? profile.dateOfBirth.split('T')[0] : '',
+            dateOfBirth: profile?.dateOfBirth ? profile?.dateOfBirth.split('T')[0] : '',
             company: profile?.company || '',
             position: profile?.position || ''
         });
@@ -126,7 +126,7 @@ export default function AboutMe({ profile }) {
             const formData = new FormData();
 
             // 🆔 Always include user ID
-            formData.append("id", profile._id || 1);
+            formData.append("id", profile?._id || 1);
 
             // 🔹 Append all fields in updateData
             Object.keys(updateData).forEach((key) => {
@@ -854,7 +854,7 @@ export default function AboutMe({ profile }) {
             email: profile?.email || '',
             mobile: profile?.mobile || '',
             gender: profile?.gender || '',
-            dateOfBirth: profile?.dateOfBirth ? profile.dateOfBirth.split('T')[0] : '',
+            dateOfBirth: profile?.dateOfBirth ? profile?.dateOfBirth.split('T')[0] : '',
             company: profile?.company || '',
             position: profile?.position || ''
         });
@@ -895,7 +895,7 @@ export default function AboutMe({ profile }) {
             {/* Summary Section */}
             <section className="bg-white rounded-xl p-2 sm:p-6 shadow-lg border border-gray-200">
                 <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-bold text-gray-800">Summary of {profile.name || 'Your Profile'}</h3>
+                    <h3 className="text-xl font-bold text-gray-800">Summary of {profile?.name || 'Your Profile'}</h3>
                     <div className="flex space-x-3">
                         {editingSummary ? (
                             <>

@@ -1,12 +1,12 @@
 // CompanyList.js
 'use client';
 import { useRouter } from 'next/navigation';
-import React from 'react';
-import { companyData } from '../config/data'
+import React, { useEffect, useState } from 'react';
+// import { companyData } from '../config/data'
 import Link from 'next/link';
+import { useSWRFetch } from '../config/useswrfetch';
 
-// Dummy company data (remains the same)
-const companys = companyData || [];
+
 
 // Card Component (simplified for the chat button, no longer managing `isChatOpen` itself)
 const CompanyCard = ({ company }) => {
@@ -56,7 +56,7 @@ const CompanyCard = ({ company }) => {
                         <p className="truncate break-all">
                             🌐 Website:{" "}
                             <Link
-                                href={company.website}
+                                href={company.website|| "#"}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-600 hover:underline break-all"
@@ -116,13 +116,46 @@ const TitleCard = () => {
 
 // Main List Component
 const CompanyList = () => {
+    const [companyID, setCompanyID] = useState(null);
+    const [isClient, setIsClient] = useState(false);
 
+    useEffect(() => {
+        setIsClient(true);
+        // Get user details from localStorage on client side only
+        const user_details = JSON.parse(localStorage.getItem('user_details') || '{}');
+        setCompanyID(user_details.id || null);
+    }, []);
+
+    // Only fetch data if we have a companyID and we're on the client
+    const { data, error, isLoading } = useSWRFetch(
+        isClient ? `/api/companies` : null
+    );
+
+    // Handle loading state
+    if (!isClient || isLoading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <div className="text-lg">Loading...</div>
+            </div>
+        );
+    }
+
+    // Handle error state
+    if (error) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <div className="text-red-500 text-lg">Error loading company data</div>
+            </div>
+        );
+    }
+
+    const companys = data || [];
     return (
         <div className="w-full px-10 m-auto grid grid-cols-1 gap-20 p-5">
             <TitleCard />
-            {companys.map((company) => (
+            {companys.map((company, index) => (
                 <CompanyCard
-                    key={company.id}
+                    key={index}
                     company={company}
                 />
             ))}

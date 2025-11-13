@@ -1,6 +1,6 @@
 export const runtime = "edge";
-import RegisterForm from "@/components/common/signup";
+import LoginForm from "@/components/common/signup";
 
 export default async function Page() {
-    return <RegisterForm />
+    return <LoginForm />
 }

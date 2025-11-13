@@ -14,6 +14,7 @@ import RootContext from '../config/rootcontext';
 import { Mutated } from '../config/useswrfetch';
 import { useParams } from 'next/navigation';
 import Loading from '../common/loading';
+import CompanyLandingPage from '../company/companyprofile';
 
 const tabs = [
     { name: 'About Me', component: AboutMe },
@@ -37,16 +38,15 @@ function CandidateProfilePage({ userData }) {
     const { id, category } = params;
     const [activeTab, setActiveTab] = useState(0);
     const [profile, setProfile] = useState({
-        name: '', position: '', email: '', image: '', summary: '', experience: [], education: [],
+        name: '', position: '', email: '', mobile: '', website: '', image: '', summary: '', experience: [], education: [],
     });
     const [tempProfile, setTempProfile] = useState({
-        name: '', position: '', email: '', image: '', summary: '', experience: [], education: [],
+        name: '', position: '', email: '', mobile: '', website: '', image: '', summary: '', experience: [], education: [],
     });
     const [editingHeader, setEditingHeader] = useState(false);
     const [accordionOpen, setAccordionOpen] = useState(null);
     const [previewImage, setPreviewImage] = useState('');
     const [serviceCall, setServiceCall] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
 
     // Enhanced Crop states
     const [cropping, setCropping] = useState(false);
@@ -99,7 +99,10 @@ function CandidateProfilePage({ userData }) {
         };
     }, [previewImage, cropImage]);
 
-    const ActiveComponent = tabs[activeTab].component;
+    // Check if user is company or superadmin
+    const isCompany = userData?.role === 'company' || userData?.role === 'superadmin';
+    // For company users, we don't use the tabs, so set ActiveComponent based on role
+    const ActiveComponent = isCompany ? CompanyLandingPage : tabs[activeTab].component;
 
     /** ─── Enhanced Image Upload + Crop ────────────────────── **/
     const handleImageChange = (e) => {
@@ -114,7 +117,7 @@ function CandidateProfilePage({ userData }) {
                     show: true,
                     dismiss: true,
                     type: "warning",
-                    position: "Warning",
+                    title: "Warning",
                     message: "Please select an image smaller than 5MB",
                 },
             }));
@@ -206,7 +209,7 @@ function CandidateProfilePage({ userData }) {
                 }
 
                 const previewUrl = URL.createObjectURL(blob);
-                const file = new File([blob], "profile.jpg", { type: "image/jpeg" });
+                const file = new File([blob], "tempProfile?.jpg", { type: "image/jpeg" });
 
                 setPreviewImage(previewUrl);
                 setTempProfile((prev) => ({ ...prev, imageFile: file, profileImage: previewUrl }));
@@ -220,7 +223,7 @@ function CandidateProfilePage({ userData }) {
                         show: true,
                         dismiss: true,
                         type: "success",
-                        position: "Success",
+                        title: "Success",
                         message: "Image cropped successfully",
                     },
                 }));
@@ -233,7 +236,7 @@ function CandidateProfilePage({ userData }) {
                     show: true,
                     dismiss: true,
                     type: "error",
-                    position: "Failed",
+                    title: "Failed",
                     message: "Failed to crop image. Please try again.",
                 },
             }));
@@ -330,16 +333,17 @@ function CandidateProfilePage({ userData }) {
         try {
             const formData = new FormData();
             formData.append("id", id);
-            formData.append("name", tempProfile.name || "");
-            formData.append("email", tempProfile.email || "");
-            formData.append("position", tempProfile.position || "");
-            formData.append("role", "applicant");
-
-            if (tempProfile.password) formData.append("password", tempProfile.password);
-            if (tempProfile.imageFile) formData.append("image", tempProfile.imageFile);
-            if (tempProfile.summary) formData.append("summary", tempProfile.summary);
-            if (tempProfile.experience) formData.append("experience", JSON.stringify(tempProfile.experience));
-            if (tempProfile.education) formData.append("education", JSON.stringify(tempProfile.education));
+            formData.append("name", tempProfile?.name || "");
+            formData.append("email", tempProfile?.email || "");
+            formData.append("position", tempProfile?.position || "");
+            formData.append("role", userData?.role || "applicant");
+            if (tempProfile?.mobile) formData.append("mobile", tempProfile?.mobile);
+            if (tempProfile?.website) formData.append("website", tempProfile?.website);
+            if (tempProfile?.password) formData.append("password", tempProfile?.password);
+            if (tempProfile?.imageFile) formData.append("image", tempProfile?.imageFile);
+            if (tempProfile?.summary) formData.append("summary", tempProfile?.summary);
+            if (tempProfile?.experience) formData.append("experience", JSON.stringify(tempProfile?.experience));
+            if (tempProfile?.education) formData.append("education", JSON.stringify(tempProfile?.education));
 
             const res = await fetch(`/api/users`, {
                 method: 'PUT',
@@ -361,7 +365,7 @@ function CandidateProfilePage({ userData }) {
                         show: true,
                         dismiss: true,
                         type: "success",
-                        position: "Success",
+                        title: "Success",
                         message: "Profile updated successfully"
                     }
                 }));
@@ -372,7 +376,7 @@ function CandidateProfilePage({ userData }) {
                         show: true,
                         dismiss: true,
                         type: "error",
-                        position: "Failed",
+                        title: "Failed",
                         message: data.error || "Failed to update profile"
                     }
                 }));
@@ -386,7 +390,7 @@ function CandidateProfilePage({ userData }) {
                     show: true,
                     dismiss: true,
                     type: "error",
-                    position: "Failed",
+                    title: "Failed",
                     message: "Something went wrong while updating profile"
                 }
             }));
@@ -397,7 +401,6 @@ function CandidateProfilePage({ userData }) {
         setEditingHeader(false);
         setPreviewImage("");
         setTempProfile(profile);
-        setShowPassword(false);
         setCropping(false);
         setCropImage(null);
         setCompletedCrop(null);
@@ -442,7 +445,7 @@ function CandidateProfilePage({ userData }) {
                             />
                             <div className="relative">
                                 <img
-                                    src={profile.profileImage || "https://placehold.co/80x80/F0F0F0/000000?text=Logo"}
+                                    src={tempProfile?.profileImage || "https://placehold.co/80x80/F0F0F0/000000?text=Logo"}
                                     alt="Profile Avatar"
                                     className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border-4 border-white object-cover shadow-lg"
                                 />
@@ -463,7 +466,7 @@ function CandidateProfilePage({ userData }) {
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
                                         <input
                                             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile.name || ""}
+                                            value={tempProfile?.name || ""}
                                             placeholder="Enter your full name"
                                             onChange={(e) => handleInputChange('name', e.target.value)}
                                         />
@@ -473,7 +476,7 @@ function CandidateProfilePage({ userData }) {
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Professional Title</label>
                                         <input
                                             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile.position || ""}
+                                            value={tempProfile?.position || ""}
                                             placeholder="Enter your professional position"
                                             onChange={(e) => handleInputChange('position', e.target.value)}
                                         />
@@ -484,9 +487,31 @@ function CandidateProfilePage({ userData }) {
                                         <input
                                             type="email"
                                             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile.email || ""}
+                                            value={tempProfile?.email || ""}
                                             placeholder="Enter your email address"
                                             onChange={(e) => handleInputChange('email', e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Mobile Number</label>
+                                        <input
+                                            type="number"
+                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            value={tempProfile?.mobile || ""}
+                                            placeholder="Enter your mobile number"
+                                            onChange={(e) => handleInputChange('mobile', e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Website</label>
+                                        <input
+                                            type="text"
+                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            value={tempProfile?.website || ""}
+                                            placeholder="Enter your website"
+                                            onChange={(e) => handleInputChange('website', e.target.value)}
                                         />
                                     </div>
 
@@ -507,9 +532,9 @@ function CandidateProfilePage({ userData }) {
                                 </div>
                             ) : (
                                 <div>
-                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
-                                    <p className="text-sm sm:text-base text-gray-600">{profile.position}</p>
-                                    <p className="text-xs sm:text-sm text-gray-500">{profile.email}</p>
+                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{tempProfile?.name}</h2>
+                                    <p className="text-sm sm:text-base text-gray-600">{tempProfile?.position}</p>
+                                    <p className="text-xs sm:text-sm text-gray-500">{tempProfile?.email}</p>
                                 </div>
                             )}
                         </div>
@@ -518,8 +543,7 @@ function CandidateProfilePage({ userData }) {
                             <button
                                 onClick={() => {
                                     setEditingHeader(true);
-                                    setTempProfile(profile);
-                                    setShowPassword(false);
+                                    setTempProfile(userData);
                                 }}
                                 className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0"
                             >
@@ -534,7 +558,11 @@ function CandidateProfilePage({ userData }) {
             <div className="bg-white border-b border-gray-200 max-w-5xl mx-auto px-4 py-6 rounded-b-md shadow-sm">
                 {rootContext?.user?.role === "recruiter" ? (
                     <AboutMe profile={profile} setRootContext={setRootContext} mutated={mutated} />
+                ) : isCompany ? (
+                    // Show CompanyLandingPage for company/superadmin users
+                    <CompanyLandingPage profile={profile} setRootContext={setRootContext} mutated={mutated} />
                 ) : (
+                    // Show regular tabs for other users
                     <>
                         {/* Desktop Tabs */}
                         <div className="hidden sm:block">
