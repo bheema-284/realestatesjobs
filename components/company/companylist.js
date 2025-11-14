@@ -13,7 +13,7 @@ const CompanyCard = ({ company }) => {
     const router = useRouter();
 
     const handleViewCompany = () => {
-        router.push(`/companies/${company.id}`);
+        router.push(`/companies/${company._id}`);
     };
 
     return (
@@ -21,7 +21,7 @@ const CompanyCard = ({ company }) => {
             {/* Logo with overlay effect */}
             <div className="absolute w-24 h-24 sm:w-32 sm:h-32 md:w-42 md:h-42 -top-3 -left-3 border border-gray-400 shadow-lg bg-white rounded-xl sm:rounded-2xl shadow-md flex items-center justify-center p-2">
                 <img
-                    src={company.logo}
+                    src={company.profileImage || company.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
                     alt={company.name}
                     className="w-full h-full object-contain"
                 />
@@ -56,7 +56,7 @@ const CompanyCard = ({ company }) => {
                         <p className="truncate break-all">
                             🌐 Website:{" "}
                             <Link
-                                href={company.website|| "#"}
+                                href={company.website || "#"}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-600 hover:underline break-all"

@@ -47,6 +47,7 @@ function CandidateProfilePage({ userData }) {
     const [accordionOpen, setAccordionOpen] = useState(null);
     const [previewImage, setPreviewImage] = useState('');
     const [serviceCall, setServiceCall] = useState(false);
+    const [roleLoading, setRoleLoading] = useState(true); // Add loading state for role
 
     // Enhanced Crop states
     const [cropping, setCropping] = useState(false);
@@ -77,6 +78,7 @@ function CandidateProfilePage({ userData }) {
         if (userData) {
             setProfile(userData);
             setTempProfile(userData);
+            setRoleLoading(false); // Role data loaded
         }
     }, [userData]);
 
@@ -103,6 +105,18 @@ function CandidateProfilePage({ userData }) {
     const isCompany = userData?.role === 'company' || userData?.role === 'superadmin';
     // For company users, we don't use the tabs, so set ActiveComponent based on role
     const ActiveComponent = isCompany ? CompanyLandingPage : tabs[activeTab].component;
+
+    // Show loading while role is being determined
+    if (roleLoading) {
+        return (
+            <div className="bg-white min-h-screen mt-20 flex items-center justify-center">
+                <div className="text-center">
+                    <Loading />
+                    <p className="mt-4 text-gray-600">Loading profile...</p>
+                </div>
+            </div>
+        );
+    }
 
     /** ─── Enhanced Image Upload + Crop ────────────────────── **/
     const handleImageChange = (e) => {

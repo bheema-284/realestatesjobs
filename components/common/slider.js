@@ -1,221 +1,186 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
-import { ObjectId } from "bson"; // remove if not used elsewhere
 
 function Slider({ data, imageSize = "400px", rounded }) {
-    // Basic state
-    const [currentSlide, setCurrentSlide] = useState(1); // slides arr uses clones
+    const [currentSlide, setCurrentSlide] = useState(1);
     const [isTransitioning, setIsTransitioning] = useState(true);
-    const [loadedImages, setLoadedImages] = useState(new Set());
+    const [loadedImages, setLoadedImages] = useState(new Set()); // Track loaded images
 
-    // Drag state
+    // State for swiping logic
     const [isDragging, setIsDragging] = useState(false);
-    const dragStartXRef = useRef(0);
-    const dragDistanceRef = useRef(0);
+    const [dragStartX, setDragStartX] = useState(0);
+    const [dragDistance, setDragDistance] = useState(0);
 
-    // Slide structure (clone last and first)
+    // Clone first and last slides for infinite loop
     const slides = [data[data.length - 1], ...data, data[0]];
+    const slideWidth = 100; // Represents 100% width of the container
+    const swipeThreshold = 50; // Minimum distance (in pixels) to register a swipe
 
-    // Queue & processor refs
-    const targetSlideRef = useRef(1); // desired slide index in `slides`
-    const processingRef = useRef(false); // whether processor loop is running
-    const directionRef = useRef(0); // -1 or +1 direction current step
-    const preloadCache = useRef(new Set());
-    const slideWidth = 100;
-    const swipeThreshold = 50;
-
-    // Configuration - how many images ahead/behind to preload
-    const PRELOAD_AHEAD = 25; // <-- aggressive preloading window
-
-    // Helper to mark loaded images
-    const markLoaded = useCallback((url) => {
-        setLoadedImages(prev => {
-            const s = new Set(prev);
-            s.add(url);
-            return s;
-        });
+    // --- Navigation Functions ---
+    const nextSlide = useCallback(() => {
+        setCurrentSlide((prev) => prev + 1);
+        setIsTransitioning(true);
     }, []);
 
-    // Preload function - preloads a window around a given index
-    const preloadWindow = useCallback((centerIndex) => {
-        for (let offset = -PRELOAD_AHEAD; offset <= PRELOAD_AHEAD; offset++) {
-            const i = (centerIndex + offset + slides.length) % slides.length;
-            const url = slides[i]?.image;
-            if (url && !preloadCache.current.has(url)) {
-                preloadCache.current.add(url);
-                const img = new Image();
-                img.src = url;
-                img.onload = () => markLoaded(url);
-                img.onerror = () => markLoaded(url); // mark attempted
-            }
-        }
-    }, [slides, markLoaded]);
+    const prevSlide = useCallback(() => {
+        setCurrentSlide((prev) => prev - 1);
+        setIsTransitioning(true);
+    }, []);
 
-    // Processor: advance one step toward targetSlideRef until equal
-    const processQueueStep = useCallback(() => {
-        if (processingRef.current) return; // already running
-        processingRef.current = true;
-
-        const step = async () => {
-            try {
-                // continue until currentSlide equals targetSlideRef
-                while (targetSlideRef.current !== currentSlide) {
-                    const desired = targetSlideRef.current;
-                    // compute direction of next small step (-1 or +1)
-                    const diff = desired - currentSlide;
-                    // Normalize diff to shortest path across clones? we step linear through slides array
-                    const stepDir = diff > 0 ? 1 : -1;
-                    directionRef.current = stepDir;
-
-                    // enable transition and step one slide
-                    setIsTransitioning(true);
-                    // update slide using function to capture latest
-                    setCurrentSlide(prev => prev + stepDir);
-
-                    // Wait for the transition to finish. We'll await a Promise that resolves on next animation frame
-                    // and also use onTransitionEnd which will call continue. But since we can't await that easily here,
-                    // we'll poll waiting for `isTransitioning` flip to false when loop reset occurs or wait fixed time.
-                    // We choose to wait for the CSS duration (700ms) plus tiny buffer.
-                    await new Promise(res => setTimeout(res, 720)); // must match CSS duration
-
-                    // Preload window around new currentSlide
-                    preloadWindow(currentSlide + stepDir);
-                }
-            } finally {
-                processingRef.current = false;
-            }
-        };
-
-        step();
-    }, [currentSlide, preloadWindow]);
-
-    // Public navigation — update targetRef then trigger processor
-    const enqueueNext = useCallback(() => {
-        targetSlideRef.current = targetSlideRef.current + 1;
-        // process queue (if not already)
-        requestAnimationFrame(() => processQueueStep());
-    }, [processQueueStep]);
-
-    const enqueuePrev = useCallback(() => {
-        targetSlideRef.current = targetSlideRef.current - 1;
-        requestAnimationFrame(() => processQueueStep());
-    }, [processQueueStep]);
-
-    // Handle transition end for loop reset (no visible jump)
-    const handleTransitionEnd = useCallback(() => {
-        // If we reached cloned first or cloned last, jump to real slide without transition
-        if (currentSlide === slides.length - 1) {
-            // jumped to cloned first -> switch to index 1 (real first)
-            setIsTransitioning(false);
-            setCurrentSlide(1);
-            // ensure targetRef tracks new current (so queue logic continues correctly)
-            targetSlideRef.current = Math.max(1, targetSlideRef.current - (slides.length - 2));
-        } else if (currentSlide === 0) {
-            // jumped to cloned last -> switch to last real index
-            setIsTransitioning(false);
-            setCurrentSlide(slides.length - 2);
-            targetSlideRef.current = Math.min(slides.length - 2, targetSlideRef.current + (slides.length - 2));
-        }
-
-        // always preload around active slide
-        preloadWindow(currentSlide);
-    }, [currentSlide, slides.length, preloadWindow]);
-
-    // Aggressive preloading on mount and slide change
+    // --- Auto-scroll Effect ---
     useEffect(() => {
-        preloadWindow(currentSlide);
-    }, [currentSlide, preloadWindow]);
-
-    // Auto-scroll (respects queue — auto enqueues)
-    useEffect(() => {
+        // Prevent auto-scroll while dragging to avoid conflicts
         if (isDragging) return;
-        const id = setInterval(() => {
-            enqueueNext();
-        }, 4000);
-        return () => clearInterval(id);
-    }, [enqueueNext, isDragging]);
 
-    // --- Image handlers ---
-    const handleImageLoad = (url) => markLoaded(url);
-    const handleImageError = (e, url) => {
-        e.target.src = "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg";
-        markLoaded(url);
-    };
+        const autoScrollInterval = setInterval(nextSlide, 3000);
+        return () => clearInterval(autoScrollInterval);
+    }, [nextSlide, isDragging]);
 
-    // --- Drag / Swipe handlers (cancel queue when user actively drags?) ---
-    const onDragStart = (clientX) => {
-        setIsTransitioning(false);
-        setIsDragging(true);
-        dragStartXRef.current = clientX;
-        dragDistanceRef.current = 0;
-    };
-    const onDragMove = (clientX) => {
-        if (!isDragging) return;
-        dragDistanceRef.current = clientX - dragStartXRef.current;
-        // we aren't updating visual drag state via React state to reduce re-renders; we store in ref and use inline style below
-    };
-    const onDragEnd = () => {
-        if (!isDragging) return;
-        setIsDragging(false);
+    // --- Infinite Loop Logic ---
+    const handleTransitionEnd = () => {
+        // Reset the drag distance and re-enable transitions
+        setDragDistance(0);
         setIsTransitioning(true);
 
-        const d = dragDistanceRef.current;
-        dragDistanceRef.current = 0;
-
-        if (d > swipeThreshold) {
-            // swipe right -> prev
-            enqueuePrev();
-        } else if (d < -swipeThreshold) {
-            enqueueNext();
-        } else {
-            // snap back
-            // no change to queue
+        if (currentSlide === slides.length - 1) {
+            // Reached cloned first slide, jump to real first slide (index 1)
+            setIsTransitioning(false);
+            setCurrentSlide(1);
+        } else if (currentSlide === 0) {
+            // Reached cloned last slide, jump to real last slide (index slides.length - 2)
+            setIsTransitioning(false);
+            setCurrentSlide(slides.length - 2);
         }
     };
 
-    // Derived translate including drag (we read ref for dragDistance)
-    const dragPx = isDragging ? `${dragDistanceRef.current}px` : "0px";
-    const totalTranslateX = `calc(-${currentSlide * slideWidth}% + ${dragPx})`;
+    // --- Image Loading Handlers ---
+    const handleImageLoad = (imageUrl) => {
+        setLoadedImages(prev => new Set(prev).add(imageUrl));
+    };
 
-    // Utility: get actual slide data (adjust clones)
+    const handleImageError = (e, imageUrl) => {
+        console.warn(`Failed to load image: ${imageUrl}`);
+        // Set error image
+        e.target.src = "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg";
+        // Mark as loaded to prevent loading attempts
+        setLoadedImages(prev => new Set(prev).add(imageUrl));
+    };
+
+    // Preload adjacent images for smoother transitions
+    useEffect(() => {
+        const preloadImages = () => {
+            const currentIndex = currentSlide;
+            const prevIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : slides.length - 1;
+            const nextIndex = (currentIndex + 1) % slides.length;
+
+            [currentIndex, prevIndex, nextIndex].forEach(index => {
+                const imageUrl = slides[index]?.image;
+                if (imageUrl && !loadedImages.has(imageUrl)) {
+                    const img = new Image();
+                    img.src = imageUrl;
+                    img.onload = () => handleImageLoad(imageUrl);
+                    img.onerror = () => handleImageLoad(imageUrl); // Still mark as attempted
+                }
+            });
+        };
+
+        preloadImages();
+    }, [currentSlide, slides, loadedImages]);
+
+    // --- SWIPE HANDLERS ---
+    const handleDragStart = (clientX) => {
+        setIsTransitioning(false); // Disable transition for drag
+        setIsDragging(true);
+        setDragStartX(clientX);
+    };
+
+    const handleDragMove = (clientX) => {
+        if (!isDragging) return;
+        const newDragDistance = clientX - dragStartX;
+        setDragDistance(newDragDistance);
+    };
+
+    const handleDragEnd = () => {
+        if (!isDragging) return;
+
+        setIsDragging(false);
+        setIsTransitioning(true); // Re-enable transition for snap-back/slide
+
+        // Determine if a swipe threshold was met
+        if (dragDistance > swipeThreshold) {
+            // Swiped right (to the previous slide)
+            prevSlide();
+        } else if (dragDistance < -swipeThreshold) {
+            // Swiped left (to the next slide)
+            nextSlide();
+        } else {
+            // Not enough drag, snap back to the current slide without changing index.
+            // This is handled automatically because we re-enable the transition.
+            setDragDistance(0);
+        }
+    };
+
+    // MOUSE handlers
+    const onMouseDown = (e) => handleDragStart(e.clientX);
+    const onMouseMove = (e) => handleDragMove(e.clientX);
+    const onMouseUp = handleDragEnd;
+    const onMouseLeave = (e) => isDragging && handleDragEnd(); // Stop dragging if mouse leaves the area
+
+    // TOUCH handlers
+    const onTouchStart = (e) => handleDragStart(e.touches[0].clientX);
+    const onTouchMove = (e) => handleDragMove(e.touches[0].clientX);
+    const onTouchEnd = handleDragEnd;
+
+    // Calculate the total translation including the swipe offset
+    const totalTranslateX = `calc(-${currentSlide * slideWidth}% + ${dragDistance}px)`;
+
+    // Get current slide data (adjusting for cloned slides)
     const getCurrentSlideData = () => {
         let actualIndex = currentSlide - 1;
-        if (currentSlide === 0) actualIndex = data.length - 1;
-        else if (currentSlide === slides.length - 1) actualIndex = 0;
+        if (currentSlide === 0) {
+            actualIndex = data.length - 1; // Last real slide
+        } else if (currentSlide === slides.length - 1) {
+            actualIndex = 0; // First real slide
+        }
         return data[actualIndex];
     };
+
     const currentSlideData = getCurrentSlideData();
 
     return (
         <div
             className={`relative w-full bg-white overflow-hidden ${rounded}`}
-            onMouseUp={onDragEnd}
-            onMouseLeave={() => isDragging && onDragEnd()}
+            // Add global mouse listeners to handle the release outside the container
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseLeave}
         >
             <div className="relative w-full" style={{ height: imageSize }}>
-                {/* Fixed label */}
+                {/* Fixed label (always top-left, doesn't move with images) */}
                 {currentSlideData?.status && (
                     <span className="absolute top-3 left-3 bg-orange-300 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30">
                         {currentSlideData.status}
                     </span>
                 )}
 
-                {/* Loading indicator: show when the current slide image hasn't been loaded yet */}
+                {/* Loading indicator */}
                 {!loadedImages.has(slides[currentSlide]?.image) && slides[currentSlide]?.image && (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
                     </div>
                 )}
 
+                {/* Slides wrapper - Swiping enabled here */}
                 <div
-                    className={`flex ${isTransitioning ? "transition-transform duration-700 ease-in-out" : ""}`}
+                    className={`flex cursor-grab ${isTransitioning ? "transition-transform duration-700 ease-in-out" : ""}`}
                     style={{ transform: `translateX(${totalTranslateX})` }}
                     onTransitionEnd={handleTransitionEnd}
-                    onMouseDown={(e) => onDragStart(e.clientX)}
-                    onMouseMove={(e) => onDragMove(e.clientX)}
-                    onTouchStart={(e) => onDragStart(e.touches[0].clientX)}
-                    onTouchMove={(e) => onDragMove(e.touches[0].clientX)}
-                    onTouchEnd={onDragEnd}
+
+                    // Mouse and Touch Event Handlers
+                    onMouseDown={onMouseDown}
+                    onMouseMove={onMouseMove}
+                    onTouchStart={onTouchStart}
+                    onTouchMove={onTouchMove}
+                    onTouchEnd={onTouchEnd}
                 >
                     {slides.map((item, index) => (
                         <div key={index} className="relative flex-none w-full h-full">
@@ -224,11 +189,11 @@ function Slider({ data, imageSize = "400px", rounded }) {
                                     <img
                                         src={item.image}
                                         alt={`carousel-${index}`}
-                                        className="object-cover w-full h-full select-none"
-                                        draggable="false"
+                                        className="object-cover w-full h-full select-none" // Fixed: object-fit to object-cover
+                                        draggable="false" // Prevents default browser drag behavior on images
                                         onLoad={() => handleImageLoad(item.image)}
                                         onError={(e) => handleImageError(e, item.image)}
-                                        loading="lazy"
+                                        loading="lazy" // Add lazy loading for better performance
                                     />
                                 ) : (
                                     <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -246,13 +211,13 @@ function Slider({ data, imageSize = "400px", rounded }) {
                 </div>
             </div>
 
-            {/* Buttons */}
+            {/* Prev / Next buttons (Z-index updated to be below the status label but above slides) */}
             {data?.length > 1 && (
                 <>
                     <button
                         type="button"
                         className="absolute top-0 left-0 z-20 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none"
-                        onClick={enqueuePrev}
+                        onClick={prevSlide}
                         aria-label="Previous slide"
                     >
                         <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50 transition-colors">
@@ -263,7 +228,7 @@ function Slider({ data, imageSize = "400px", rounded }) {
                     <button
                         type="button"
                         className="absolute top-0 right-0 z-20 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none"
-                        onClick={enqueueNext}
+                        onClick={nextSlide}
                         aria-label="Next slide"
                     >
                         <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50 transition-colors">

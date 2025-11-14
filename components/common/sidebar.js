@@ -15,12 +15,8 @@ import {
 const Sidebar = ({ isMobileOpen, toggleSidebar, userRole, authenticated }) => {
     const pathname = usePathname();
     const router = useRouter();
-
-    console.log("Sidebar Debug - userRole:", userRole, "Authenticated:", authenticated);
-
     // If not authenticated, don't show sidebar
     if (!authenticated) {
-        console.log("Sidebar: Not authenticated - hiding sidebar");
         return null;
     }
 

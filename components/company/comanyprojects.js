@@ -15,6 +15,7 @@ import { useState } from "react";
 import EnquiryForm from "../common/enquirynow";
 
 export default function ProjectsPage({ companyProfile }) {
+
     const router = useRouter();
     const [drawerOpen, setDrawerOpen] = useState({
         open: false,
@@ -32,8 +33,8 @@ export default function ProjectsPage({ companyProfile }) {
     }
 
     const projectDetails = (p) => {
-        const slug = encodeURIComponent(p.title);
-        router.push(`/companies/${companyProfile.id}/${slug}`);
+        const slug = encodeURIComponent(p.id);
+        router.push(`/companies/${companyProfile._id}/${slug}`);
     };
 
     return (
@@ -70,9 +71,9 @@ export default function ProjectsPage({ companyProfile }) {
 
             {/* ✅ Project Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4">
-                {companyProfile.projects.map((p) => (
+                {companyProfile.projects.map((p, index) => (
                     <div
-                        key={p.id}
+                        key={index}
                         className="group relative cursor-pointer bg-white border border-gray-300 overflow-hidden hover:shadow-xl transition flex flex-col"
                     >
                         {/* Image */}

@@ -19,24 +19,24 @@ export default function AboutCompany({ companyProfile }) {
             {/* Company Info */}
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6 bg-white shadow-lg rounded-2xl p-6">
                 <Image
-                    src={companyProfile.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
-                    alt={companyProfile.name}
+                    src={companyProfile?.profileImage || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
+                    alt={companyProfile?.name}
                     width={120}
                     height={120}
                     className="rounded-lg object-contain"
                 />
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800">{companyProfile.name}</h1>
-                    <p className="text-gray-600">{companyProfile.industry}</p>
+                    <h1 className="text-3xl font-bold text-gray-800">{companyProfile?.name}</h1>
+                    <p className="text-gray-600">{companyProfile?.industry}</p>
                     <p className="mt-2 text-gray-700">
-                        <span className="font-semibold">Location:</span> {companyProfile.location}
+                        <span className="font-semibold">Location:</span> {companyProfile?.location}
                     </p>
                     <p className="text-gray-700">
                         <span className="font-semibold">Established:</span>{" "}
-                        {companyProfile.established}
+                        {companyProfile?.established}
                     </p>
                     <Link
-                        href={companyProfile.website}
+                        href={companyProfile?.website|| "#"}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-block mt-3 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

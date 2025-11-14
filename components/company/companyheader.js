@@ -46,7 +46,7 @@ export default function Header({ company }) {
                 {/* Logo wrapper (keeps flex intact) */}
                 <div className="relative h-20 w-auto">
                     <img
-                        src={company.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
+                        src={company.profileImage || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
                         alt="Logo"
                         className={`h-full z-50 shadow-lg rounded-lg transform transition-all duration-500 ${scrolledDown
                             ? "scale-75 translate-y-1"

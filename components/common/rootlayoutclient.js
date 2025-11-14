@@ -1,6 +1,6 @@
 'use client';
 import "../../app/globals.css";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import RootContext from "@/components/config/rootcontext";
 import Loader from "@/components/common/loader";
 import Toast from "@/components/common/toast";
@@ -38,35 +38,10 @@ export default function RootLayoutClient({ children }) {
             title: '',
             message: ''
         },
-        jobs: [
-            // ... your existing jobs data
-            {
-                "id": "job-1753249533581-t8lcig7",
-                "jobTitle": "Real Estate Sales",
-                "jobDescription": "Sell properties in a fast-paced real estate market.",
-                "employmentTypes": ["full-time"],
-                "workingSchedule": {
-                    "dayShift": true,
-                    "nightShift": false,
-                    "weekendAvailability": true,
-                    "custom": "Flexible weekends"
-                },
-                "salaryType": "hourly",
-                "salaryAmount": "80,000 + Commission",
-                "salaryFrequency": "Weekly",
-                "hiringMultiple": true,
-                "location": "Bangalore",
-                "postedOn": "2025-07-23"
-            },
-            // ... rest of your jobs data
-        ],
+        jobs: [],
         notification: false,
-        tasksColumns: [
-            // ... your existing tasksColumns data
-        ],
-        schedule: [
-            // ... your existing schedule data
-        ]
+        tasksColumns: [],
+        schedule: []
     });
 
     useEffect(() => {
@@ -76,7 +51,6 @@ export default function RootLayoutClient({ children }) {
         if (user_details) {
             updatedContext.authenticated = true;
             updatedContext.user = { ...updatedContext.user, ...user_details };
-            console.log("User role from localStorage:", user_details.role); // Debug log
         } else {
             updatedContext.authenticated = false;
         }
@@ -91,9 +65,6 @@ export default function RootLayoutClient({ children }) {
         const role = rootContext?.user?.role;
         const authenticated = rootContext?.authenticated;
 
-        console.log("Current role:", role, "Authenticated:", authenticated, "Path:", pathName); // Debug log
-
-        // Define public routes that don't require authentication
         const publicRoutes = [
             "/",
             "/about",
@@ -224,18 +195,15 @@ export default function RootLayoutClient({ children }) {
     // Check if sidebar should be shown - FIXED VERSION
     const shouldShowSidebar = () => {
         if (!rootContext.authenticated) {
-            console.log("Sidebar: Not authenticated");
             return false;
         }
 
         const role = rootContext?.user?.role;
-        console.log("Sidebar: Current role:", role); // Debug log
 
         // Roles that should see sidebar
         const sidebarRoles = ["recruiter", "company", "superadmin"];
 
         if (!sidebarRoles.includes(role)) {
-            console.log("Sidebar: Role not in sidebar roles");
             return false;
         }
 
@@ -253,22 +221,8 @@ export default function RootLayoutClient({ children }) {
         const shouldShow = !noSidebarRoutes.some(route =>
             pathName === route || pathName.startsWith(route)
         );
-
-        console.log("Sidebar: Should show?", shouldShow, "Path:", pathName);
         return shouldShow;
     };
-
-    // Debug sidebar status
-    useEffect(() => {
-        if (ready) {
-            console.log("Sidebar Status:", {
-                authenticated: rootContext.authenticated,
-                role: rootContext?.user?.role,
-                pathName: pathName,
-                shouldShow: shouldShowSidebar()
-            });
-        }
-    }, [ready, rootContext.authenticated, rootContext?.user?.role, pathName]);
 
     return (
         <html lang="en" className={inter.variable}>

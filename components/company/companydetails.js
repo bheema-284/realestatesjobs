@@ -8,8 +8,8 @@ import AboutCompany from './aboutcompany';
 import ButtonTab from '../common/buttontab';
 import CompanyJobs from './companyjobs';
 import CompanyServices from './companyservices';
-import { companyData } from '../config/data'
 import RootContext from '../config/rootcontext';
+import { useSWRFetch } from '../config/useswrfetch';
 
 const allTabs = [
     { name: 'About', component: AboutCompany },
@@ -19,7 +19,18 @@ const allTabs = [
     { name: 'Investors', component: CompanyInvestors },
 ];
 
-export default function CompanyDetails({ companyId }) {
+export default function CompanyDetails() {
+    const [companyID, setCompanyID] = useState(null);
+    const [isClient, setIsClient] = useState(false);
+    useEffect(() => {
+        setIsClient(true);
+        const user_details = JSON.parse(localStorage.getItem('user_details') || '{}');
+        setCompanyID(user_details.id || null);
+    }, []);
+
+    const { data, error, isLoading } = useSWRFetch(
+        companyID && isClient ? `/api/companies?companyId=${companyID}` : null
+    );
     const [activeTab, setActiveTab] = useState(0);
     const { rootContext } = useContext(RootContext);
 
@@ -53,12 +64,29 @@ export default function CompanyDetails({ companyId }) {
     const [accordionOpen, setAccordionOpen] = useState(null);
 
     useEffect(() => {
-        const data = companyData.find((c) => String(c.id) === String(companyId || 1));
         if (data) {
-            setCompanyProfile(data);
-            setTempCompanyProfile(data);
+            // Handle both single object and array cases
+            if (Array.isArray(data)) {
+                // If data is an array, use the first object
+                if (data.length > 0) {
+                    setCompanyProfile(data[0]);
+                    setTempCompanyProfile(data[0]);
+                } else {
+                    // Handle empty array case
+                    setCompanyProfile({});
+                    setTempCompanyProfile({});
+                }
+            } else {
+                // If data is a single object, use it directly
+                setCompanyProfile(data);
+                setTempCompanyProfile(data);
+            }
+        } else {
+            // Handle no data case
+            setCompanyProfile({});
+            setTempCompanyProfile({});
         }
-    }, [companyId]);
+    }, [data]); // Changed from companyID to data
 
     const ActiveComponent = tabs[activeTab].component;
 
@@ -76,7 +104,7 @@ export default function CompanyDetails({ companyId }) {
                 <div className="p-6 flex flex-col sm:flex-row items-center gap-4 relative z-10">
                     <div className="absolute -top-12 left-6 sm:left-6">
                         <img
-                            src={tempCompanyProfile.logo || "https://placehold.co/48x48/F0F0F0/000000?text=Logo"}
+                            src={tempCompanyProfile.profileImage || tempCompanyProfile.logo || "https://placehold.co/48x48/F0F0F0/000000?text=Logo"}
                             alt="Avatar"
                             className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border-4 border-white object-cover shadow-lg"
                         />
