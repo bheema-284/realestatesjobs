@@ -33,7 +33,6 @@ const ASPECT_RATIOS = [
 ];
 
 function CandidateProfilePage({ userData }) {
-
     const params = useParams();
     const { id, category } = params;
     const [activeTab, setActiveTab] = useState(0);
@@ -414,7 +413,7 @@ function CandidateProfilePage({ userData }) {
     const handleCancelEdit = () => {
         setEditingHeader(false);
         setPreviewImage("");
-        setTempProfile(profile);
+        setTempProfile(userData);
         setCropping(false);
         setCropImage(null);
         setCompletedCrop(null);
@@ -574,7 +573,7 @@ function CandidateProfilePage({ userData }) {
                     <AboutMe profile={profile} setRootContext={setRootContext} mutated={mutated} />
                 ) : isCompany ? (
                     // Show CompanyLandingPage for company/superadmin users
-                    <CompanyLandingPage profile={profile} setRootContext={setRootContext} mutated={mutated} />
+                    <CompanyLandingPage profile={userData} setRootContext={setRootContext} mutated={mutated} />
                 ) : (
                     // Show regular tabs for other users
                     <>

@@ -16,7 +16,13 @@ import {
     MapPinIcon,
     CalendarIcon,
     PlusIcon,
-    TrashIcon
+    TrashIcon,
+    PhotoIcon,
+    VideoCameraIcon,
+    CloudArrowUpIcon,
+    EyeIcon,
+    EyeSlashIcon,
+    BuildingStorefrontIcon
 } from '@heroicons/react/24/solid';
 
 // Memoized Edit Section Components - Defined outside to prevent re-renders
@@ -367,6 +373,442 @@ const EditValuesSection = ({ tempProfile, onArrayFieldChange, onAddArrayField, o
     );
 };
 
+// Separate Media Upload Component
+const MediaUploadComponent = ({ type, onUpload, uploading, uploadType }) => {
+    const handleFileSelect = async (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+
+        for (const file of files) {
+            await onUpload(file, type);
+        }
+        event.target.value = ''; // Reset file input
+    };
+
+    return (
+        <div className="flex gap-2">
+            <label className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer">
+                <CloudArrowUpIcon className="w-4 h-4" />
+                Upload {type === 'image' ? 'Images' : 'Videos'}
+                <input
+                    type="file"
+                    accept={type === 'image' ? 'image/*' : 'video/*'}
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    multiple
+                    disabled={uploading && uploadType === type}
+                />
+            </label>
+            {type === 'video' && (
+                <button
+                    onClick={() => document.getElementById('video-url-input')?.focus()}
+                    className="flex items-center gap-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                >
+                    <PlusIcon className="w-4 h-4" />
+                    Add Video URL
+                </button>
+            )}
+        </div>
+    );
+};
+
+// Separate Gallery Section Component
+const GallerySection = ({ tempProfile, onArrayFieldChange, onRemoveArrayField }) => {
+    const toggleMediaVisibility = (type, index) => {
+        const field = type === 'image' ? 'galleryImages' : 'videos';
+        const currentValue = tempProfile[field][index].isVisible;
+        onArrayFieldChange(field, index, 'isVisible', !currentValue);
+    };
+
+    return (
+        <div className="space-y-8">
+            {/* Images Grid */}
+            <div className="space-y-6">
+                <h4 className="text-lg font-semibold flex items-center gap-2">
+                    <PhotoIcon className="w-5 h-5" />
+                    Gallery Images ({tempProfile.galleryImages?.length || 0})
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {tempProfile.galleryImages?.map((image, index) => (
+                        <div key={image.id || index} className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="relative aspect-video bg-gray-100">
+                                <img
+                                    src={image.url}
+                                    alt={image.caption || `Gallery image ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                />
+                                <div className="absolute top-2 right-2 flex gap-1">
+                                    <button
+                                        onClick={() => toggleMediaVisibility('image', index)}
+                                        className={`p-1 rounded-full ${image.isVisible ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}
+                                    >
+                                        {image.isVisible ? <EyeIcon className="w-3 h-3" /> : <EyeSlashIcon className="w-3 h-3" />}
+                                    </button>
+                                    <button
+                                        onClick={() => onRemoveArrayField('galleryImages', index)}
+                                        className="p-1 bg-red-500 text-white rounded-full"
+                                    >
+                                        <TrashIcon className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="p-3">
+                                <input
+                                    type="text"
+                                    value={image.caption}
+                                    onChange={(e) => onArrayFieldChange('galleryImages', index, 'caption', e.target.value)}
+                                    placeholder="Add caption..."
+                                    className="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {(!tempProfile.galleryImages || tempProfile.galleryImages.length === 0) && (
+                    <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                        <PhotoIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                        <p>No images uploaded yet.</p>
+                        <p className="text-sm">Upload images to showcase your company</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Videos Grid */}
+            <div className="space-y-6">
+                <h4 className="text-lg font-semibold flex items-center gap-2">
+                    <VideoCameraIcon className="w-5 h-5" />
+                    Videos ({tempProfile.videos?.length || 0})
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {tempProfile.videos?.map((video, index) => (
+                        <div key={video.id || index} className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="relative aspect-video bg-gray-100">
+                                {video.thumbnail ? (
+                                    <img
+                                        src={video.thumbnail}
+                                        alt={video.title || `Video ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                                        <VideoCameraIcon className="w-12 h-12 text-gray-400" />
+                                    </div>
+                                )}
+                                <div className="absolute top-2 right-2 flex gap-1">
+                                    <button
+                                        onClick={() => toggleMediaVisibility('video', index)}
+                                        className={`p-1 rounded-full ${video.isVisible ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}
+                                    >
+                                        {video.isVisible ? <EyeIcon className="w-3 h-3" /> : <EyeSlashIcon className="w-3 h-3" />}
+                                    </button>
+                                    <button
+                                        onClick={() => onRemoveArrayField('videos', index)}
+                                        className="p-1 bg-red-500 text-white rounded-full"
+                                    >
+                                        <TrashIcon className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="p-3 space-y-2">
+                                <input
+                                    type="text"
+                                    value={video.title}
+                                    onChange={(e) => onArrayFieldChange('videos', index, 'title', e.target.value)}
+                                    placeholder="Video title..."
+                                    className="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                                <textarea
+                                    value={video.description}
+                                    onChange={(e) => onArrayFieldChange('videos', index, 'description', e.target.value)}
+                                    placeholder="Video description..."
+                                    rows="2"
+                                    className="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                                <input
+                                    type="text"
+                                    value={video.url}
+                                    onChange={(e) => onArrayFieldChange('videos', index, 'url', e.target.value)}
+                                    placeholder="Video URL..."
+                                    className="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {(!tempProfile.videos || tempProfile.videos.length === 0) && (
+                    <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                        <VideoCameraIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                        <p>No videos uploaded yet.</p>
+                        <p className="text-sm">Upload videos to showcase your company</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const EditMediaSection = ({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField, profile }) => {
+    const [uploading, setUploading] = useState(false);
+    const [uploadType, setUploadType] = useState('');
+    const [videoUrl, setVideoUrl] = useState('');
+
+    const handleFileUpload = async (file, type) => {
+        if (!file) return;
+
+        setUploading(true);
+        setUploadType(type);
+
+        try {
+            // Create a temporary URL for immediate preview
+            const temporaryUrl = URL.createObjectURL(file);
+
+            if (type === 'image') {
+                onAddArrayField('galleryImages', {
+                    url: temporaryUrl, // Temporary local URL for preview
+                    caption: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
+                    isVisible: true,
+                    file: file, // Keep file reference for actual upload
+                    isNew: true, // Mark as new file
+                    uploading: false
+                });
+            } else if (type === 'video') {
+                onAddArrayField('videos', {
+                    url: temporaryUrl, // Temporary local URL for preview
+                    title: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
+                    description: '',
+                    thumbnail: '',
+                    isVisible: true,
+                    file: file, // Keep file reference for actual upload
+                    isNew: true, // Mark as new file
+                    uploading: false
+                });
+            }
+
+            // Don't upload immediately - files will be handled in the main save
+            console.log('File added for upload:', file.name, 'Type:', type);
+
+        } catch (error) {
+            console.error('Error handling file:', error);
+        } finally {
+            setUploading(false);
+            setUploadType('');
+        }
+    };
+
+    // Alternative: If you want to use a separate upload endpoint
+    const handleFileUploadWithEndpoint = async (file, type) => {
+        if (!file) return;
+
+        setUploading(true);
+        setUploadType(type);
+
+        try {
+            // Create a separate FormData for file upload only
+            const uploadFormData = new FormData();
+            uploadFormData.append('file', file);
+            uploadFormData.append('type', type);
+
+            // Add user ID if available
+            if (tempProfile?._id) {
+                uploadFormData.append('userId', tempProfile._id);
+            }
+
+            // Use a dedicated upload endpoint - you'll need to create this
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: uploadFormData,
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Upload successful:', data);
+
+                if (type === 'image') {
+                    onAddArrayField('galleryImages', {
+                        url: data.url || data.secure_url, // Permanent URL from server
+                        caption: file.name.replace(/\.[^/.]+$/, ""),
+                        isVisible: true,
+                        publicId: data.public_id, // If using Cloudinary
+                        isExternal: false
+                    });
+                } else if (type === 'video') {
+                    onAddArrayField('videos', {
+                        url: data.url || data.secure_url, // Permanent URL from server
+                        title: file.name.replace(/\.[^/.]+$/, ""),
+                        description: '',
+                        thumbnail: data.thumbnail_url || data.url.replace(/\.(mp4|mov|avi)$/, '.jpg'),
+                        isVisible: true,
+                        publicId: data.public_id, // If using Cloudinary
+                        isExternal: false
+                    });
+                }
+            } else {
+                const errorData = await response.json();
+                console.error('Upload failed:', errorData);
+
+                // Fallback: add with temporary URL and mark for later upload
+                const temporaryUrl = URL.createObjectURL(file);
+                if (type === 'image') {
+                    onAddArrayField('galleryImages', {
+                        url: temporaryUrl,
+                        caption: file.name.replace(/\.[^/.]+$/, ""),
+                        isVisible: true,
+                        file: file, // Keep file for main save
+                        isNew: true,
+                        uploadFailed: true
+                    });
+                } else if (type === 'video') {
+                    onAddArrayField('videos', {
+                        url: temporaryUrl,
+                        title: file.name.replace(/\.[^/.]+$/, ""),
+                        description: '',
+                        thumbnail: '',
+                        isVisible: true,
+                        file: file, // Keep file for main save
+                        isNew: true,
+                        uploadFailed: true
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            // Fallback: add with temporary URL
+            const temporaryUrl = URL.createObjectURL(file);
+            if (type === 'image') {
+                onAddArrayField('galleryImages', {
+                    url: temporaryUrl,
+                    caption: file.name.replace(/\.[^/.]+$/, ""),
+                    isVisible: true,
+                    file: file,
+                    isNew: true,
+                    uploadFailed: true
+                });
+            } else if (type === 'video') {
+                onAddArrayField('videos', {
+                    url: temporaryUrl,
+                    title: file.name.replace(/\.[^/.]+$/, ""),
+                    description: '',
+                    thumbnail: '',
+                    isVisible: true,
+                    file: file,
+                    isNew: true,
+                    uploadFailed: true
+                });
+            }
+        } finally {
+            setUploading(false);
+            setUploadType('');
+        }
+    };
+
+    const handleVideoUrlAdd = () => {
+        if (videoUrl.trim()) {
+            onAddArrayField('videos', {
+                url: videoUrl.trim(),
+                title: 'External Video',
+                description: '',
+                thumbnail: '',
+                isVisible: true,
+                isExternal: true
+            });
+            setVideoUrl('');
+        }
+    };
+
+    return (
+        <div className="space-y-8">
+            {/* Upload Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                    <h4 className="text-lg font-semibold">Upload Media</h4>
+
+                    {/* Image Upload */}
+                    <div className="space-y-2">
+                        <MediaUploadComponent
+                            type="image"
+                            onUpload={handleFileUpload} // Use the simple version without immediate upload
+                            uploading={uploading}
+                            uploadType={uploadType}
+                        />
+                        <p className="text-sm text-gray-500">
+                            Supported formats: JPG, PNG, WebP. Max size: 10MB
+                        </p>
+                    </div>
+
+                    {/* Video Upload & URL */}
+                    <div className="space-y-2">
+                        <MediaUploadComponent
+                            type="video"
+                            onUpload={handleFileUpload} // Use the simple version without immediate upload
+                            uploading={uploading}
+                            uploadType={uploadType}
+                        />
+
+                        <div className="flex gap-2">
+                            <input
+                                id="video-url-input"
+                                type="text"
+                                value={videoUrl}
+                                onChange={(e) => setVideoUrl(e.target.value)}
+                                placeholder="Paste video URL (YouTube, Vimeo, etc.)"
+                                className="flex-1 p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                onKeyPress={(e) => e.key === 'Enter' && handleVideoUrlAdd()}
+                            />
+                            <button
+                                onClick={handleVideoUrlAdd}
+                                className="px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                            >
+                                Add
+                            </button>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                            Upload videos or add URLs from YouTube, Vimeo, etc.
+                        </p>
+                    </div>
+
+                    {uploading && (
+                        <div className="flex items-center gap-2 text-blue-600">
+                            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                            Uploading {uploadType}...
+                        </div>
+                    )}
+
+                    {/* Info message */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm text-blue-800">
+                            <strong>Note:</strong> Files will be uploaded when you click "Save Changes".
+                            The preview shows temporary URLs until saved.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="bg-blue-50 rounded-lg p-4">
+                    <h5 className="font-semibold text-blue-900 mb-2">Media Tips</h5>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• Use high-quality images (1200x800px recommended)</li>
+                        <li>• Add descriptive captions to images</li>
+                        <li>• Keep videos under 5 minutes for best performance</li>
+                        <li>• Use eye-catching thumbnails for videos</li>
+                        <li>• Toggle visibility to control what visitors see</li>
+                        <li>• Remember to click "Save Changes" to preserve media</li>
+                    </ul>
+                </div>
+            </div>
+
+            {/* Gallery Display */}
+            <GallerySection
+                tempProfile={tempProfile}
+                onArrayFieldChange={onArrayFieldChange}
+                onRemoveArrayField={onRemoveArrayField}
+            />
+        </div>
+    );
+};
+
 const EditVisionSection = ({ tempProfile, onInputChange, onSave, onCancel, isSaving }) => (
     <EditSection
         section="vision"
@@ -421,7 +863,7 @@ const EditMissionSection = ({ tempProfile, onInputChange, onSave, onCancel, isSa
 
 const EditSection = ({ section, title, children, onSave, onCancel, isSaving }) => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
                 <div className="flex justify-between items-center">
                     <h3 className="text-2xl font-bold text-gray-900">Edit {title}</h3>
@@ -563,6 +1005,11 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
                     { label: 'Cities Presence', value: '5+' }
                 ],
 
+                // Media
+                galleryImages: profile.galleryImages || [],
+                videos: profile.videos || [],
+                projects: profile.projects || [],
+
                 // Social Media
                 socialMedia: profile.socialMedia || {
                     linkedin: '',
@@ -614,7 +1061,7 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
                 };
             }
 
-            // For object arrays (leadership, achievements, certifications, whyChooseUs)
+            // For object arrays (leadership, achievements, certifications, whyChooseUs, galleryImages, videos)
             return {
                 ...prev,
                 [field]: [...prev[field], { ...defaultValue, id: Date.now() + Math.random() }]
@@ -640,7 +1087,7 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             // Define which fields should be treated as simple arrays (comma-separated)
             const simpleArrays = ['values', 'services'];
             // Define which fields should be treated as object arrays (JSON)
-            const objectArrays = ['leadership', 'achievements', 'certifications', 'whyChooseUs', 'statistics'];
+            const objectArrays = ['leadership', 'achievements', 'certifications', 'whyChooseUs', 'statistics', 'galleryImages', 'videos', 'projects'];
             // Define which fields should be treated as objects (JSON)
             const objectFields = ['socialMedia'];
 
@@ -678,6 +1125,23 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
                     formData.append(key, value.toString());
                 }
             });
+
+            // Handle file uploads for media
+            if (tempProfile.galleryImages) {
+                tempProfile.galleryImages.forEach((image, index) => {
+                    if (image.file) {
+                        formData.append(`galleryImageFiles`, image.file);
+                    }
+                });
+            }
+
+            if (tempProfile.videos) {
+                tempProfile.videos.forEach((video, index) => {
+                    if (video.file) {
+                        formData.append(`videoFiles`, video.file);
+                    }
+                });
+            }
 
             console.log('Sending form data:', Object.fromEntries(formData.entries()));
 
@@ -764,6 +1228,9 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
                     ? profile.services.map(item => typeof item === 'string' ? item : item.title || item.name || '')
                     : [],
                 statistics: profile.statistics || [],
+                galleryImages: profile.galleryImages || [],
+                projects: profile.projects || [],
+                videos: profile.videos || [],
                 socialMedia: profile.socialMedia || {}
             });
         }
@@ -773,6 +1240,586 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
         setEditing(true);
         setActiveEditSection(section);
     }, []);
+
+
+    const EditProjectsSection = ({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField }) => {
+        const [uploading, setUploading] = useState(false);
+        const [uploadType, setUploadType] = useState('');
+        const [uploadErrors, setUploadErrors] = useState({});
+
+        const handleProjectImageUpload = async (projectIndex, file) => {
+            if (!file) return;
+
+            setUploading(true);
+            setUploadType('project-image');
+
+            try {
+                // Create a temporary URL for immediate preview
+                const temporaryUrl = URL.createObjectURL(file);
+
+                // Get current project images
+                const currentProject = tempProfile.projects[projectIndex];
+                const currentImages = currentProject.images || [];
+
+                // Add temporary image for preview
+                const updatedImages = [
+                    ...currentImages,
+                    {
+                        url: temporaryUrl, // Temporary local URL for preview
+                        caption: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
+                        file: file, // Keep file reference for actual upload
+                        isNew: true, // Mark as new file
+                        uploading: false,
+                        tempId: `temp-${Date.now()}-${Math.random().toString(36).substring(7)}`
+                    }
+                ];
+
+                onArrayFieldChange('projects', projectIndex, 'images', updatedImages);
+
+                console.log('Project image added for upload:', file.name, 'Project:', projectIndex);
+
+            } catch (error) {
+                console.error('Error handling project image:', error);
+                setUploadErrors(prev => ({
+                    ...prev,
+                    [projectIndex]: 'Failed to process image. Please try again.'
+                }));
+            } finally {
+                setUploading(false);
+                setUploadType('');
+            }
+        };
+
+        const removeProjectImage = (projectIndex, imageIndex) => {
+            const currentProject = tempProfile.projects[projectIndex];
+            const imageToRemove = currentProject.images[imageIndex];
+
+            // Clean up blob URL if it's a temporary image
+            if (imageToRemove.url.startsWith('blob:')) {
+                URL.revokeObjectURL(imageToRemove.url);
+            }
+
+            // Remove from local state
+            const updatedImages = currentProject.images.filter((_, i) => i !== imageIndex);
+            onArrayFieldChange('projects', projectIndex, 'images', updatedImages);
+        };
+
+        const validateProject = (project) => {
+            const errors = [];
+
+            if (!project.title?.trim()) {
+                errors.push('Project title is required');
+            }
+
+            if (!project.description?.trim()) {
+                errors.push('Project description is required');
+            }
+
+            if (project.images?.some(img => img.isUploading)) {
+                errors.push('Some images are still uploading');
+            }
+
+            return errors;
+        };
+
+        return (
+            <div className="space-y-8">
+                {/* Upload Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <h4 className="text-lg font-semibold">Manage Projects</h4>
+
+                        {/* Add Project Button */}
+                        <div className="space-y-2">
+                            <button
+                                onClick={() => onAddArrayField('projects', {
+                                    title: '',
+                                    description: '',
+                                    location: '',
+                                    status: 'ongoing',
+                                    startDate: '',
+                                    completionDate: '',
+                                    budget: '',
+                                    client: '',
+                                    images: []
+                                })}
+                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                            >
+                                + Add New Project
+                            </button>
+                            <p className="text-sm text-gray-500">
+                                Showcase your company's work with detailed project information
+                            </p>
+                        </div>
+
+                        {/* Upload Status */}
+                        {uploading && (
+                            <div className="flex items-center gap-2 text-blue-600">
+                                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                                Processing {uploadType}...
+                            </div>
+                        )}
+
+                        {/* Info message */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p className="text-sm text-blue-800">
+                                <strong>Note:</strong> Project images will be uploaded when you click "Save Changes".
+                                The preview shows temporary URLs until saved.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="bg-blue-50 rounded-lg p-4">
+                        <h5 className="font-semibold text-blue-900 mb-2">Project Tips</h5>
+                        <ul className="text-sm text-blue-700 space-y-1">
+                            <li>• Use descriptive titles and detailed descriptions</li>
+                            <li>• Include high-quality project images (1200x800px recommended)</li>
+                            <li>• Add location, client, and budget information</li>
+                            <li>• Set appropriate project status (Planning, Ongoing, Completed)</li>
+                            <li>• Include start and completion dates when available</li>
+                            <li>• Remember to click "Save Changes" to preserve all project data</li>
+                        </ul>
+                    </div>
+                </div>
+
+                {/* Projects List */}
+                <div className="space-y-6">
+                    {tempProfile.projects?.map((project, projectIndex) => {
+                        const projectErrors = validateProject(project);
+
+                        return (
+                            <div key={project.id || projectIndex} className="border border-gray-200 rounded-lg p-6 space-y-6 bg-white">
+                                {/* Project Header */}
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <h5 className="font-medium text-lg">Project {projectIndex + 1}</h5>
+                                        {projectErrors.length > 0 && (
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <ExclamationCircleIcon className="w-4 h-4 text-red-500" />
+                                                <span className="text-sm text-red-600">
+                                                    {projectErrors[0]}
+                                                    {projectErrors.length > 1 && ` +${projectErrors.length - 1} more`}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => onRemoveArrayField('projects', projectIndex)}
+                                        className="text-red-500 hover:text-red-700 p-1"
+                                    >
+                                        <TrashIcon className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                {/* Project Form Fields */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Project Title *</label>
+                                        <input
+                                            type="text"
+                                            value={project.title || ''}
+                                            onChange={(e) => onArrayFieldChange('projects', projectIndex, 'title', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Enter project title"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                                        <input
+                                            type="text"
+                                            value={project.location || ''}
+                                            onChange={(e) => onArrayFieldChange('projects', projectIndex, 'location', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Project location"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                        <select
+                                            value={project.status || 'ongoing'}
+                                            onChange={(e) => onArrayFieldChange('projects', projectIndex, 'status', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
+                                            <option value="planning">Planning</option>
+                                            <option value="ongoing">Ongoing</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="on-hold">On Hold</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+                                        <input
+                                            type="text"
+                                            value={project.client || ''}
+                                            onChange={(e) => onArrayFieldChange('projects', projectIndex, 'client', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Client name"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                        <input
+                                            type="date"
+                                            value={project.startDate || ''}
+                                            onChange={(e) => onArrayFieldChange('projects', projectIndex, 'startDate', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Completion Date</label>
+                                        <input
+                                            type="date"
+                                            value={project.completionDate || ''}
+                                            onChange={(e) => onArrayFieldChange('projects', projectIndex, 'completionDate', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
+                                        <input
+                                            type="text"
+                                            value={project.budget || ''}
+                                            onChange={(e) => onArrayFieldChange('projects', projectIndex, 'budget', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Project budget"
+                                        />
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Project Description *</label>
+                                        <textarea
+                                            value={project.description || ''}
+                                            onChange={(e) => onArrayFieldChange('projects', projectIndex, 'description', e.target.value)}
+                                            rows="4"
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Describe the project details, features, and achievements..."
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Project Images Section */}
+                                <div className="border-t pt-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div>
+                                            <h6 className="font-semibold text-gray-900">Project Images</h6>
+                                            <p className="text-sm text-gray-600">
+                                                Add images to showcase this project
+                                            </p>
+                                        </div>
+                                        <label className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer">
+                                            <CloudArrowUpIcon className="w-4 h-4" />
+                                            Add Images
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    const files = Array.from(e.target.files);
+                                                    files.forEach(file => handleProjectImageUpload(projectIndex, file));
+                                                    e.target.value = '';
+                                                }}
+                                                className="hidden"
+                                                multiple
+                                            />
+                                        </label>
+                                    </div>
+
+                                    {/* Project-specific Errors */}
+                                    {uploadErrors[projectIndex] && (
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                                            <p className="text-sm text-red-800">{uploadErrors[projectIndex]}</p>
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {project.images?.map((image, imageIndex) => (
+                                            <div key={image.tempId || image.publicId || imageIndex} className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                                                <div className="relative aspect-video bg-gray-100">
+                                                    <img
+                                                        src={image.url}
+                                                        alt={image.caption || `Project image ${imageIndex + 1}`}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    <button
+                                                        onClick={() => removeProjectImage(projectIndex, imageIndex)}
+                                                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                                    >
+                                                        <TrashIcon className="w-3 h-3" />
+                                                    </button>
+                                                    {image.isNew && (
+                                                        <span className="absolute top-2 left-2 px-2 py-1 bg-green-500 text-white text-xs rounded">
+                                                            New
+                                                        </span>
+                                                    )}
+                                                    {image.url.startsWith('blob:') && (
+                                                        <span className="absolute top-2 left-2 px-2 py-1 bg-yellow-500 text-white text-xs rounded">
+                                                            Ready to Upload
+                                                        </span>
+                                                    )}
+                                                    {image.uploadFailed && (
+                                                        <span className="absolute top-2 left-2 px-2 py-1 bg-red-500 text-white text-xs rounded">
+                                                            Upload Failed
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="p-3">
+                                                    <input
+                                                        type="text"
+                                                        value={image.caption || ''}
+                                                        onChange={(e) => {
+                                                            const updatedImages = [...project.images];
+                                                            updatedImages[imageIndex] = { ...image, caption: e.target.value };
+                                                            onArrayFieldChange('projects', projectIndex, 'images', updatedImages);
+                                                        }}
+                                                        placeholder="Image caption..."
+                                                        className="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    />
+                                                    <p className="text-xs text-gray-500 mt-1 truncate">
+                                                        {image.url.startsWith('blob:')
+                                                            ? 'Will upload on save'
+                                                            : image.publicId
+                                                                ? 'Uploaded to Cloudinary'
+                                                                : 'Ready to save'
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {(!project.images || project.images.length === 0) && (
+                                        <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                                            <PhotoIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                                            <p>No project images yet.</p>
+                                            <p className="text-sm">Add images to showcase this project</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {(!tempProfile.projects || tempProfile.projects.length === 0) && (
+                        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                            <BuildingStorefrontIcon className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                            <h4 className="text-xl font-semibold text-gray-600 mb-2">No Projects Added</h4>
+                            <p className="text-gray-500 mb-4">Showcase your company's work by adding projects</p>
+                            <button
+                                onClick={() => onAddArrayField('projects', {
+                                    title: '',
+                                    description: '',
+                                    location: '',
+                                    status: 'ongoing',
+                                    startDate: '',
+                                    completionDate: '',
+                                    budget: '',
+                                    client: '',
+                                    images: []
+                                })}
+                                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                Add Your First Project
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+    // Icons (keep the same as before)
+    const CloudArrowUpIcon = ({ className }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+    );
+
+    const ExclamationTriangleIcon = ({ className }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+    );
+
+    const ExclamationCircleIcon = ({ className }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    );
+
+    const PlusIcon = ({ className }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+    );
+
+    const TrashIcon = ({ className }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+    );
+
+    const PhotoIcon = ({ className }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+    );
+
+    const BuildingStorefrontIcon = ({ className }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+    );
+
+    // Add this Projects Display Component for the main view
+    const ProjectsSection = ({ tempProfile }) => {
+        const [visibleProjects, setVisibleProjects] = useState(6);
+
+        const loadMore = () => {
+            setVisibleProjects(prev => prev + 6);
+        };
+
+        const getStatusColor = (status) => {
+            switch (status) {
+                case 'completed': return 'bg-green-100 text-green-800';
+                case 'ongoing': return 'bg-blue-100 text-blue-800';
+                case 'planning': return 'bg-yellow-100 text-yellow-800';
+                case 'on-hold': return 'bg-red-100 text-red-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        };
+
+        const getStatusText = (status) => {
+            switch (status) {
+                case 'completed': return 'Completed';
+                case 'ongoing': return 'Ongoing';
+                case 'planning': return 'Planning';
+                case 'on-hold': return 'On Hold';
+                default: return status;
+            }
+        };
+
+        const displayedProjects = tempProfile.projects?.slice(0, visibleProjects) || [];
+        console.log("tempProfile.projects", tempProfile)
+        return (
+            <section className="mb-16">
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-4xl font-bold text-gray-900">Our Projects</h2>
+                    <button
+                        onClick={() => startEditingSection('projects')}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <PencilIcon className="w-4 h-4" />
+                        Manage Projects
+                    </button>
+                </div>
+
+                {displayedProjects.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {displayedProjects.map((project, index) => (
+                                <div key={project.id || index} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
+                                    {/* Project Image */}
+                                    <div className="relative h-48 bg-gray-200">
+                                        {project.images && project.images.length > 0 ? (
+                                            <img
+                                                src={project.images[0].url}
+                                                alt={project.title}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                                <BuildingStorefrontIcon className="w-12 h-12 text-gray-400" />
+                                            </div>
+                                        )}
+                                        <div className="absolute top-3 right-3">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                                                {getStatusText(project.status)}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Project Details */}
+                                    <div className="p-6">
+                                        <h3 className="text-xl font-bold text-gray-900 mb-2">{project.title}</h3>
+
+                                        {project.location && (
+                                            <div className="flex items-center gap-2 text-gray-600 mb-2">
+                                                <MapPinIcon className="w-4 h-4" />
+                                                <span className="text-sm">{project.location}</span>
+                                            </div>
+                                        )}
+
+                                        {project.client && (
+                                            <div className="flex items-center gap-2 text-gray-600 mb-3">
+                                                <UserGroupIcon className="w-4 h-4" />
+                                                <span className="text-sm">Client: {project.client}</span>
+                                            </div>
+                                        )}
+
+                                        <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                                            {project.description || 'No description provided.'}
+                                        </p>
+
+                                        <div className="flex justify-between items-center text-sm text-gray-500">
+                                            {project.startDate && (
+                                                <span>Start: {new Date(project.startDate).toLocaleDateString()}</span>
+                                            )}
+                                            {project.completionDate && (
+                                                <span>Complete: {new Date(project.completionDate).toLocaleDateString()}</span>
+                                            )}
+                                        </div>
+
+                                        {project.budget && (
+                                            <div className="mt-3 pt-3 border-t border-gray-200">
+                                                <span className="text-sm font-semibold text-blue-600">Budget: {project.budget}</span>
+                                            </div>
+                                        )}
+
+                                        {project.images && project.images.length > 1 && (
+                                            <div className="mt-3 flex items-center gap-1 text-sm text-gray-500">
+                                                <PhotoIcon className="w-4 h-4" />
+                                                <span>{project.images.length} images</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {tempProfile.projects.length > visibleProjects && (
+                            <div className="text-center mt-8">
+                                <button
+                                    onClick={loadMore}
+                                    className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                >
+                                    Load More Projects ({tempProfile.projects.length - visibleProjects} remaining)
+                                </button>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="text-center py-16 bg-gray-50 rounded-2xl">
+                        <BuildingStorefrontIcon className="w-20 h-20 mx-auto mb-6 text-gray-400" />
+                        <h3 className="text-2xl font-semibold text-gray-600 mb-4">No Projects Yet</h3>
+                        <p className="text-gray-500 max-w-md mx-auto mb-6">
+                            Showcase your company's work by adding projects. Display your achievements, ongoing work, and completed projects to build trust with potential clients.
+                        </p>
+                        <button
+                            onClick={() => startEditingSection('projects')}
+                            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                        >
+                            Add Your First Project
+                        </button>
+                    </div>
+                )}
+            </section>
+        );
+    };
 
     // View Mode - Comprehensive Mini Landing Page
     return (
@@ -867,7 +1914,107 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
                 </div>
             </section>
 
-            {/* Our Vision Section - Completely Separate */}
+            {/* Projects Section */}
+            <ProjectsSection tempProfile={tempProfile} />
+
+            {/* Gallery Section */}
+            <section className="mb-16">
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-4xl font-bold text-gray-900">Gallery</h2>
+                    <button
+                        onClick={() => startEditingSection('media')}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <PhotoIcon className="w-4 h-4" />
+                        Manage Media
+                    </button>
+                </div>
+
+                {/* Images Grid */}
+                <div className="mb-12">
+                    <h3 className="text-2xl font-semibold text-gray-900 mb-6 flex items-center gap-3">
+                        <PhotoIcon className="w-6 h-6 text-blue-600" />
+                        Photo Gallery
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {tempProfile.galleryImages?.filter(img => img.isVisible !== false).map((image, index) => (
+                            <div key={image.id || index} className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300">
+                                <img
+                                    src={image.url}
+                                    alt={image.caption || `Gallery image ${index + 1}`}
+                                    className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-black/30 bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-end">
+                                    {image.caption && (
+                                        <div className="p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                                            <p className="font-semibold">{image.caption}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    {(!tempProfile.galleryImages || tempProfile.galleryImages.filter(img => img.isVisible !== false).length === 0) && (
+                        <div className="text-center py-12 bg-gray-50 rounded-2xl">
+                            <PhotoIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                            <h4 className="text-xl font-semibold text-gray-600 mb-2">No Images Yet</h4>
+                            <p className="text-gray-500">Upload images to showcase your company's work and achievements</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Videos Grid */}
+                <div>
+                    <h3 className="text-2xl font-semibold text-gray-900 mb-6 flex items-center gap-3">
+                        <VideoCameraIcon className="w-6 h-6 text-purple-600" />
+                        Video Gallery
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {tempProfile.videos?.filter(video => video.isVisible !== false).map((video, index) => (
+                            <div key={video.id || index} className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300">
+                                <div className="relative aspect-video bg-gray-900">
+                                    {video.thumbnail ? (
+                                        <img
+                                            src={video.thumbnail}
+                                            alt={video.title || `Video ${index + 1}`}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                            <VideoCameraIcon className="w-16 h-16 text-gray-400" />
+                                        </div>
+                                    )}
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <button
+                                            onClick={() => window.open(video.url, '_blank')}
+                                            className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors transform scale-100 group-hover:scale-110"
+                                        >
+                                            <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M8 5v14l11-7z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-white">
+                                    <h4 className="font-semibold text-gray-900 mb-2">{video.title || `Video ${index + 1}`}</h4>
+                                    {video.description && (
+                                        <p className="text-gray-600 text-sm">{video.description}</p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    {(!tempProfile.videos || tempProfile.videos.filter(video => video.isVisible !== false).length === 0) && (
+                        <div className="text-center py-12 bg-gray-50 rounded-2xl">
+                            <VideoCameraIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                            <h4 className="text-xl font-semibold text-gray-600 mb-2">No Videos Yet</h4>
+                            <p className="text-gray-500">Upload videos to showcase your company's projects and testimonials</p>
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            {/* Our Vision Section */}
             <section className="mb-16">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-4xl font-bold text-gray-900">Our Vision</h2>
@@ -891,7 +2038,7 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
                 </div>
             </section>
 
-            {/* Our Mission Section - Completely Separate */}
+            {/* Our Mission Section */}
             <section className="mb-16">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-4xl font-bold text-gray-900">Our Mission</h2>
@@ -1082,43 +2229,6 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
                 </div>
             </section>
 
-            {/* Contact Section */}
-            <section className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl text-white p-12 mb-16">
-                <div className="text-center mb-8">
-                    <h2 className="text-4xl font-bold mb-4">Get In Touch</h2>
-                    <p className="text-xl opacity-90">Ready to work with us? Contact our team today.</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-4xl mx-auto">
-                    <div className="text-center">
-                        <PhoneIcon className="w-8 h-8 mx-auto mb-3 text-blue-400" />
-                        <p className="font-semibold">Phone</p>
-                        <p className="opacity-80">{tempProfile.mobile || 'Not provided'}</p>
-                    </div>
-                    <div className="text-center">
-                        <EnvelopeIcon className="w-8 h-8 mx-auto mb-3 text-blue-400" />
-                        <p className="font-semibold">Email</p>
-                        <p className="opacity-80">{tempProfile.email}</p>
-                    </div>
-                    <div className="text-center">
-                        <MapPinIcon className="w-8 h-8 mx-auto mb-3 text-blue-400" />
-                        <p className="font-semibold">Location</p>
-                        <p className="opacity-80">{tempProfile.location || 'Not specified'}</p>
-                    </div>
-                    <div className="text-center">
-                        <GlobeAltIcon className="w-8 h-8 mx-auto mb-3 text-blue-400" />
-                        <p className="font-semibold">Website</p>
-                        <p className="opacity-80">
-                            {tempProfile.website ? (
-                                <a href={tempProfile.website} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition-colors">
-                                    Visit Website
-                                </a>
-                            ) : 'Not provided'}
-                        </p>
-                    </div>
-                </div>
-            </section>
-
             {/* Edit Modals */}
             {activeEditSection === 'about' && (
                 <EditSection
@@ -1305,6 +2415,40 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
                     isSaving={isSaving}
                 >
                     <EditValuesSection
+                        tempProfile={tempProfile}
+                        onArrayFieldChange={handleArrayFieldChange}
+                        onAddArrayField={addArrayField}
+                        onRemoveArrayField={removeArrayField}
+                    />
+                </EditSection>
+            )}
+
+            {activeEditSection === 'media' && (
+                <EditSection
+                    section="media"
+                    title="Media Gallery"
+                    onSave={handleSave}
+                    onCancel={handleCancel}
+                    isSaving={isSaving}
+                >
+                    <EditMediaSection
+                        tempProfile={tempProfile}
+                        onArrayFieldChange={handleArrayFieldChange}
+                        onAddArrayField={addArrayField}
+                        onRemoveArrayField={removeArrayField}
+                    />
+                </EditSection>
+            )}
+
+            {activeEditSection === 'projects' && (
+                <EditSection
+                    section="projects"
+                    title="Projects"
+                    onSave={handleSave}
+                    onCancel={handleCancel}
+                    isSaving={isSaving}
+                >
+                    <EditProjectsSection
                         tempProfile={tempProfile}
                         onArrayFieldChange={handleArrayFieldChange}
                         onAddArrayField={addArrayField}

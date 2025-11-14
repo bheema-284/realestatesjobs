@@ -348,7 +348,7 @@ export default function ProjectDetailsPage() {
                     {project.images.map((image, index) => (
                         <div key={index} className="group relative overflow-hidden rounded-xl border border-gray-200">
                             <img
-                                src={image.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
+                                src={image.url || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
                                 alt={`${project.title} - Image ${index + 1}`}
                                 className="w-full h-64 object-cover transition-transform group-hover:scale-105"
                             />
@@ -398,7 +398,7 @@ export default function ProjectDetailsPage() {
             <div className="w-full sm:w-[80%] mx-auto">
                 {/* Project Slider */}
                 {project.images && project.images.length > 0 && (
-                    <Slider data={project.images} imageSize={"400px"} />
+                    <Slider data={project.images.map(item => ({ image: item.url }))} imageSize={"400px"} />
                 )}
 
                 {/* Project Header */}
