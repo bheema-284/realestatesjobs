@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import 'react-image-crop/dist/ReactCrop.css';
 import {
     PencilIcon,
@@ -20,7 +20,7 @@ import {
 } from '@heroicons/react/24/solid';
 
 // Memoized Edit Section Components - Defined outside to prevent re-renders
-const EditLeadershipSection = React.memo(({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField }) => {
+const EditLeadershipSection = ({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField }) => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -93,9 +93,9 @@ const EditLeadershipSection = React.memo(({ tempProfile, onArrayFieldChange, onA
             ))}
         </div>
     );
-});
+};
 
-const EditWhyChooseUsSection = React.memo(({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField }) => {
+const EditWhyChooseUsSection = ({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField }) => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -147,9 +147,9 @@ const EditWhyChooseUsSection = React.memo(({ tempProfile, onArrayFieldChange, on
             ))}
         </div>
     );
-});
+};
 
-const EditServicesSection = React.memo(({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField }) => {
+const EditServicesSection = ({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField }) => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -188,9 +188,9 @@ const EditServicesSection = React.memo(({ tempProfile, onArrayFieldChange, onAdd
             )}
         </div>
     );
-});
+};
 
-const EditAchievementsSection = React.memo(({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField }) => {
+const EditAchievementsSection = ({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField }) => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -324,9 +324,9 @@ const EditAchievementsSection = React.memo(({ tempProfile, onArrayFieldChange, o
             </div>
         </div>
     );
-});
+};
 
-const EditValuesSection = React.memo(({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField }) => {
+const EditValuesSection = ({ tempProfile, onArrayFieldChange, onAddArrayField, onRemoveArrayField }) => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -365,9 +365,9 @@ const EditValuesSection = React.memo(({ tempProfile, onArrayFieldChange, onAddAr
             )}
         </div>
     );
-});
+};
 
-const EditVisionSection = React.memo(({ tempProfile, onInputChange, onSave, onCancel, isSaving }) => (
+const EditVisionSection = ({ tempProfile, onInputChange, onSave, onCancel, isSaving }) => (
     <EditSection
         section="vision"
         title="Our Vision"
@@ -391,9 +391,9 @@ const EditVisionSection = React.memo(({ tempProfile, onInputChange, onSave, onCa
             </div>
         </div>
     </EditSection>
-));
+);
 
-const EditMissionSection = React.memo(({ tempProfile, onInputChange, onSave, onCancel, isSaving }) => (
+const EditMissionSection = ({ tempProfile, onInputChange, onSave, onCancel, isSaving }) => (
     <EditSection
         section="mission"
         title="Our Mission"
@@ -417,9 +417,9 @@ const EditMissionSection = React.memo(({ tempProfile, onInputChange, onSave, onC
             </div>
         </div>
     </EditSection>
-));
+);
 
-const EditSection = React.memo(({ section, title, children, onSave, onCancel, isSaving }) => (
+const EditSection = ({ section, title, children, onSave, onCancel, isSaving }) => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
@@ -460,7 +460,7 @@ const EditSection = React.memo(({ section, title, children, onSave, onCancel, is
             </div>
         </div>
     </div>
-));
+);
 
 // Company Landing Page Component
 function CompanyLandingPage({ profile, setRootContext, mutated }) {

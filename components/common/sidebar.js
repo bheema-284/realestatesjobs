@@ -66,7 +66,6 @@ const Sidebar = ({ isMobileOpen, toggleSidebar, userRole, authenticated }) => {
 
     // If no items to show for this role, don't render sidebar
     if (sidebarItems.length === 0) {
-        console.log("Sidebar: No items available for role:", userRole);
         return null;
     }
 
