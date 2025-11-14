@@ -1316,4 +1316,4 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
     );
 }
 
-export default React.memo(CompanyLandingPage);
+export default CompanyLandingPage;

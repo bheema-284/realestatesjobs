@@ -1,7 +1,8 @@
 'use client';
 import Chat from '@/components/common/chat';
-import { candidatesData, jobCategories } from '@/components/config/data';
+import { jobCategories } from '@/components/config/data';
 import RootContext from '@/components/config/rootcontext';
+import { useSWRFetch } from '@/components/config/useswrfetch';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid';
 import { ChatBubbleOvalLeftEllipsisIcon, EyeIcon } from '@heroicons/react/24/solid';
 import { useRouter } from 'next/navigation';
@@ -15,7 +16,6 @@ import {
     FaCheckCircle,
 } from 'react-icons/fa';
 
-const candidates = candidatesData || []
 
 // Candidate Card
 const ApplicationCard = ({ candidate, onOpenChatWithCandidate }) => {
@@ -132,6 +132,8 @@ const ApplicationList = () => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [selectedCandidateName, setSelectedCandidateName] = useState('');
     const [openCategory, setOpenCategory] = useState(''); // Accordion: currently open category
+    const { data, error, isLoading } = useSWRFetch(`/api/applicants`);
+    const candidates = data || []
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
