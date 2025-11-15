@@ -1,10 +1,9 @@
 "use client";
-import { useState, Fragment, useContext } from "react";
+import { useState, Fragment, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Combobox, Dialog, Listbox, Transition } from "@headlessui/react";
+import { Listbox, Transition } from "@headlessui/react";
 import { ChevronUpDownIcon, CheckIcon } from "@heroicons/react/20/solid";
 import RootContext from "../config/rootcontext";
-import { Mutated } from "../config/useswrfetch";
 
 const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) => {
     const router = useRouter();
@@ -36,15 +35,27 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
         paymentPlan: "",
         additionalCharges: "",
         description: "",
-        highlights: ""
+        highlights: "",
+        images: []
     });
 
-    const [imageFiles, setImageFiles] = useState([]);
     const [amenityInput, setAmenityInput] = useState("");
     const [selectedStatus, setSelectedStatus] = useState({ value: "ONGOING", label: "ONGOING" });
     const [selectedProjectType, setSelectedProjectType] = useState({ value: "Apartments", label: "Apartments" });
     const [selectedPaymentPlan, setSelectedPaymentPlan] = useState({ value: "", label: "Select Payment Plan" });
     const { setRootContext } = useContext(RootContext);
+
+    // Cleanup object URLs on unmount
+    useEffect(() => {
+        return () => {
+            formData.images.forEach(img => {
+                if (img.url && img.url.startsWith('blob:')) {
+                    URL.revokeObjectURL(img.url);
+                }
+            });
+        };
+    }, [formData.images]);
+
     // Options for dropdowns
     const projectStatusOptions = [
         { value: "NEW LAUNCH", label: "NEW LAUNCH" },
@@ -96,24 +107,54 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
         }));
     };
 
-    const handleImageChange = (e) => {
+    const handleProjectImageUpload = (e) => {
         const files = Array.from(e.target.files);
-        const validFiles = files.filter(file => {
-            if (!file.type.startsWith('image/')) {
-                alert('Please select only image files');
-                return false;
-            }
+        const valid = [];
+
+        files.forEach(file => {
+            if (!file.type.startsWith("image/")) return;
             if (file.size > 5 * 1024 * 1024) {
-                alert('Image size should be less than 5MB');
-                return false;
+                alert(`File ${file.name} is too large. Maximum size is 5MB.`);
+                return;
             }
-            return true;
+
+            valid.push({
+                tempId: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                file,
+                url: URL.createObjectURL(file),
+                caption: file.name.replace(/\.[^/.]+$/, ""),
+                isNew: true,
+                isVisible: true
+            });
         });
-        setImageFiles(prev => [...prev, ...validFiles]);
+
+        setFormData(prev => ({
+            ...prev,
+            images: [...prev.images, ...valid],
+        }));
     };
 
-    const removeImage = (index) => {
-        setImageFiles(prev => prev.filter((_, i) => i !== index));
+    const removeImage = (img) => {
+        // Revoke object URL to prevent memory leaks
+        if (img.url && img.url.startsWith('blob:')) {
+            URL.revokeObjectURL(img.url);
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            images: prev.images.filter(i => i.tempId !== img.tempId && i.publicId !== img.publicId),
+        }));
+    };
+
+    const updateCaption = (id, value) => {
+        setFormData(prev => ({
+            ...prev,
+            images: prev.images.map(img =>
+                img.tempId === id || img.publicId === id
+                    ? { ...img, caption: value }
+                    : img
+            )
+        }));
     };
 
     const addAmenity = () => {
@@ -148,14 +189,52 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
         return `project-${timestamp}-${random}`;
     };
 
+    const validateForm = () => {
+        const requiredFields = ['title', 'location', 'price'];
+        const missingFields = requiredFields.filter(field => !formData[field] || formData[field].trim() === '');
+
+        if (missingFields.length > 0) {
+            return `Please fill in required fields: ${missingFields.join(', ')}`;
+        }
+
+        if (formData.images.length === 0) {
+            return 'Please add at least one project image';
+        }
+
+        return null;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Validate form
+        const validationError = validateForm();
+        if (validationError) {
+            setRootContext(prev => ({
+                ...prev,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Validation Error",
+                    message: validationError,
+                },
+            }));
+            return;
+        }
+
         setLoading(true);
 
         try {
-            // Prepare the complete project data
-            const projectData = {
-                id: generateProjectId(),
+            // Generate project ID first
+            const projectId = generateProjectId();
+
+            // Calculate the project index (position in the projects array)
+            const projectIndex = existingProjects.length; // New project will be at the end
+
+            // 1️⃣ Build basic project object with image metadata
+            const newProject = {
+                id: projectId,
                 title: formData.title,
                 location: formData.location,
                 price: formData.price,
@@ -186,30 +265,58 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                 addedDate: new Date().toISOString(),
                 lastUpdated: new Date().toISOString(),
                 isActive: true,
-                images: [] // Will be populated after upload
+
+                // Include image metadata (without file objects)
+                images: formData.images.map(img => ({
+                    tempId: img.tempId,
+                    caption: img.caption,
+                    isVisible: img.isVisible,
+                    isNew: true
+                    // URL will be added by backend after Cloudinary upload
+                }))
             };
 
-            // Create FormData for multipart upload
-            const submitData = new FormData();
-            submitData.append("id", companyId);
+            // 2️⃣ Prepare FormData
+            const fd = new FormData();
+            fd.append("id", companyId);
 
-            // Create updated projects array
-            const updatedProjects = [...existingProjects, projectData];
-            submitData.append("projects", JSON.stringify(updatedProjects));
+            // 🔥 CRITICAL FIX: Preserve existing projects and add the new one
+            const updatedProjects = [...existingProjects, newProject];
 
-            // Append image files
-            imageFiles.forEach((file, index) => {
-                submitData.append(`projectImage_${updatedProjects.length - 1}_${index}`, file);
+            console.log('📊 Projects data:', {
+                existingCount: existingProjects.length,
+                newProject: newProject.title,
+                updatedCount: updatedProjects.length,
+                allProjects: updatedProjects.map(p => p.title)
             });
 
-            // Call the PUT endpoint to update user projects
-            const response = await fetch('/api/users', {
-                method: 'PUT',
-                body: submitData
+            fd.append("projects", JSON.stringify(updatedProjects));
+
+            // 4️⃣ Append image files in the correct format for backend
+            // Backend expects: projectGallery_{projectIndex}
+            formData.images.forEach((img) => {
+                if (img.file) {
+                    fd.append(`projectGallery_${projectIndex}`, img.file);
+                }
+            });
+
+            console.log('📤 Submitting project:', {
+                projectId,
+                projectIndex,
+                imageCount: formData.images.length,
+                projectTitle: newProject.title,
+                totalProjects: updatedProjects.length
+            });
+
+            // 5️⃣ Send request
+            const response = await fetch("/api/users", {
+                method: "PUT",
+                body: fd
             });
 
             const result = await response.json();
 
+            // 6️⃣ Notify UI
             if (result.success) {
                 setRootContext(prev => ({
                     ...prev,
@@ -218,35 +325,38 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                         dismiss: true,
                         type: "success",
                         position: "Success",
-                        message: 'Project added successfully!',
-                    },
+                        message: "Project added successfully!"
+                    }
                 }));
-                mutated()
+
+                mutated();
                 onClose();
                 router.refresh();
             } else {
-                  setRootContext(prev => ({
-                ...prev,
-                toast: {
-                    show: true,
-                    dismiss: true,
-                    type: "error",
-                    position: "Faied",
-                    message: result.error || 'Failed to add project',
-                },
-            }));
+                console.error('Backend error:', result);
+                setRootContext(prev => ({
+                    ...prev,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        position: "Failed",
+                        message: result.error || "Failed to add project"
+                    }
+                }));
             }
-        } catch (error) {
-            console.error('Error adding project:', error);
+
+        } catch (err) {
+            console.error("Error adding project:", err);
             setRootContext(prev => ({
                 ...prev,
                 toast: {
                     show: true,
                     dismiss: true,
                     type: "error",
-                    position: "Faied",
-                    message: 'Error adding project. Please try again.',
-                },
+                    position: "Failed",
+                    message: "Error adding project. Please try again."
+                }
             }));
         } finally {
             setLoading(false);
@@ -702,41 +812,59 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                             </div>
                         </div>
 
-                        {/* Project Images */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Project Images
-                            </label>
+                        {/* IMAGES UPLOAD SECTION */}
+                        <div className="mb-4">
+                            <label className="block font-medium mb-1">Project Images *</label>
+
+                            <div
+                                className="border-2 border-dashed border-gray-300 p-5 text-center cursor-pointer rounded-lg hover:border-blue-500 transition-colors"
+                                onClick={() => document.getElementById("projectImages").click()}
+                            >
+                                <p className="text-gray-500">Click to upload images</p>
+                                <p className="text-xs text-gray-400 mt-1">Max 5MB per image</p>
+                            </div>
+
                             <input
                                 type="file"
-                                accept="image/*"
+                                id="projectImages"
+                                className="hidden"
                                 multiple
-                                onChange={handleImageChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                accept="image/*"
+                                onChange={handleProjectImageUpload}
                             />
-                            <p className="text-xs text-gray-500 mt-1">
-                                You can select multiple images. Recommended: 16:9 ratio, max 5MB each
-                            </p>
 
-                            {/* Preview selected images */}
-                            {imageFiles.length > 0 && (
-                                <div className="mt-3">
-                                    <p className="text-sm text-gray-600 mb-2">Selected images:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {imageFiles.map((file, index) => (
-                                            <div key={index} className="relative">
+                            {/* PREVIEW GRID */}
+                            {formData.images.length > 0 && (
+                                <div className="mt-4">
+                                    <p className="text-sm text-gray-600 mb-2">
+                                        Selected images ({formData.images.length}):
+                                    </p>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                        {formData.images.map((img, index) => (
+                                            <div key={img.tempId} className="relative border rounded-lg p-2 bg-gray-50">
                                                 <img
-                                                    src={URL.createObjectURL(file)}
+                                                    src={img.url}
                                                     alt={`Preview ${index + 1}`}
-                                                    className="w-20 h-20 object-cover rounded border"
+                                                    className="h-32 w-full object-cover rounded"
                                                 />
+
+                                                {/* REMOVE BUTTON */}
                                                 <button
                                                     type="button"
-                                                    onClick={() => removeImage(index)}
-                                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
+                                                    onClick={() => removeImage(img)}
+                                                    className="absolute top-2 right-2 bg-red-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center"
                                                 >
-                                                    ×
+                                                    ✕
                                                 </button>
+
+                                                {/* CAPTION INPUT */}
+                                                <input
+                                                    type="text"
+                                                    className="mt-2 w-full border rounded px-2 py-1 text-sm"
+                                                    value={img.caption || ""}
+                                                    onChange={(e) => updateCaption(img.tempId, e.target.value)}
+                                                    placeholder="Image Caption"
+                                                />
                                             </div>
                                         ))}
                                     </div>

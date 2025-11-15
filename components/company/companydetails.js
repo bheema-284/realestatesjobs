@@ -28,9 +28,7 @@ export default function CompanyDetails() {
         setCompanyID(user_details.id || null);
     }, []);
 
-    const { data, error, isLoading } = useSWRFetch(
-        companyID && isClient ? `/api/companies?companyId=${companyID}` : null
-    );
+    const { data, error, isLoading } = useSWRFetch(`/api/companies`);
     const [activeTab, setActiveTab] = useState(0);
     const { rootContext } = useContext(RootContext);
 

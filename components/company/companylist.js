@@ -127,9 +127,7 @@ const CompanyList = () => {
     }, []);
 
     // Only fetch data if we have a companyID and we're on the client
-    const { data, error, isLoading } = useSWRFetch(
-        isClient ? `/api/companies` : null
-    );
+    const { data, error, isLoading } = useSWRFetch(`/api/companies`);
 
     // Handle loading state
     if (!isClient || isLoading) {

@@ -20,7 +20,7 @@ const tabs = [
     { name: 'About Me', component: AboutMe },
     { name: 'My Applications', component: Applications },
     { name: 'My Projects', component: Projects },
-    { name: 'My Previous Services', component: Services },
+    { name: 'My Premium Services', component: Services },
     { name: 'My Digital Marketing', component: Marketing },
 ];
 

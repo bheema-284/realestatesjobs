@@ -34,165 +34,249 @@ const resetPasswordSchema = Joi.object({
     newPassword: Joi.string().min(6).required(),
 }).xor("email", "mobile"); // only one allowed
 
-async function processProjectsWithImages(formData, newProjects, existingProjects, userId) {
-    const processedProjects = [];
+// -------------------- Helpers for Cloudinary --------------------
 
-    for (let i = 0; i < newProjects.length; i++) {
-        const project = newProjects[i];
-        const existingProject = existingProjects.find(p => p.id === project.id) || {};
-
-        console.log(`🔄 Processing project ${i}: ${project.title}`);
-
-        // Start with existing images - use images instead of galleryImages
-        let finalImages = existingProject.images || [];
-
-        // Process new file uploads for this project
-        const imageFiles = formData.getAll(`projectGallery_${i}`);
-        console.log(`📤 Found ${imageFiles.length} new image files`);
-
-        for (const imageFile of imageFiles) {
-            if (imageFile && imageFile.size > 0) {
-                try {
-                    console.log(`⬆️ Uploading: ${imageFile.name}`);
-
-                    const buffer = Buffer.from(await imageFile.arrayBuffer());
-                    const result = await new Promise((resolve, reject) => {
-                        cloudinary.uploader.upload_stream(
-                            {
-                                folder: `users/${userId}/projects/gallery`,
-                                public_id: `project_${project.id || i}_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-                                transformation: [
-                                    { width: 1200, height: 800, crop: "limit" },
-                                    { quality: "auto" },
-                                    { format: "webp" }
-                                ]
-                            },
-                            (error, result) => {
-                                if (error) {
-                                    console.error(`❌ Cloudinary upload error:`, error);
-                                    reject(error);
-                                } else {
-                                    console.log(`✅ Cloudinary upload successful:`, result.secure_url);
-                                    resolve(result);
-                                }
-                            }
-                        ).end(buffer);
-                    });
-
-                    // Add new uploaded image to images array
-                    finalImages.push({
-                        url: result.secure_url,
-                        publicId: result.public_id,
-                        caption: imageFile.name.replace(/\.[^/.]+$/, ""),
-                        isVisible: true,
-                        uploadedAt: new Date(),
-                        isNew: true // Mark as newly uploaded
-                    });
-
-                    console.log(`✅ Image uploaded to: ${result.secure_url}`);
-
-                } catch (error) {
-                    console.error(`❌ Upload failed for ${imageFile.name}:`, error);
-                }
-            }
-        }
-
-        // Update image metadata from frontend (for existing images)
-        if (project.images) {
-            project.images.forEach(frontendImg => {
-                // Skip blob URLs - they're only for preview
-                if (frontendImg.url && frontendImg.url.startsWith('blob:')) {
-                    return;
-                }
-
-                // Update existing image metadata
-                const existingIndex = finalImages.findIndex(img =>
-                    img.tempId === frontendImg.tempId ||
-                    img.publicId === frontendImg.publicId ||
-                    img.url === frontendImg.url
-                );
-
-                if (existingIndex !== -1) {
-                    // Update existing image
-                    finalImages[existingIndex] = {
-                        ...finalImages[existingIndex],
-                        caption: frontendImg.caption || finalImages[existingIndex].caption,
-                        isVisible: frontendImg.isVisible !== false,
-                        // Preserve the URL and publicId from Cloudinary
-                        url: finalImages[existingIndex].url, // Keep Cloudinary URL
-                        publicId: finalImages[existingIndex].publicId // Keep Cloudinary publicId
-                    };
-                } else if (frontendImg.url && !frontendImg.url.startsWith('blob:')) {
-                    // Add existing image that wasn't in finalImages yet
-                    finalImages.push({
-                        url: frontendImg.url,
-                        publicId: frontendImg.publicId,
-                        caption: frontendImg.caption || '',
-                        isVisible: frontendImg.isVisible !== false,
-                        uploadedAt: frontendImg.uploadedAt || new Date()
-                    });
-                }
-            });
-        }
-
-        // Remove any images that were deleted in frontend
-        if (project.images) {
-            const frontendImageUrls = project.images
-                .filter(img => img.url && !img.url.startsWith('blob:'))
-                .map(img => img.url);
-
-            finalImages = finalImages.filter(img =>
-                frontendImageUrls.includes(img.url) || img.isNew
-            );
-        }
-
-        // Create final project object - use images field
-        const mergedProject = {
-            ...existingProject,
-            ...project,
-            images: finalImages.filter(img => img && img.url), // Remove any images without URLs
-            updatedAt: new Date().toISOString()
-        };
-
-        console.log(`✅ Final project ${i} has ${mergedProject.images.length} images`);
-        processedProjects.push(mergedProject);
-    }
-
-    console.log(`🎯 Processed ${processedProjects.length} projects with images`);
-    return processedProjects;
-}
-// 🔹 NEW: Function to handle projects from JSON data (when images are already uploaded)
-// 🔹 Function to handle projects from JSON data (when images are already uploaded)
-function processProjectsFromJSON(projectsData, existingProjects) {
-    if (!Array.isArray(projectsData)) return projectsData;
-
-    return projectsData.map(project => {
-        const existingProject = existingProjects.find(p => p.id === project.id) || {};
-
-        // Filter out any blob URLs and use existing Cloudinary URLs instead
-        const processedImages = (project.images || []).map(img => {
-            // If image has a blob URL, try to find the corresponding Cloudinary URL from existing project
-            if (img.url && img.url.startsWith('blob:')) {
-                const existingImg = existingProject.images?.find(existing =>
-                    existing.caption === img.caption ||
-                    existing.publicId === img.publicId ||
-                    existing.tempId === img.tempId
-                );
-                return existingImg || img;
-            }
-            return img;
-        }).filter(img => !img.url.startsWith('blob:')); // Remove any remaining blob URLs
-
-        return {
-            ...existingProject,
-            ...project,
-            images: processedImages.length > 0 ? processedImages : (existingProject.images || []),
-            updatedAt: new Date().toISOString()
-        };
+// Upload a buffer to Cloudinary; folder is full path like `users/${userId}/projects`
+async function uploadBufferToCloudinary(buffer, folder, options = {}) {
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            {
+                folder,
+                resource_type: options.resource_type || 'image',
+                transformation: options.transformation || [{ quality: "auto" }, { format: "webp" }]
+            },
+            (err, result) => (err ? reject(err) : resolve(result))
+        );
+        uploadStream.end(buffer);
     });
 }
 
-// 🔹 Enhanced Media Upload Handler
+// Try to find a file in formData using several strategies.
+// 1) formData.get(tempId)
+// 2) formData.get(`projectImage_${pIndex}_${iIndex}`)
+// 3) try to find a file among formData entries with matching filename/caption (best-effort)
+function findProjectFileInFormData(formData, tempId, pIndex, iIndex, caption) {
+    // 1) tempId
+    if (tempId) {
+        const f = formData.get(tempId);
+        if (f && f.size && f.size > 0) return f;
+    }
+
+    // 2) indexed key
+    const indexedKey = `projectImage_${pIndex}_${iIndex}`;
+    const f2 = formData.get(indexedKey);
+    if (f2 && f2.size && f2.size > 0) return f2;
+
+    // 3) brute-force search over all formData files (best-effort)
+    for (const pair of formData.entries()) {
+        const [key, value] = pair;
+        // skip non-File entries
+        if (!value || typeof value !== 'object' || typeof value.size !== 'number') continue;
+        // If caption exists, try match filename or original filename
+        if (caption && value.name && caption && value.name.includes(caption)) {
+            return value;
+        }
+        // Also allow keys beginning with "projectImage" (in case front-end used different keys)
+        if (key && key.startsWith('projectImage')) {
+            return value;
+        }
+    }
+
+    return null;
+}
+
+// Optional helper: delete Cloudinary publicIds that were removed
+async function cleanupDeletedProjectImages(oldProjects = [], newProjects = []) {
+    try {
+        const oldPublicIds = new Set();
+        const newPublicIds = new Set();
+
+        oldProjects.forEach(p => (p.images || []).forEach(img => { if (img.publicId) oldPublicIds.add(img.publicId); }));
+        newProjects.forEach(p => (p.images || []).forEach(img => { if (img.publicId) newPublicIds.add(img.publicId); }));
+
+        for (const publicId of oldPublicIds) {
+            if (!newPublicIds.has(publicId)) {
+                try {
+                    await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+                } catch (err) {
+                    console.error("cleanupDeletedProjectImages - failed to destroy", publicId, err);
+                }
+            }
+        }
+    } catch (err) {
+        console.error("cleanupDeletedProjectImages error:", err);
+    }
+}
+
+// -------------------- Project images handler (REPLACEMENT) --------------------
+// This function reads project images from parsedProjects and formData, uploads new files and returns final projects.
+async function handleUpdatedProjectImages(formData, newProjects, oldProjects, userId) {
+    const finalProjects = [];
+
+    for (let pIndex = 0; pIndex < newProjects.length; pIndex++) {
+        const project = newProjects[pIndex] || {};
+        const existingProject = (oldProjects || [])[pIndex] || {};
+
+        const resultImages = [];
+
+        // If frontend provided an images array, iterate; otherwise fallback to existingProject.images
+        const projectImagesArray = Array.isArray(project.images) ? project.images : [];
+
+        for (let iIndex = 0; iIndex < projectImagesArray.length; iIndex++) {
+            const img = projectImagesArray[iIndex];
+
+            if (!img) continue;
+
+            // CASE A: Already uploaded image (Cloudinary url) — keep as-is
+            if (!img.isNew && img.url && !img.url.startsWith('blob:')) {
+                resultImages.push({
+                    url: img.url,
+                    publicId: img.publicId || null,
+                    caption: img.caption || ""
+                });
+                continue;
+            }
+
+            // CASE B: New image that was previewed and has tempId or indexed file => upload it
+            if (img.isNew) {
+                // Attempt to find the file in formData using multiple fallbacks
+                const file = findProjectFileInFormData(formData, img.tempId, pIndex, iIndex, img.caption || "");
+
+                if (file && file.size > 0) {
+                    try {
+                        // Convert file to buffer then upload
+                        const buffer = Buffer.from(await file.arrayBuffer());
+                        const uploaded = await uploadBufferToCloudinary(buffer, `users/${userId}/projects`, {
+                            transformation: [
+                                { width: 1200, height: 800, crop: "limit" },
+                                { quality: "auto" },
+                                { format: "webp" }
+                            ]
+                        });
+
+                        resultImages.push({
+                            url: uploaded.secure_url,
+                            publicId: uploaded.public_id,
+                            caption: img.caption || ""
+                        });
+                    } catch (err) {
+                        console.error(`handleUpdatedProjectImages: upload failed for project ${pIndex} image ${iIndex}`, err);
+                        // skip this image on error
+                    }
+                } else {
+                    // No file found for this new image: skip it (do not push blob url)
+                    console.warn(`No file found in formData for project ${pIndex} image ${iIndex} (tempId: ${img.tempId})`);
+                }
+                continue;
+            }
+
+            // CASE C: Unexpected / invalid entry — skip
+        }
+
+        // If no images were resolved for this project, keep existing images (so we don't wipe them)
+        const finalImageSet = resultImages.length > 0 ? resultImages : (existingProject.images || []);
+
+        // Merge project info: preserve existingProject fields and override with incoming project fields
+        finalProjects.push({
+            ...existingProject,
+            ...project,
+            images: finalImageSet,
+            updatedAt: new Date().toISOString()
+        });
+    }
+
+    return finalProjects;
+}
+
+// -------------------- Other helpers (experience/education etc.) --------------------
+// These are kept as you originally provided (unchanged besides minor formatting)
+async function processExperienceDocuments(formData, experienceData, userId, existingExperience) {
+    const experienceWithDocs = [];
+
+    for (let i = 0; i < Math.max(experienceData.length, existingExperience.length); i++) {
+        const newExp = experienceData[i] || {};
+        const existingExp = existingExperience[i] || {};
+
+        let documentUrl = existingExp.documentUrl;
+
+        // Check if there's a new document file for this experience entry
+        const docFile = formData.get(`experienceDoc_${i}`);
+        if (docFile && docFile.size > 0) {
+            console.log(`Uploading experience document for index ${i}`);
+
+            const buffer = Buffer.from(await docFile.arrayBuffer());
+            const result = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    {
+                        folder: `users/${userId}/experience`,
+                        resource_type: 'raw',
+                        public_id: `exp_${i}_${Date.now()}`,
+                    },
+                    (err, res) => (err ? reject(err) : resolve(res))
+                );
+                uploadStream.end(buffer);
+            });
+            documentUrl = result.secure_url;
+            console.log(`Experience document uploaded: ${documentUrl}`);
+        }
+
+        const mergedExperience = {
+            ...existingExp,
+            ...newExp,
+            documentUrl: documentUrl,
+            logo: newExp.logo || existingExp.logo || dummyLogos[i % dummyLogos.length],
+            showDescription: newExp.showDescription !== undefined ? newExp.showDescription : (existingExp.showDescription || false)
+        };
+
+        experienceWithDocs.push(mergedExperience);
+    }
+
+    return experienceWithDocs;
+}
+
+async function processEducationDocuments(formData, educationData, userId, existingEducation) {
+    const educationWithDocs = [];
+
+    for (let i = 0; i < Math.max(educationData.length, existingEducation.length); i++) {
+        const newEdu = educationData[i] || {};
+        const existingEdu = existingEducation[i] || {};
+
+        let documentUrl = existingEdu.documentUrl;
+
+        const docFile = formData.get(`educationDoc_${i}`);
+        if (docFile && docFile.size > 0) {
+            console.log(`Uploading education document for index ${i}`);
+
+            const buffer = Buffer.from(await docFile.arrayBuffer());
+            const result = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    {
+                        folder: `users/${userId}/education`,
+                        resource_type: 'raw',
+                        public_id: `edu_${i}_${Date.now()}`,
+                    },
+                    (err, res) => (err ? reject(err) : resolve(res))
+                );
+                uploadStream.end(buffer);
+            });
+            documentUrl = result.secure_url;
+            console.log(`Education document uploaded: ${documentUrl}`);
+        }
+
+        const mergedEducation = {
+            ...existingEdu,
+            ...newEdu,
+            documentUrl: documentUrl,
+            years: newEdu.years || `${newEdu.startYear || ''} - ${newEdu.endYear || ''}` || existingEdu.years
+        };
+
+        educationWithDocs.push(mergedEducation);
+    }
+
+    return educationWithDocs;
+}
+
+// -------------------- Media uploads (gallery, videos, logo, cover) --------------------
 async function handleMediaUploads(formData, updateFields, existingUser, userId) {
     try {
         // Handle gallery images upload
@@ -249,7 +333,6 @@ async function handleMediaUploads(formData, updateFields, existingUser, userId) 
                 }
             }
 
-            // Merge with existing images
             if (uploadedImages.length > 0) {
                 const existingImages = existingUser.galleryImages || [];
                 updateFields.galleryImages = [...existingImages, ...uploadedImages];
@@ -309,7 +392,6 @@ async function handleMediaUploads(formData, updateFields, existingUser, userId) 
                 }
             }
 
-            // Merge with existing videos
             if (uploadedVideos.length > 0) {
                 const existingVideos = existingUser.videos || [];
                 updateFields.videos = [...existingVideos, ...uploadedVideos];
@@ -391,129 +473,7 @@ function processRecruitersData(newRecruiters, existingRecruiters) {
     });
 }
 
-// Helper function to process experience documents
-async function processExperienceDocuments(formData, experienceData, userId, existingExperience) {
-    const experienceWithDocs = [];
-
-    for (let i = 0; i < Math.max(experienceData.length, existingExperience.length); i++) {
-        const newExp = experienceData[i] || {};
-        const existingExp = existingExperience[i] || {};
-
-        let documentUrl = existingExp.documentUrl;
-
-        // Check if there's a new document file for this experience entry
-        const docFile = formData.get(`experienceDoc_${i}`);
-        if (docFile && docFile.size > 0) {
-            console.log(`Uploading experience document for index ${i}`);
-
-            const buffer = Buffer.from(await docFile.arrayBuffer());
-            const result = await new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        folder: `users/${userId}/experience`,
-                        resource_type: 'raw',
-                        public_id: `exp_${i}_${Date.now()}`,
-                    },
-                    (err, res) => (err ? reject(err) : resolve(res))
-                );
-                uploadStream.end(buffer);
-            });
-            documentUrl = result.secure_url;
-            console.log(`Experience document uploaded: ${documentUrl}`);
-        }
-
-        // Merge existing data with new data, preserving important fields
-        const mergedExperience = {
-            ...existingExp, // Start with existing data
-            ...newExp, // Override with new data
-            documentUrl: documentUrl, // Use new URL if uploaded, otherwise keep existing
-            logo: newExp.logo || existingExp.logo || dummyLogos[i % dummyLogos.length],
-            showDescription: newExp.showDescription !== undefined ? newExp.showDescription : (existingExp.showDescription || false)
-        };
-
-        experienceWithDocs.push(mergedExperience);
-    }
-
-    return experienceWithDocs;
-}
-
-// Helper function to process education documents
-async function processEducationDocuments(formData, educationData, userId, existingEducation) {
-    const educationWithDocs = [];
-
-    for (let i = 0; i < Math.max(educationData.length, existingEducation.length); i++) {
-        const newEdu = educationData[i] || {};
-        const existingEdu = existingEducation[i] || {};
-
-        let documentUrl = existingEdu.documentUrl;
-
-        // Check if there's a new document file for this education entry
-        const docFile = formData.get(`educationDoc_${i}`);
-        if (docFile && docFile.size > 0) {
-            console.log(`Uploading education document for index ${i}`);
-
-            const buffer = Buffer.from(await docFile.arrayBuffer());
-            const result = await new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        folder: `users/${userId}/education`,
-                        resource_type: 'raw',
-                        public_id: `edu_${i}_${Date.now()}`,
-                    },
-                    (err, res) => (err ? reject(err) : resolve(res))
-                );
-                uploadStream.end(buffer);
-            });
-            documentUrl = result.secure_url;
-            console.log(`Education document uploaded: ${documentUrl}`);
-        }
-
-        // Merge existing data with new data, preserving important fields
-        const mergedEducation = {
-            ...existingEdu, // Start with existing data
-            ...newEdu, // Override with new data
-            documentUrl: documentUrl, // Use new URL if uploaded, otherwise keep existing
-            years: newEdu.years || `${newEdu.startYear || ''} - ${newEdu.endYear || ''}` || existingEdu.years
-        };
-
-        educationWithDocs.push(mergedEducation);
-    }
-
-    return educationWithDocs;
-}
-
-// 🔹 Helper function to delete media from Cloudinary
-async function deleteMediaFromCloudinary(publicId, resourceType = 'image') {
-    try {
-        const result = await cloudinary.uploader.destroy(publicId, {
-            resource_type: resourceType
-        });
-        return result.result === 'ok';
-    } catch (error) {
-        console.error("Error deleting media from Cloudinary:", error);
-        return false;
-    }
-}
-
-// 🔹 Helper function to clean up old media
-async function cleanupOldMedia(existingMedia, newMedia, resourceType = 'image') {
-    try {
-        const existingPublicIds = existingMedia.map(item => item.publicId).filter(Boolean);
-        const newPublicIds = newMedia.map(item => item.publicId).filter(Boolean);
-
-        const publicIdsToDelete = existingPublicIds.filter(publicId => !newPublicIds.includes(publicId));
-
-        for (const publicId of publicIdsToDelete) {
-            await deleteMediaFromCloudinary(publicId, resourceType);
-        }
-
-        return publicIdsToDelete.length;
-    } catch (error) {
-        console.error("Error cleaning up old media:", error);
-        return 0;
-    }
-}
-
+// -------------------- PUT handler (main) --------------------
 export async function PUT(request) {
     try {
         const contentType = request.headers.get("content-type") || "";
@@ -743,25 +703,35 @@ export async function PUT(request) {
             if (projectsData) {
                 try {
                     const parsedProjects = JSON.parse(projectsData);
+
                     if (Array.isArray(parsedProjects)) {
-                        // Check if user has permission to manage projects
                         if (["company", "superadmin", "recruiter"].includes(existingUser.role)) {
-                            // Process projects with image uploads
-                            updateFields.projects = await processProjectsWithImages(
+
+                            // ---- NEW: robust project handling using helper above ----
+                            updateFields.projects = await handleUpdatedProjectImages(
                                 formData,
                                 parsedProjects,
                                 existingUser.projects || [],
                                 userId
                             );
+
+                            // Optional: cleanup deleted images from Cloudinary
+                            try {
+                                await cleanupDeletedProjectImages(existingUser.projects || [], updateFields.projects || []);
+                            } catch (cleanupErr) {
+                                console.error("cleanupDeletedProjectImages error:", cleanupErr);
+                            }
+
                         } else {
-                            // For non-company roles, don't allow project updates
-                            return new Response(JSON.stringify({
-                                error: "Only company, superadmin, and recruiter roles can manage projects"
-                            }), { status: 403 });
+                            return new Response(
+                                JSON.stringify({
+                                    error: "Only company, superadmin, and recruiter roles can manage projects",
+                                }),
+                                { status: 403 }
+                            );
                         }
                     }
                 } catch (error) {
-                    // If projects is not JSON, handle as regular field
                     console.warn("Projects field is not valid JSON, treating as text");
                     updateFields.projects = projectsData;
                 }
@@ -1082,6 +1052,7 @@ export async function PUT(request) {
         return new Response(JSON.stringify({ error: err.message }), { status: 500 });
     }
 }
+
 
 export async function POST(request) {
     try {

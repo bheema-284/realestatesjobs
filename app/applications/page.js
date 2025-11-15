@@ -1,3 +1,5 @@
+// Error: companyJobsService is not defined - FIXED
+
 'use client';
 import React, { useState, Fragment, useEffect, useContext } from 'react';
 import { Dialog, Transition, RadioGroup, Switch } from '@headlessui/react';
@@ -9,6 +11,70 @@ import JobPostingModal from '@/components/createjob';
 import ButtonTab from '@/components/common/buttontab';
 import JobList from '@/components/jobslist';
 
+// API service functions for company jobs
+const companyJobsService = {
+    // Get all jobs for a company
+    getCompanyJobs: async (companyId) => {
+        try {
+            const response = await fetch(`/api/companies/${companyId}/jobs`);
+            if (!response.ok) throw new Error('Failed to fetch jobs');
+            return await response.json();
+        } catch (error) {
+            throw new Error(`Error fetching company jobs: ${error.message}`);
+        }
+    },
+
+    // Create a new job
+    createJob: async (jobData) => {
+        try {
+            const response = await fetch('/api/jobs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(jobData),
+            });
+            if (!response.ok) throw new Error('Failed to create job');
+            return await response.json();
+        } catch (error) {
+            throw new Error(`Error creating job: ${error.message}`);
+        }
+    },
+
+    // Update an existing job
+    updateJob: async (jobData) => {
+        try {
+            const response = await fetch(`/api/jobs/${jobData.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(jobData),
+            });
+            if (!response.ok) throw new Error('Failed to update job');
+            return await response.json();
+        } catch (error) {
+            throw new Error(`Error updating job: ${error.message}`);
+        }
+    },
+
+    // Delete a job
+    deleteJob: async (jobId, companyId) => {
+        try {
+            const response = await fetch(`/api/jobs/${jobId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ companyId }),
+            });
+            if (!response.ok) throw new Error('Failed to delete job');
+            return await response.json();
+        } catch (error) {
+            throw new Error(`Error deleting job: ${error.message}`);
+        }
+    },
+};
 
 const Icons = {
     ChannelPartners: "/icons/cp.png",
@@ -462,7 +528,6 @@ function JobModal({ isOpen, setIsOpen, initialJobTitle = '', onSave }) {
 }
 
 
-// Main Jobs Component (combining categories and table)
 // Main Jobs Component with API integration
 export default function Jobs() {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -530,10 +595,19 @@ export default function Jobs() {
             setLoading(true);
             let response;
 
+            // Prepare the job data with proper structure
+            const jobPayload = {
+                ...jobData,
+                companyId: companyId,
+                companyName: companyName,
+                postedBy: rootContext?.user?.id,
+                postedByRole: rootContext?.user?.role,
+            };
+
             if (mode === "create") {
-                response = await companyJobsService.createJob(jobData);
+                response = await companyJobsService.createJob(jobPayload);
             } else {
-                response = await companyJobsService.updateJob(jobData);
+                response = await companyJobsService.updateJob(jobPayload);
             }
 
             if (response.success) {

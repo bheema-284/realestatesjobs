@@ -34,6 +34,11 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
         // Add role-specific items
         const roleSpecificItems = [
             {
+                label: "Profile",
+                link: `/details/${rootContext?.user?.id || 1}/${rootContext?.user?.name || ""}`,
+                roles: ["superadmin", "company", "recruiter", "applicant"]
+            },
+            {
                 label: "Add Projects",
                 link: "/projects",
                 roles: ["superadmin", "company", "recruiter", "applicant"]
