@@ -594,7 +594,11 @@ const EnhancedJobList = ({
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="flex-shrink-0 h-10 w-10">
-                                                    {getIconForTitle(job.categorySlug)}
+                                                    <img
+                                                        src={job.companyDetails?.profileImage || "https://placehold.co/80x80/F0F0F0/000000?text=Logo"}
+                                                        alt={name}
+                                                        className="h-8 w-auto object-contain mx-auto"
+                                                    />
                                                 </div>
                                                 <div className="ml-4">
                                                     <div className="text-sm font-medium text-gray-900">
@@ -892,7 +896,7 @@ export default function Jobs() {
     // Enhanced tabs with job counts
     const tabs = jobCategories.map((job, index) => {
         const categorySlug = job.slug;
-       
+
         return {
             name: (
                 <div key={index} className="flex flex-wrap items-center gap-2 text-left">
@@ -903,7 +907,7 @@ export default function Jobs() {
                             className="h-12 w-auto object-contain mx-auto"
                         />
                         <span className="text-sm font-semibold">{job.title}</span>
-                        <span className="text-xs text-gray-500">{job.description}</span>                       
+                        <span className="text-xs text-gray-500">{job.description}</span>
                     </div>
                 </div>
             ),

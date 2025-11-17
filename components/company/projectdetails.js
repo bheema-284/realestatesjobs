@@ -14,7 +14,10 @@ export default function ProjectDetailsPage() {
     const [company, setCompany] = useState({});
     const { rootContext, setRootContext } = useContext(RootContext);
     const [isAdding, setIsAdding] = useState(false);
-    const [isAdded, setIsAdded] = useState(false);
+    const [isAdded, setIsAdded] = useState({
+        isAdded: false,
+        date: null
+    });
 
     // Only fetch data if we have a companyID and we're on the client
     const { data, error, isLoading } = useSWRFetch(`/api/companies`);
@@ -48,15 +51,28 @@ export default function ProjectDetailsPage() {
             const currentApplicantId = rootContext.user._id || rootContext.user.id;
 
             // Check if this applicant has already added this project
-            const hasAdded = company.projectsOfApplicants.some(
+            const applicantProject = company.projectsOfApplicants.find(
                 applicantProject =>
                     applicantProject.projectId === currentProjectId &&
                     applicantProject.applicantId === currentApplicantId
             );
 
-            setIsAdded(hasAdded);
+            if (applicantProject) {
+                setIsAdded({
+                    isAdded: true,
+                    date: applicantProject.addedDate
+                });
+            } else {
+                setIsAdded({
+                    isAdded: false,
+                    date: null
+                });
+            }
         } else {
-            setIsAdded(false);
+            setIsAdded({
+                isAdded: false,
+                date: null
+            });
         }
     }, [company.projectsOfApplicants, rootContext.user, title]);
 
@@ -165,6 +181,17 @@ export default function ProjectDetailsPage() {
         }, 1500);
     };
 
+    // Format date for display
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
     // Add to My Projects function - Updated to use the new API
     const handleAddToMyProjects = async () => {
         if (!rootContext.user || rootContext.user.role !== "applicant") {
@@ -181,7 +208,7 @@ export default function ProjectDetailsPage() {
             return;
         }
 
-        if (isAdded) {
+        if (isAdded.isAdded) {
             setRootContext(prev => ({
                 ...prev,
                 toast: {
@@ -238,7 +265,10 @@ export default function ProjectDetailsPage() {
             const result = await response.json();
 
             if (response.ok && result.success) {
-                setIsAdded(true);
+                setIsAdded({
+                    isAdded: true,
+                    date: new Date().toISOString()
+                });
                 mutated(); // Refresh the company data to update projectsOfApplicants
                 setRootContext(prev => ({
                     ...prev,
@@ -366,7 +396,7 @@ export default function ProjectDetailsPage() {
         <div className="space-y-6">
             <h3 className="text-xl font-semibold text-gray-800">Premium Amenities</h3>
             {project.amenities && project.amenities.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     {project.amenities.map((amenity, index) => (
                         <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 text-center hover:shadow-lg transition-shadow">
                             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -561,9 +591,9 @@ export default function ProjectDetailsPage() {
                         <div className="mt-6">
                             <button
                                 onClick={handleAddToMyProjects}
-                                disabled={isAdding || isAdded}
-                                className={`px-6 py-3 rounded-lg font-semibold transition-colors ${isAdded
-                                        ? "bg-green-600 text-white cursor-not-allowed"
+                                disabled={isAdding || isAdded.isAdded}
+                                className={`px-6 py-2 rounded-lg font-semibold transition-colors ${isAdded.isAdded
+                                        ? "bg-gray-600 text-white cursor-not-allowed"
                                         : isAdding
                                             ? "bg-gray-400 text-white cursor-not-allowed"
                                             : "bg-yellow-600 text-white hover:bg-yellow-700"
@@ -574,17 +604,17 @@ export default function ProjectDetailsPage() {
                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                                         Adding...
                                     </span>
-                                ) : isAdded ? (
-                                    "✓ Added to My Projects"
+                                ) : isAdded.isAdded ? (
+                                    "✓ Added"
                                 ) : (
                                     "Add to My Projects"
                                 )}
                             </button>
 
-                            {/* Success message */}
-                            {isAdded && (
+                            {/* Success message with date */}
+                            {isAdded.isAdded && isAdded.date && (
                                 <p className="text-green-600 text-sm mt-2">
-                                    This project has been added to your profile. You can view it in your dashboard.
+                                    {`This project has been added to your profile on ${formatDate(isAdded.date)}. You can view it in your dashboard.`}
                                 </p>
                             )}
                         </div>
@@ -614,7 +644,7 @@ export default function ProjectDetailsPage() {
                             key={sec}
                             ref={sectionRefs.current[sec]}
                             data-section={sec}
-                            className="scroll-mt-24 min-h-[50vh] flex flex-col justify-center"
+                            className="scroll-mt-24 min-h-[50vh] px-2 flex flex-col justify-center"
                         >
                             <h2 className="text-2xl font-semibold mb-6 text-gray-800 pb-2">
                                 {sec}
