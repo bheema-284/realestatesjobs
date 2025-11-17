@@ -2,6 +2,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import React, { useContext, useState, useEffect } from 'react';
 import RootContext from '../config/rootcontext';
+import Loading from '../common/loading';
 
 // Utility function (MUST match the one used for navigation/routing)
 const createSlug = (title) => {
@@ -15,7 +16,7 @@ const JobCard = ({ job, category }) => {
     const user = rootContext?.user;
     const isLoggedIn = user && user.role;
     const isApplicant = isLoggedIn && user.role === "applicant";
-
+    const [serviceCall, setServiceCall] = useState(false);
     const [applied, setApplied] = useState(false);
 
     // -----------------------------------------------------
@@ -40,7 +41,7 @@ const JobCard = ({ job, category }) => {
         }
 
         if (!isApplicant) return;
-
+        setServiceCall(true)
         try {
             const response = await fetch("/api/jobs/apply", {
                 method: "POST",
@@ -49,14 +50,26 @@ const JobCard = ({ job, category }) => {
                     userId: user._id || user.id,
                     jobId: job.id,
                     jobTitle: job.jobTitle,
-                    category,
-                    companyId: job.companyId,
+                    category
                 }),
             });
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Failed to apply");
-
+            if (!response.ok) {
+                setRootContext({
+                    ...rootContext,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        title: "Failed",
+                        message: data.error || "Failed to apply",
+                    },
+                });
+            }
+            if (response.status) {
+                setServiceCall(false);
+            }
             setApplied(true);
 
             setRootContext({
@@ -86,7 +99,7 @@ const JobCard = ({ job, category }) => {
 
     return (
         <div className="relative w-full sm:w-[80%] mx-auto bg-white border border-gray-300 shadow-lg rounded-2xl flex flex-col sm:flex-row items-start p-4 sm:p-6 gap-6">
-
+            {serviceCall && <Loading />}
             {/* Company Logo */}
             <div className="absolute w-20 h-20 sm:w-24 sm:h-24 -top-3 -left-3 border border-gray-300 shadow-md bg-white rounded-xl flex items-center justify-center p-2">
                 <img

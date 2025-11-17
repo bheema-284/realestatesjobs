@@ -31,7 +31,7 @@ const ASPECT_RATIOS = [
     { label: "16:9", value: 16 / 9 },
 ];
 
-function ProfilePage({ userData }) {
+function ProfilePage({ userData, userId }) {
     const params = useParams();
     const { id, category } = params;
     const [activeTab, setActiveTab] = useState(0);

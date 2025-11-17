@@ -4,33 +4,25 @@ import { PencilIcon } from '@heroicons/react/24/solid';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import CompanyInvestors from './companyinvestors';
 import CompanyProjects from './comanyprojects';
-import AboutCompany from './aboutcompany';
 import ButtonTab from '../common/buttontab';
 import CompanyJobs from './companyjobs';
 import CompanyServices from './companyservices';
 import RootContext from '../config/rootcontext';
-import { useSWRFetch } from '../config/useswrfetch';
+import { Mutated } from '../config/useswrfetch';
+import CompanyLandingPage from './companyprofile';
 
 const allTabs = [
-    { name: 'About', component: AboutCompany },
+    { name: 'About', component: CompanyLandingPage },
     { name: 'New Projects', component: CompanyProjects },
     { name: 'Jobs', component: CompanyJobs },
     { name: 'Premium Services', component: CompanyServices },
     { name: 'Investors', component: CompanyInvestors },
 ];
 
-export default function CompanyDetails() {
-    const [companyID, setCompanyID] = useState(null);
-    const [isClient, setIsClient] = useState(false);
-    useEffect(() => {
-        setIsClient(true);
-        const user_details = JSON.parse(localStorage.getItem('user_details') || '{}');
-        setCompanyID(user_details.id || null);
-    }, []);
+export default function CompanyDetails({ userData, userId }) {
 
-    const { data, error, isLoading } = useSWRFetch(`/api/companies`);
     const [activeTab, setActiveTab] = useState(0);
-    const { rootContext } = useContext(RootContext);
+    const { rootContext, setRootContext } = useContext(RootContext);
 
     const tabs = React.useMemo(() => {
         const role = rootContext?.user?.role;
@@ -61,30 +53,32 @@ export default function CompanyDetails() {
     const [tempCompanyProfile, setTempCompanyProfile] = useState(companyProfile);
     const [accordionOpen, setAccordionOpen] = useState(null);
 
+    const mutated = Mutated(userId ? `/api/users?id=${userId}` : null);
+
     useEffect(() => {
-        if (data) {
+        if (userData) {
             // Handle both single object and array cases
-            if (Array.isArray(data)) {
-                // If data is an array, use the first object
-                if (data.length > 0) {
-                    setCompanyProfile(data[0]);
-                    setTempCompanyProfile(data[0]);
+            if (Array.isArray(userData)) {
+                // If userData is an array, use the first object
+                if (userData.length > 0) {
+                    setCompanyProfile(userData[0]);
+                    setTempCompanyProfile(userData[0]);
                 } else {
                     // Handle empty array case
                     setCompanyProfile({});
                     setTempCompanyProfile({});
                 }
             } else {
-                // If data is a single object, use it directly
-                setCompanyProfile(data);
-                setTempCompanyProfile(data);
+                // If userData is a single object, use it directly
+                setCompanyProfile(userData);
+                setTempCompanyProfile(userData);
             }
         } else {
-            // Handle no data case
+            // Handle no userData case
             setCompanyProfile({});
             setTempCompanyProfile({});
         }
-    }, [data]); // Changed from companyID to data
+    }, [userData]); // Changed from companyID to userData
 
     const ActiveComponent = tabs[activeTab].component;
 
@@ -131,7 +125,7 @@ export default function CompanyDetails() {
                                         <button
                                             className="px-3 py-1 bg-blue-600 text-white rounded"
                                             onClick={() => {
-                                                // Assuming you have a function called setProfile (or similar) to save data
+                                                // Assuming you have a function called setProfile (or similar) to save userData
                                                 // setProfile(tempCompanyProfile); 
                                                 // Using setCompanyProfile for immediate client-side update for demonstration
                                                 setCompanyProfile(tempCompanyProfile);
@@ -186,7 +180,7 @@ export default function CompanyDetails() {
 
                     {/* Tab Content */}
                     <div className="py-1 px-3 rounded-t-md">
-                        <ActiveComponent companyProfile={companyProfile} />
+                        <ActiveComponent profile={companyProfile} setRootContext={setRootContext} mutated={mutated} />
                     </div>
                 </div>
 
@@ -208,7 +202,7 @@ export default function CompanyDetails() {
                                 </button>
                                 {isOpen && (
                                     <div className="p-2">
-                                        <Component companyProfile={companyProfile} />
+                                        <Component profile={companyProfile} setRootContext={setRootContext} mutated={mutated} />
                                     </div>
                                 )}
                             </div>

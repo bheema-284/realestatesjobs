@@ -1,33 +1,25 @@
-// Error: companyJobsService is not defined - FIXED
-
 'use client';
 import React, { useState, Fragment, useEffect, useContext } from 'react';
-import { Dialog, Transition, RadioGroup, Switch } from '@headlessui/react';
-import { ChevronDownIcon } from '@heroicons/react/20/solid'; // For the dropdown icon
-import { XMarkIcon } from '@heroicons/react/24/solid';
+import { ChevronDownIcon } from '@heroicons/react/20/solid';
+import { XMarkIcon, PencilIcon, TrashIcon, EyeIcon, PlusIcon, SparklesIcon } from '@heroicons/react/24/solid';
 import RootContext from '@/components/config/rootcontext';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import JobPostingModal from '@/components/createjob';
 import ButtonTab from '@/components/common/buttontab';
-import JobList from '@/components/jobslist';
+import { useSWRFetch, Mutated } from '@/components/config/useswrfetch';
+
+// Generate unique job ID
+const generateJobId = () => {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    return `job-${timestamp}-${random}`;
+};
 
 // API service functions for company jobs
 const companyJobsService = {
-    // Get all jobs for a company
-    getCompanyJobs: async (companyId) => {
-        try {
-            const response = await fetch(`/api/companies/${companyId}/jobs`);
-            if (!response.ok) throw new Error('Failed to fetch jobs');
-            return await response.json();
-        } catch (error) {
-            throw new Error(`Error fetching company jobs: ${error.message}`);
-        }
-    },
-
-    // Create a new job
     createJob: async (jobData) => {
         try {
-            const response = await fetch('/api/jobs', {
+            const response = await fetch('/api/companies/jobs', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -41,10 +33,9 @@ const companyJobsService = {
         }
     },
 
-    // Update an existing job
     updateJob: async (jobData) => {
         try {
-            const response = await fetch(`/api/jobs/${jobData.id}`, {
+            const response = await fetch(`/api/companies/jobs`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -58,10 +49,9 @@ const companyJobsService = {
         }
     },
 
-    // Delete a job
     deleteJob: async (jobId, companyId) => {
         try {
-            const response = await fetch(`/api/jobs/${jobId}`, {
+            const response = await fetch(`/api/companies/jobs?companyId=${companyId}&jobId=${jobId}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -90,60 +80,383 @@ const Icons = {
     ),
 };
 
-// Data for the job category cards
+// Updated job categories to match your categorySlug values
 const jobCategories = [
     {
         icon: '/icons/tel.png',
         title: 'Tele Caller',
         description: 'Engage & Convert',
+        slug: 'tele-caller'
     },
     {
         icon: '/icons/cp.png',
         title: 'Channel Partners',
         description: 'Collaborate & Earn',
+        slug: 'channel-partners'
     },
     {
         icon: '/icons/realestate.png',
         title: 'Real Estate Sales',
         description: 'Sell Property Faster',
+        slug: 'real-estate-sales'
     },
     {
         icon: '/icons/crm.png',
         title: 'CRM Executive',
         description: 'Manage Client Relations',
+        slug: 'crm-executive'
     },
     {
         icon: '/icons/digital.png',
         title: 'Digital Marketing',
         description: 'Promote & Convert',
+        slug: 'digital-marketing'
     },
     {
         icon: '/icons/hrandop.png',
         title: 'HR & Operations',
         description: 'People & Process',
+        slug: 'hr-operations'
     },
     {
         icon: '/icons/accounts.png',
         title: 'Accounts & Auditing',
         description: 'Ensure Financial Clarity',
+        slug: 'accounts-auditing'
     },
     {
         icon: '/icons/legal.png',
         title: 'Legal',
         description: 'Safeguard Deals & Compliance',
+        slug: 'legal'
     },
     {
         icon: '/icons/architects.png',
         title: 'Architects',
         description: 'Design Smart & Aesthetic Spaces',
+        slug: 'architects'
     },
     {
         icon: '/icons/webdev.png',
         title: 'Web Development',
         description: 'Build Real Estate Tech',
+        slug: 'web-development'
     }
 ];
 
+// Auto-create job templates for each category
+const autoCreateJobTemplates = {
+    'tele-caller': {
+        jobTitle: "Tele Caller Executive",
+        jobDescription: "<p>We are looking for an enthusiastic Tele Caller Executive to generate sales by contacting potential customers. The ideal candidate should have excellent communication skills and a pleasant phone voice.</p>",
+        employmentTypes: ["full-time"],
+        workingSchedule: {
+            dayShift: true,
+            nightShift: false,
+            weekendAvailability: false,
+            custom: ""
+        },
+        salaryType: "fixed",
+        salaryAmount: "15000-25000",
+        salaryFrequency: "Monthly",
+        salaryNegotiable: true,
+        hiringMultiple: true,
+        location: "Hyderabad",
+        experience: "0-1 Year",
+        salary: "1.5-2.5 LPA",
+        jobRoleType: "office-based",
+        commissionStructure: "Performance based incentives",
+        incentives: "Monthly performance bonus",
+        propertyTypes: ["residential", "commercial"],
+        targetAreas: "All Hyderabad areas",
+        languageRequirements: ["english", "hindi", "telugu"],
+        vehicleRequirement: false,
+        targetAudience: "local",
+        salesTargets: "50 calls per day",
+        leadProvided: true,
+        trainingProvided: true,
+        certificationRequired: false
+    },
+    'channel-partners': {
+        jobTitle: "Channel Partner Manager",
+        jobDescription: "<p>Looking for experienced Channel Partner Managers to expand our real estate network. Build and maintain relationships with channel partners to drive sales growth.</p>",
+        employmentTypes: ["full-time"],
+        workingSchedule: {
+            dayShift: true,
+            nightShift: false,
+            weekendAvailability: true,
+            custom: ""
+        },
+        salaryType: "commission",
+        salaryAmount: "",
+        salaryFrequency: "Monthly",
+        salaryNegotiable: true,
+        hiringMultiple: false,
+        location: "Hyderabad",
+        experience: "2-5 Years",
+        salary: "3-6 LPA + Commission",
+        jobRoleType: "field-sales",
+        commissionStructure: "5-10% on sales",
+        incentives: "Quarterly bonuses, travel allowances",
+        propertyTypes: ["residential", "commercial", "plots", "luxury"],
+        targetAreas: "Hyderabad and surrounding areas",
+        languageRequirements: ["english", "hindi", "telugu"],
+        vehicleRequirement: true,
+        targetAudience: "nri",
+        salesTargets: "2-3 deals per month",
+        leadProvided: true,
+        trainingProvided: true,
+        certificationRequired: false
+    },
+    'real-estate-sales': {
+        jobTitle: "Real Estate Sales Executive",
+        jobDescription: "<p>Join our dynamic sales team as a Real Estate Sales Executive. Showcase premium properties to potential buyers and close deals effectively.</p>",
+        employmentTypes: ["full-time"],
+        workingSchedule: {
+            dayShift: true,
+            nightShift: false,
+            weekendAvailability: true,
+            custom: ""
+        },
+        salaryType: "fixed+commission",
+        salaryAmount: "20000",
+        salaryFrequency: "Monthly",
+        salaryNegotiable: true,
+        hiringMultiple: true,
+        location: "Hyderabad",
+        experience: "1-3 Years",
+        salary: "2-5 LPA + Commission",
+        jobRoleType: "field-sales",
+        commissionStructure: "2-5% on sales",
+        incentives: "Performance bonuses, incentives",
+        propertyTypes: ["residential", "commercial", "luxury", "apartments"],
+        targetAreas: "Hyderabad prime locations",
+        languageRequirements: ["english", "hindi", "telugu"],
+        vehicleRequirement: true,
+        targetAudience: "nri",
+        salesTargets: "1-2 deals per month",
+        leadProvided: true,
+        trainingProvided: true,
+        certificationRequired: false
+    },
+    'crm-executive': {
+        jobTitle: "CRM Executive",
+        jobDescription: "<p>We are hiring a CRM Executive to manage customer relationships and ensure excellent client service. Maintain client databases and handle customer queries efficiently.</p>",
+        employmentTypes: ["full-time"],
+        workingSchedule: {
+            dayShift: true,
+            nightShift: false,
+            weekendAvailability: false,
+            custom: ""
+        },
+        salaryType: "fixed",
+        salaryAmount: "25000-40000",
+        salaryFrequency: "Monthly",
+        salaryNegotiable: true,
+        hiringMultiple: false,
+        location: "Hyderabad",
+        experience: "1-3 Years",
+        salary: "3-5 LPA",
+        jobRoleType: "office-based",
+        commissionStructure: "Not applicable",
+        incentives: "Performance bonus",
+        propertyTypes: ["residential", "commercial"],
+        targetAreas: "Not applicable",
+        languageRequirements: ["english", "hindi", "telugu"],
+        vehicleRequirement: false,
+        targetAudience: "existing-clients",
+        salesTargets: "Client satisfaction metrics",
+        leadProvided: true,
+        trainingProvided: true,
+        certificationRequired: false
+    },
+    'digital-marketing': {
+        jobTitle: "Digital Marketing Executive",
+        jobDescription: "<p>Looking for a creative Digital Marketing Executive to handle our online presence. Create and manage digital campaigns for real estate properties.</p>",
+        employmentTypes: ["full-time"],
+        workingSchedule: {
+            dayShift: true,
+            nightShift: false,
+            weekendAvailability: false,
+            custom: ""
+        },
+        salaryType: "fixed",
+        salaryAmount: "30000-50000",
+        salaryFrequency: "Monthly",
+        salaryNegotiable: true,
+        hiringMultiple: false,
+        location: "Hyderabad",
+        experience: "2-4 Years",
+        salary: "3.6-6 LPA",
+        jobRoleType: "office-based",
+        commissionStructure: "Performance based",
+        incentives: "Campaign performance bonuses",
+        propertyTypes: ["residential", "commercial", "luxury"],
+        targetAreas: "Online platforms",
+        languageRequirements: ["english", "hindi"],
+        vehicleRequirement: false,
+        targetAudience: "digital-audience",
+        salesTargets: "Lead generation targets",
+        leadProvided: true,
+        trainingProvided: true,
+        certificationRequired: true
+    },
+    'hr-operations': {
+        jobTitle: "HR Operations Executive",
+        jobDescription: "<p>Join our HR team as an Operations Executive. Handle recruitment, employee engagement, and operational activities for our growing real estate team.</p>",
+        employmentTypes: ["full-time"],
+        workingSchedule: {
+            dayShift: true,
+            nightShift: false,
+            weekendAvailability: false,
+            custom: ""
+        },
+        salaryType: "fixed",
+        salaryAmount: "35000-50000",
+        salaryFrequency: "Monthly",
+        salaryNegotiable: true,
+        hiringMultiple: false,
+        location: "Hyderabad",
+        experience: "2-5 Years",
+        salary: "4.2-6 LPA",
+        jobRoleType: "office-based",
+        commissionStructure: "Not applicable",
+        incentives: "Annual bonus",
+        propertyTypes: [],
+        targetAreas: "Not applicable",
+        languageRequirements: ["english", "hindi", "telugu"],
+        vehicleRequirement: false,
+        targetAudience: "internal",
+        salesTargets: "Recruitment targets",
+        leadProvided: true,
+        trainingProvided: true,
+        certificationRequired: true
+    },
+    'accounts-auditing': {
+        jobTitle: "Accounts Executive",
+        jobDescription: "<p>We are seeking an experienced Accounts Executive to manage financial records, handle audits, and ensure compliance with accounting standards.</p>",
+        employmentTypes: ["full-time"],
+        workingSchedule: {
+            dayShift: true,
+            nightShift: false,
+            weekendAvailability: false,
+            custom: ""
+        },
+        salaryType: "fixed",
+        salaryAmount: "40000-60000",
+        salaryFrequency: "Monthly",
+        salaryNegotiable: true,
+        hiringMultiple: false,
+        location: "Hyderabad",
+        experience: "3-6 Years",
+        salary: "4.8-7.2 LPA",
+        jobRoleType: "office-based",
+        commissionStructure: "Not applicable",
+        incentives: "Annual performance bonus",
+        propertyTypes: [],
+        targetAreas: "Not applicable",
+        languageRequirements: ["english", "hindi"],
+        vehicleRequirement: false,
+        targetAudience: "internal",
+        salesTargets: "Financial reporting deadlines",
+        leadProvided: true,
+        trainingProvided: true,
+        certificationRequired: true
+    },
+    'legal': {
+        jobTitle: "Legal Advisor",
+        jobDescription: "<p>Looking for a Legal Advisor to handle property documentation, legal compliance, and client agreements. Ensure all real estate transactions are legally sound.</p>",
+        employmentTypes: ["full-time"],
+        workingSchedule: {
+            dayShift: true,
+            nightShift: false,
+            weekendAvailability: false,
+            custom: ""
+        },
+        salaryType: "fixed",
+        salaryAmount: "50000-80000",
+        salaryFrequency: "Monthly",
+        salaryNegotiable: true,
+        hiringMultiple: false,
+        location: "Hyderabad",
+        experience: "4-8 Years",
+        salary: "6-9.6 LPA",
+        jobRoleType: "office-based",
+        commissionStructure: "Not applicable",
+        incentives: "Case completion bonuses",
+        propertyTypes: ["residential", "commercial", "plots"],
+        targetAreas: "Legal documentation",
+        languageRequirements: ["english", "hindi", "telugu"],
+        vehicleRequirement: false,
+        targetAudience: "clients",
+        salesTargets: "Document processing timelines",
+        leadProvided: true,
+        trainingProvided: false,
+        certificationRequired: true
+    },
+    'architects': {
+        jobTitle: "Architect",
+        jobDescription: "<p>Join our design team as an Architect. Create innovative architectural designs for residential and commercial projects. Bring creative vision to life.</p>",
+        employmentTypes: ["full-time"],
+        workingSchedule: {
+            dayShift: true,
+            nightShift: false,
+            weekendAvailability: false,
+            custom: ""
+        },
+        salaryType: "fixed",
+        salaryAmount: "45000-70000",
+        salaryFrequency: "Monthly",
+        salaryNegotiable: true,
+        hiringMultiple: false,
+        location: "Hyderabad",
+        experience: "3-7 Years",
+        salary: "5.4-8.4 LPA",
+        jobRoleType: "office-based",
+        commissionStructure: "Project based incentives",
+        incentives: "Design excellence awards",
+        propertyTypes: ["residential", "commercial", "luxury"],
+        targetAreas: "Design and planning",
+        languageRequirements: ["english", "hindi"],
+        vehicleRequirement: false,
+        targetAudience: "clients",
+        salesTargets: "Project completion timelines",
+        leadProvided: true,
+        trainingProvided: true,
+        certificationRequired: true
+    },
+    'web-development': {
+        jobTitle: "Web Developer",
+        jobDescription: "<p>Looking for a skilled Web Developer to build and maintain our real estate platforms. Create responsive websites and implement new features.</p>",
+        employmentTypes: ["full-time"],
+        workingSchedule: {
+            dayShift: true,
+            nightShift: false,
+            weekendAvailability: false,
+            custom: ""
+        },
+        salaryType: "fixed",
+        salaryAmount: "40000-70000",
+        salaryFrequency: "Monthly",
+        salaryNegotiable: true,
+        hiringMultiple: false,
+        location: "Hyderabad",
+        experience: "2-5 Years",
+        salary: "4.8-8.4 LPA",
+        jobRoleType: "office-based",
+        commissionStructure: "Not applicable",
+        incentives: "Project completion bonuses",
+        propertyTypes: [],
+        targetAreas: "Web development",
+        languageRequirements: ["english"],
+        vehicleRequirement: false,
+        targetAudience: "online-users",
+        salesTargets: "Project delivery timelines",
+        leadProvided: true,
+        trainingProvided: true,
+        certificationRequired: false
+    }
+};
 
 const getIconForTitle = (name) => {
     const normalizedTitle = name && name.replace(/\s+/g, '').replace(/[^\w]/g, '');
@@ -154,384 +467,282 @@ const getIconForTitle = (name) => {
     />;
 };
 
-
-// JobModal component (modified to accept props for state management)
-function JobModal({ isOpen, setIsOpen, initialJobTitle = '', onSave }) {
-    // State for form fields
-    const [jobTitle, setJobTitle] = useState(initialJobTitle);
-    const [jobDescription, setJobDescription] = useState('');
-    const [employmentTypes, setEmploymentTypes] = useState([]);
-    const [workingSchedule, setWorkingSchedule] = useState({
-        dayShift: false,
-        nightShift: false,
-        weekendAvailability: false,
-        custom: '',
-    });
-    const [salaryType, setSalaryType] = useState('hourly');
-    const [salaryAmount, setSalaryAmount] = useState('');
-    const [salaryFrequency, setSalaryFrequency] = useState('Yearly');
-    const [hiringMultiple, setHiringMultiple] = useState(false);
-
-    // Update jobTitle when initialJobTitle prop changes
-    useEffect(() => {
-        setJobTitle(initialJobTitle);
-    }, [initialJobTitle]);
-
-    function closeModal() {
-        setIsOpen(false);
-        // Optionally reset form fields when closing
-        setJobDescription('');
-        setEmploymentTypes([]);
-        setWorkingSchedule({ dayShift: false, nightShift: false, weekendAvailability: false, custom: '' });
-        setSalaryType('hourly');
-        setSalaryAmount('');
-        setSalaryFrequency('Yearly');
-        setHiringMultiple(false);
-    }
-
-    const employmentOptions = [
-        { id: 'full-time', name: 'Full-time' },
-        { id: 'part-time', name: 'Part-time' },
-        { id: 'on-demand', name: 'On demand' },
-        { id: 'negotiable', name: 'Negotiable' },
-    ];
-
-    const salaryFrequencies = ['Yearly', 'Monthly', 'Weekly', 'Hourly'];
-
-    const handleEmploymentTypeChange = (typeId) => {
-        setEmploymentTypes((prev) =>
-            prev.includes(typeId) ? prev.filter((id) => id !== typeId) : [...prev, typeId]
-        );
+// Enhanced JobList component to display jobs in tabular form
+const EnhancedJobList = ({
+    tabName,
+    getIconForTitle,
+    editForm,
+    deleteItem,
+    formatWorkingSchedule,
+    formatEmploymentTypes,
+    jobList,
+    handleCategoryClick,
+    handleAutoCreate,
+    setIsOpen,
+    loading,
+    categorySlug,
+    setMode
+}) => {
+    // Helper functions for real estate specific fields
+    const formatPropertyTypes = (types) => {
+        if (!types || types.length === 0) return 'N/A';
+        return types.map(type =>
+            type.charAt(0).toUpperCase() + type.slice(1)
+        ).join(', ');
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const newJob = {
-            id: `job-${Date.now()}`, // Unique ID for the new job
-            jobTitle,
-            jobDescription,
-            employmentTypes,
-            workingSchedule,
-            salaryType,
-            salaryAmount,
-            salaryFrequency,
-            hiringMultiple,
-        };
-        onSave(newJob); // Pass the new job data to the parent
-        closeModal();
+    const formatLanguageRequirements = (languages) => {
+        if (!languages || languages.length === 0) return 'N/A';
+        return languages.map(lang =>
+            lang.charAt(0).toUpperCase() + lang.slice(1)
+        ).join(', ');
+    };
+
+    const formatTargetAudience = (audience) => {
+        if (!audience) return 'N/A';
+        return audience.split('-').map(word =>
+            word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+    };
+
+    const formatJobRoleType = (roleType) => {
+        if (!roleType) return 'N/A';
+        return roleType.split('-').map(word =>
+            word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+    };
+
+    const formatBoolean = (value) => {
+        return value ? 'Yes' : 'No';
+    };
+
+    const formatSalary = (salary) => {
+        if (!salary) return 'Not specified';
+        if (salary.includes('cr')) return salary.toUpperCase();
+        return salary;
+    };
+
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
     };
 
     return (
-        <Transition appear show={isOpen} as={Fragment}>
-            <Dialog as="div" className="relative z-50" onClose={closeModal}>
-                <Transition.Child
-                    as={Fragment}
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0"
-                    enterTo="opacity-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100"
-                    leaveTo="opacity-0"
-                >
-                    <div className="fixed inset-0 bg-black bg-opacity-25" />
-                </Transition.Child>
+        <div className="w-full max-w-7xl mx-auto p-4">
+            {/* Create Job Buttons */}
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">{tabName} Jobs</h2>
+                <div className="flex gap-3">
+                    {/* Auto Create Button */}
+                    <button
+                        onClick={() => { handleAutoCreate(tabName); setMode("create"); }}
+                        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 shadow-md"
+                    >
+                        <SparklesIcon className="w-5 h-5" />
+                        <span>Auto Create Job</span>
+                    </button>
 
-                <div className="fixed inset-0 overflow-y-auto">
-                    <div className="flex min-h-full items-center justify-center p-4 text-center" style={{ backgroundColor: '#F0F2F5' }}>
-                        <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0 scale-95"
-                            enterTo="opacity-100 scale-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100 scale-100"
-                            leaveTo="opacity-0 scale-95"
-                        >
-                            <Dialog.Panel className="w-full max-w-3xl transform overflow-hidden rounded-2xl bg-white p-8 text-left align-middle shadow-xl transition-all">
-                                <div className="flex items-center justify-between mb-5">
-                                    <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">
-                                        Create Job Posting
-                                    </Dialog.Title>
-                                    <XMarkIcon className="h-5 fill-gray-900 hover:cursor-pointer hover:font-bold" onClick={closeModal} />
-                                </div>
-                                <form onSubmit={handleSubmit} className="space-y-6">
-                                    {/* Job Title */}
-                                    <div className="flex flex-col md:flex-row items-start md:items-center">
-                                        <label htmlFor="jobTitle" className="w-full md:w-1/3 text-gray-700 font-medium text-sm md:text-base">
-                                            Job name
-                                            <p className="text-xs text-gray-500 mt-1">A job name must describe one position only</p>
-                                        </label>
-                                        <div className="w-full md:w-2/3 mt-2 md:mt-0">
-                                            <input
-                                                type="text"
-                                                id="jobTitle"
-                                                value={jobTitle}
-                                                onChange={(e) => setJobTitle(e.target.value)}
-                                                className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                placeholder="e.g. &quot;Kitchen staff&quot;"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
+                    {/* Manual Create Button */}
+                    <button
+                        onClick={() => handleCategoryClick(tabName)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+                    >
+                        <PlusIcon className="w-5 h-5" />
+                        <span>Create Job</span>
+                    </button>
+                </div>
+            </div>
 
-                                    {/* Job Description */}
-                                    <div className="flex flex-col md:flex-row items-start">
-                                        <label htmlFor="jobDescription" className="w-full md:w-1/3 text-gray-700 font-medium text-sm md:text-base">
-                                            Job description
-                                            <p className="text-xs text-gray-500 mt-1">Provide a short description about the job. Keep it short and to the point.</p>
-                                        </label>
-                                        <div className="w-full md:w-2/3 mt-2 md:mt-0 relative">
-                                            <div className="flex justify-between items-center border border-gray-300 rounded-t-md p-2 bg-gray-50 text-gray-600 text-sm">
-                                                <div className="flex space-x-2">
-                                                    <span className="font-bold">B</span>
-                                                    <span className="italic">I</span>
-                                                    <span className="underline">U</span>
-                                                    <span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2.75 7.5a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75ZM2 10.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10.25ZM2.75 13a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75ZM2 15.75a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 15.75Z" clipRule="evenodd" /></svg></span>
-                                                    <span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M10 2c-1.716 0-3.405.106-5.07.31C3.807 2.511 3 3.407 3 4.42v10.164a3 3 0 0 0 .807 2.022c.638.63 1.543.994 2.493.994H16.5A1.5 1.5 0 0 0 18 16.5V6.75A.75.75 0 0 0 17.25 6H13.5a.75.75 0 0 1-.75-.75V2.75A.75.75 0 0 0 12 2h-2Zm2.25 1.5v-.25a.75.75 0 0 0-.75-.75H10a.75.75 0 0 0-.75.75v.25h3.75Z" clipRule="evenodd" /></svg></span>
+            {/* Jobs Table - Always show if jobs exist */}
+            {jobList.length > 0 ? (
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                    {/* Table */}
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Job Details
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Location & Experience
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Salary & Commission
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Requirements
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Applications
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Status
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {jobList.map((job, index) => (
+                                    <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
+                                        {/* Job Details */}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="flex-shrink-0 h-10 w-10">
+                                                    {getIconForTitle(job.categorySlug)}
                                                 </div>
-                                                <span className="text-gray-500">200 words</span>
-                                            </div>
-                                            <textarea
-                                                id="jobDescription"
-                                                value={jobDescription}
-                                                onChange={(e) => setJobDescription(e.target.value)}
-                                                className="w-full p-2.5 border border-gray-300 rounded-b-md focus:ring-blue-500 focus:border-blue-500 text-sm min-h-[120px]"
-                                                placeholder="Description"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Employment Type */}
-                                    <div className="flex flex-col md:flex-row items-start">
-                                        <label className="w-full md:w-1/3 text-gray-700 font-medium text-sm md:text-base">
-                                            Employment type
-                                            <p className="text-xs text-gray-500 mt-1">Description text goes in ehre</p>
-                                        </label>
-                                        <div className="w-full md:w-2/3 mt-2 md:mt-0 space-y-3">
-                                            <RadioGroup value={employmentTypes} onChange={setEmploymentTypes} className="space-y-3">
-                                                {employmentOptions.map((option) => (
-                                                    <RadioGroup.Option
-                                                        key={option.id}
-                                                        value={option.id}
-                                                        className={({ active }) =>
-                                                            `relative flex cursor-pointer rounded-lg px-5 py-3 shadow-sm focus:outline-none border
-                              ${employmentTypes.includes(option.id) ? 'bg-blue-50 border-blue-500 text-blue-900' : 'bg-white border-gray-300 text-gray-900'}
-                              ${active ? 'ring-2 ring-blue-500 ring-opacity-60' : ''}`
-                                                        }
-                                                    >
-                                                        {({ checked }) => (
-                                                            <>
-                                                                <div className="flex w-full items-center justify-between">
-                                                                    <div className="flex items-center">
-                                                                        <div className="text-sm">
-                                                                            <RadioGroup.Label
-                                                                                as="p"
-                                                                                className={`font-medium ${employmentTypes.includes(option.id) ? 'text-blue-900' : 'text-gray-900'
-                                                                                    }`}
-                                                                            >
-                                                                                {option.name}
-                                                                            </RadioGroup.Label>
-                                                                        </div>
-                                                                    </div>
-                                                                    {employmentTypes.includes(option.id) && (
-                                                                        <div className="flex-shrink-0 text-blue-600">
-                                                                            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-                                                                                <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                                                                            </svg>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </RadioGroup.Option>
-                                                ))}
-                                            </RadioGroup>
-                                        </div>
-                                    </div>
-
-                                    {/* Working Schedule */}
-                                    <div className="flex flex-col md:flex-row items-start">
-                                        <label className="w-full md:w-1/3 text-gray-700 font-medium text-sm md:text-base">
-                                            Working schedule
-                                            <p className="text-xs text-gray-500 mt-1">You can pick multiple work schedules.</p>
-                                        </label>
-                                        <div className="w-full md:w-2/3 mt-2 md:mt-0 flex flex-wrap gap-3">
-                                            <button
-                                                type="button"
-                                                onClick={() => setWorkingSchedule(prev => ({ ...prev, dayShift: !prev.dayShift }))}
-                                                className={`px-4 py-2 rounded-md border text-sm font-medium transition-colors duration-200
-                          ${workingSchedule.dayShift ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                                            >
-                                                Day shift
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setWorkingSchedule(prev => ({ ...prev, nightShift: !prev.nightShift }))}
-                                                className={`px-4 py-2 rounded-md border text-sm font-medium transition-colors duration-200
-                          ${workingSchedule.nightShift ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                                            >
-                                                Night shift
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setWorkingSchedule(prev => ({ ...prev, weekendAvailability: !prev.weekendAvailability }))}
-                                                className={`px-4 py-2 rounded-md border text-sm font-medium transition-colors duration-200
-                          ${workingSchedule.weekendAvailability ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                                            >
-                                                Weekend availability
-                                            </button>
-                                            <input
-                                                type="text"
-                                                value={workingSchedule.custom}
-                                                onChange={(e) => setWorkingSchedule(prev => ({ ...prev, custom: e.target.value }))}
-                                                placeholder="Pick working schedule"
-                                                className="flex-grow p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm min-w-[150px]"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Salary */}
-                                    <div className="flex flex-col md:flex-row items-start">
-                                        <label className="w-full md:w-1/3 text-gray-700 font-medium text-sm md:text-base">
-                                            Salary
-                                            <p className="text-xs text-gray-500 mt-1">Choose how you prefer to pay for this job.</p>
-                                        </label>
-                                        <div className="w-full md:w-2/3 mt-2 md:mt-0 space-y-4">
-                                            <RadioGroup value={salaryType} onChange={setSalaryType} className="flex gap-4">
-                                                <RadioGroup.Option
-                                                    value="hourly"
-                                                    className={({ active, checked }) =>
-                                                        `relative flex cursor-pointer rounded-md p-3 focus:outline-none border
-                            ${checked ? 'bg-blue-50 border-blue-500 text-blue-900' : 'bg-white border-gray-300 text-gray-900'}
-                            ${active ? 'ring-2 ring-blue-500 ring-opacity-60' : ''}`
-                                                    }
-                                                >
-                                                    {({ checked }) => (
-                                                        <div className="flex items-center">
-                                                            <span className={`h-4 w-4 rounded-full border flex items-center justify-center ${checked ? 'border-blue-600 bg-blue-600' : 'border-gray-400 bg-white'}`}>
-                                                                {checked && <span className="h-2 w-2 rounded-full bg-white" />}
-                                                            </span>
-                                                            <RadioGroup.Label as="p" className="ml-2 text-sm font-medium">
-                                                                Salary
-                                                            </RadioGroup.Label>
-                                                        </div>
-                                                    )}
-                                                </RadioGroup.Option>
-                                                <RadioGroup.Option
-                                                    value="custom"
-                                                    className={({ active, checked }) =>
-                                                        `relative flex cursor-pointer rounded-md p-3 focus:outline-none border
-                            ${checked ? 'bg-blue-50 border-blue-500 text-blue-900' : 'bg-white border-gray-300 text-gray-900'}
-                            ${active ? 'ring-2 ring-blue-500 ring-opacity-60' : ''}`
-                                                    }
-                                                >
-                                                    {({ checked }) => (
-                                                        <div className="flex items-center">
-                                                            <span className={`h-4 w-4 rounded-full border flex items-center justify-center ${checked ? 'border-blue-600 bg-blue-600' : 'border-gray-400 bg-white'}`}>
-                                                                {checked && <span className="h-2 w-2 rounded-full bg-white" />}
-                                                            </span>
-                                                            <RadioGroup.Label as="p" className="ml-2 text-sm font-medium">
-                                                                Custom
-                                                            </RadioGroup.Label>
-                                                        </div>
-                                                    )}
-                                                </RadioGroup.Option>
-                                            </RadioGroup>
-
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label htmlFor="salaryAmount" className="block text-xs text-gray-500 mb-1">Amount you want to pay</label>
-                                                    <input
-                                                        type="number"
-                                                        id="salaryAmount"
-                                                        value={salaryAmount}
-                                                        onChange={(e) => setSalaryAmount(e.target.value)}
-                                                        className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                        placeholder="35,000"
-                                                        required
-                                                    />
-                                                </div>
-                                                <div className="relative">
-                                                    <label htmlFor="salaryFrequency" className="block text-xs text-gray-500 mb-1">How you want to pay</label>
-                                                    <select
-                                                        id="salaryFrequency"
-                                                        value={salaryFrequency}
-                                                        onChange={(e) => setSalaryFrequency(e.target.value)}
-                                                        className="block appearance-none w-full bg-white border border-gray-300 text-gray-700 py-2.5 px-3 pr-8 rounded-md leading-tight focus:outline-none focus:bg-white focus:border-blue-500 text-sm"
-                                                    >
-                                                        {salaryFrequencies.map((freq) => (
-                                                            <option key={freq} value={freq}>{freq}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 mt-4">
-                                                        <ChevronDownIcon className="h-5 w-5" aria-hidden="true" />
+                                                <div className="ml-4">
+                                                    <div className="text-sm font-medium text-gray-900">
+                                                        {job.jobTitle}
+                                                    </div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {job.companyName}
+                                                    </div>
+                                                    <div className="text-xs text-gray-400 mt-1">
+                                                        Posted: {formatDate(job.postedOn)}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        ID: {job.id}
                                                     </div>
                                                 </div>
                                             </div>
+                                        </td>
 
-                                            <div className="flex items-center mt-4">
-                                                <input
-                                                    type="checkbox"
-                                                    id="salaryNegotiable"
-                                                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                />
-                                                <label htmlFor="salaryNegotiable" className="ml-2 block text-sm text-gray-900">
-                                                    Salary is negotiable
-                                                </label>
+                                        {/* Location & Experience */}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm text-gray-900">{job.location}</div>
+                                            <div className="text-sm text-gray-500">{job.experience}</div>
+                                            <div className="text-xs text-gray-400">
+                                                {formatJobRoleType(job.jobRoleType)}
                                             </div>
-                                        </div>
-                                    </div>
+                                        </td>
 
-                                    {/* Hiring Multiple Candidates */}
-                                    <div className="flex flex-col md:flex-row items-start">
-                                        <label htmlFor="hiringMultiple" className="w-full md:w-1/3 text-gray-700 font-medium text-sm md:text-base">
-                                            Hiring multiple candidates?
-                                            <p className="text-xs text-gray-500 mt-1">This will be displayed on job page for candidates to see.</p>
-                                        </label>
-                                        <div className="w-full md:w-2/3 mt-2 md:mt-0 flex items-center">
-                                            <Switch
-                                                checked={hiringMultiple}
-                                                onChange={setHiringMultiple}
-                                                className={`${hiringMultiple ? 'bg-blue-600' : 'bg-gray-200'
-                                                    } relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75`}
-                                            >
-                                                <span className="sr-only">Enable notifications</span>
-                                                <span
-                                                    className={`${hiringMultiple ? 'translate-x-6' : 'translate-x-1'
-                                                        } inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out`}
-                                                />
-                                            </Switch>
-                                            <span className="ml-3 text-sm text-gray-900">
-                                                Yes, I am hiring multiple candidates
+                                        {/* Salary & Commission */}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-medium text-gray-900">
+                                                {formatSalary(job.salary)}
+                                            </div>
+                                            <div className="text-sm text-gray-500">
+                                                Commission: {job.commissionStructure || 'N/A'}
+                                            </div>
+                                            <div className="text-xs text-gray-400">
+                                                Incentives: {job.incentives || 'N/A'}
+                                            </div>
+                                        </td>
+
+                                        {/* Requirements */}
+                                        <td className="px-6 py-4">
+                                            <div className="text-sm text-gray-900 space-y-1">
+                                                <div className="flex items-center space-x-1">
+                                                    <span className="text-xs">Property:</span>
+                                                    <span className="text-xs font-medium">
+                                                        {job.propertyTypes?.slice(0, 2).join(', ')}
+                                                        {job.propertyTypes?.length > 2 && '...'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center space-x-1">
+                                                    <span className="text-xs">Languages:</span>
+                                                    <span className="text-xs font-medium">
+                                                        {job.languageRequirements?.slice(0, 2).join(', ')}
+                                                        {job.languageRequirements?.length > 2 && '...'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center space-x-1">
+                                                    <span className="text-xs">Vehicle:</span>
+                                                    <span className="text-xs font-medium">
+                                                        {formatBoolean(job.vehicleRequirement)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        {/* Applications */}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm text-gray-900 font-medium">
+                                                {job.applications?.length || 0}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                                Applications
+                                            </div>
+                                            <div className="text-xs text-gray-400">
+                                                Views: {job.views || 0}
+                                            </div>
+                                        </td>
+
+                                        {/* Status */}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${job.status === 'active'
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                {job.status}
                                             </span>
-                                        </div>
-                                    </div>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                {formatEmploymentTypes(job.employmentTypes)}
+                                            </div>
+                                        </td>
 
-                                    {/* Submit Button */}
-                                    <div className="mt-8 flex justify-end">
-                                        <button
-                                            type="submit"
-                                            className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                                        >
-                                            Save Job
-                                        </button>
-                                    </div>
-                                </form>
-                            </Dialog.Panel>
-                        </Transition.Child>
+                                        {/* Actions */}
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <div className="flex items-center space-x-2">
+                                                {/* Edit Button */}
+                                                <button
+                                                    onClick={() => editForm(index, "edit")}
+                                                    className="text-green-600 hover:text-green-900 transition-colors duration-200"
+                                                    title="Edit Job"
+                                                >
+                                                    <PencilIcon className="w-5 h-5" />
+                                                </button>
+
+                                                {/* Delete Button */}
+                                                <button
+                                                    onClick={() => deleteItem(index)}
+                                                    className="text-red-600 hover:text-red-900 transition-colors duration-200"
+                                                    title="Delete Job"
+                                                >
+                                                    <TrashIcon className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Table Footer */}
+                    <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+                        <div className="flex justify-between items-center">
+                            <div className="text-sm text-gray-500">
+                                Showing <span className="font-medium">{jobList.length}</span> job{jobList.length !== 1 ? 's' : ''}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                                Last updated: {new Date().toLocaleDateString()}
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </Dialog>
-        </Transition>
+            ) : (
+                // Empty state only shown when there are no jobs
+                <div className="text-center py-12 bg-white rounded-lg shadow">
+                    <div className="text-gray-400 mb-4">
+                        <ExclamationTriangleIcon className="w-16 h-16 mx-auto" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No jobs found</h3>
+                    <p className="text-gray-500 mb-6">Get started by creating your first job posting.</p>
+                </div>
+            )}
+        </div>
     );
-}
+};
 
-
-// Main Jobs Component with API integration
+// Main Jobs Component
 export default function Jobs() {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [currentJobCategory, setCurrentJobCategory] = useState('');
     const { rootContext, setRootContext } = useContext(RootContext);
     const [activeTab, setActiveTab] = useState(0);
     const [editData, setEditData] = useState({});
@@ -541,88 +752,90 @@ export default function Jobs() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Get company ID from context (adjust based on your context structure)
+    // Get company ID from context
     const companyId = rootContext?.user?.companyId || rootContext?.user?.id;
     const companyName = rootContext?.user?.companyName || rootContext?.user?.name;
 
-    const tabName = jobCategories[activeTab]?.title || '';
+    // Get current category slug and name
+    const currentCategory = jobCategories[activeTab];
+    const categorySlug = currentCategory?.slug || '';
+    const tabName = currentCategory?.title || '';
 
-    // Filter jobs from context or fetch from API
-    const jobList = rootContext.jobs || [];
-    const filterJobs = jobList.filter((item) => item.jobTitle === tabName);
+    // Use SWR to fetch jobs data
+    const { data, isLoading, error: swrError } = useSWRFetch(`/api/companies/jobs`);
+    const mutated = Mutated(`/api/companies/jobs`);
 
-    // Fetch company jobs on component mount
+    // Get jobs from SWR data - handle the correct data structure
+    const jobList = data?.jobs || [];
+
+    // Filter jobs by category slug
+    const filterJobs = jobList.filter((item) => {
+        return item.categorySlug === categorySlug;
+    });
+
+
+    // Auto-select first tab that has jobs
     useEffect(() => {
-        if (companyId) {
-            fetchCompanyJobs();
-        }
-    }, [companyId]);
+        if (jobList.length > 0 && activeTab === 0) {
+            // Find the first category that has jobs
+            const firstCategoryWithJobs = jobCategories.findIndex(category => {
+                return jobList.some(job => job.categorySlug === category.slug);
+            });
 
-    const fetchCompanyJobs = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await companyJobsService.getCompanyJobs(companyId);
-
-            if (response.success) {
-                setRootContext((prevContext) => ({
-                    ...prevContext,
-                    jobs: response.jobs || [],
-                }));
+            if (firstCategoryWithJobs !== -1 && firstCategoryWithJobs !== activeTab) {
+                setActiveTab(firstCategoryWithJobs);
             }
-        } catch (err) {
-            setError(err.message);
-            console.error('Error fetching company jobs:', err);
-        } finally {
-            setLoading(false);
         }
-    };
+    }, [jobList, activeTab]);
 
     const handleCategoryClick = (categoryTitle) => {
+        const currentCategory = jobCategories.find(cat => cat.title === categoryTitle);
+        const jobId = generateJobId();
         setEditData({
             jobTitle: categoryTitle,
+            categorySlug: currentCategory?.slug || categoryTitle.toLowerCase().replace(/\s+/g, '-'),
             companyId: companyId,
             companyName: companyName,
             postedBy: rootContext?.user?.id,
             postedByRole: rootContext?.user?.role,
+            id: jobId,
+            postedOn: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            status: 'active',
+            applications: [],
+            views: 0
         });
         setMode("create");
         setIsOpen(true);
     };
 
-    const handleJobSave = async (jobData) => {
-        try {
-            setLoading(true);
-            let response;
+    const handleAutoCreate = (categoryTitle) => {
+        const currentCategory = jobCategories.find(cat => cat.title === categoryTitle);
+        const categorySlug = currentCategory?.slug;
+        const template = autoCreateJobTemplates[categorySlug];
 
-            // Prepare the job data with proper structure
-            const jobPayload = {
-                ...jobData,
+        if (template) {
+            const jobId = generateJobId();
+            const currentDate = new Date().toISOString();
+
+            setEditData({
+                ...template,
+                categorySlug: categorySlug,
                 companyId: companyId,
                 companyName: companyName,
                 postedBy: rootContext?.user?.id,
                 postedByRole: rootContext?.user?.role,
-            };
-
-            if (mode === "create") {
-                response = await companyJobsService.createJob(jobPayload);
-            } else {
-                response = await companyJobsService.updateJob(jobPayload);
-            }
-
-            if (response.success) {
-                // Refresh the jobs list
-                await fetchCompanyJobs();
-                setIsOpen(false);
-
-                // Show success message (you can add a toast notification here)
-                console.log(`Job ${mode === 'create' ? 'created' : 'updated'} successfully!`);
-            }
-        } catch (err) {
-            setError(err.message);
-            console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} job:`, err);
-        } finally {
-            setLoading(false);
+                id: jobId,
+                postedOn: currentDate,
+                createdAt: currentDate,
+                updatedAt: currentDate,
+                status: 'active',
+                applications: [],
+                views: 0
+            });
+            setMode("create");
+            setIsOpen(true);
         }
     };
 
@@ -650,10 +863,7 @@ export default function Jobs() {
             const response = await companyJobsService.deleteJob(jobToDelete.id, companyId);
 
             if (response.success) {
-                // Refresh the jobs list
-                await fetchCompanyJobs();
-
-                // Show success message
+                mutated();
                 console.log('Job deleted successfully!');
             }
         } catch (err) {
@@ -664,7 +874,7 @@ export default function Jobs() {
         }
     };
 
-    // Helper functions (keep your existing ones)
+    // Helper functions
     const formatEmploymentTypes = (types) => {
         if (!types || types.length === 0) return 'N/A';
         return types.map(type => type.charAt(0).toUpperCase() + type.slice(1).replace('-', ' ')).join(', ');
@@ -679,25 +889,60 @@ export default function Jobs() {
         return parts.length > 0 ? parts.join(', ') : 'Flexible';
     };
 
-    const tabs = jobCategories.map((job, index) => ({
-        name: (
-            <div key={index} className="flex flex-wrap items-center gap-2 text-left">
-                <div className="flex flex-col">
-                    <img
-                        src={job.icon}
-                        alt={job.title}
-                        className="h-12 w-auto object-contain mx-auto"
-                    />
-                    <span className="text-sm font-semibold">{job.title}</span>
-                    <span className="text-xs text-gray-500">{job.description}</span>
+    // Enhanced tabs with job counts
+    const tabs = jobCategories.map((job, index) => {
+        const categorySlug = job.slug;
+       
+        return {
+            name: (
+                <div key={index} className="flex flex-wrap items-center gap-2 text-left">
+                    <div className="flex flex-col">
+                        <img
+                            src={job.icon}
+                            alt={job.title}
+                            className="h-12 w-auto object-contain mx-auto"
+                        />
+                        <span className="text-sm font-semibold">{job.title}</span>
+                        <span className="text-xs text-gray-500">{job.description}</span>                       
+                    </div>
+                </div>
+            ),
+        };
+    });
+
+    // Show loading state
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading jobs...</p>
                 </div>
             </div>
-        ),
-    }));
+        );
+    }
+
+    // Show error state
+    if (swrError) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <ExclamationTriangleIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading jobs</h3>
+                    <p className="text-gray-600 mb-4">{swrError.message}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>
-            {/* Job Categories Section */}
             <div className="bg-gray-50 min-h-screen flex flex-col font-sans">
                 {/* Loading and Error States */}
                 {loading && (
@@ -731,35 +976,66 @@ export default function Jobs() {
                     </div>
                 </div>
 
+                {/* Category Info Header */}
+                <div className="bg-white border-b border-gray-200 p-4">
+                    <div className="max-w-7xl mx-auto">
+                        <h2 className="text-lg font-semibold text-gray-800">
+                            {tabName} Jobs
+                        </h2>
+                        <p className="text-sm text-gray-600 mt-1">
+                            {filterJobs.length} job{filterJobs.length !== 1 ? 's' : ''} found in {tabName} category
+                        </p>
+                    </div>
+                </div>
+
                 {/* Mobile Accordion */}
                 <div className="sm:hidden">
                     {tabs.map((tab, index) => {
-                        const Component = JobList;
                         const isOpen = accordionOpen === index;
+                        const currentCategory = jobCategories[index];
+                        const categorySlug = currentCategory?.slug || '';
+                        const mobileFilterJobs = jobList.filter((item) => item.categorySlug === categorySlug);
+
                         return (
                             <div key={index} className="border-b border-gray-200">
                                 <button
                                     onClick={() => { setAccordionOpen(isOpen ? null : index); setActiveTab(index) }}
                                     className="w-full flex justify-between items-center py-3 px-4 bg-white text-left"
                                 >
-                                    <span className="font-medium text-sm text-gray-800 text-base truncate">{tab.name}</span>
+                                    <div className="flex flex-col items-start">
+                                        <span className="font-medium text-sm text-gray-800 text-base truncate">{currentCategory?.title}</span>
+                                        {mobileFilterJobs.length > 0 && (
+                                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full mt-1">
+                                                {mobileFilterJobs.length} job{mobileFilterJobs.length !== 1 ? 's' : ''}
+                                            </span>
+                                        )}
+                                    </div>
                                     <ChevronDownIcon
                                         className={`w-5 h-5 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}
                                     />
                                 </button>
-                                {isOpen && jobCategories[index] && (
+                                {isOpen && currentCategory && (
                                     <div className="p-3 bg-gray-50">
-                                        <Component
-                                            tabName={tabName}
+                                        <div className="mb-4">
+                                            <h3 className="text-lg font-semibold text-gray-800">{currentCategory.title} Jobs</h3>
+                                            <p className="text-sm text-gray-600">
+                                                {mobileFilterJobs.length} job{mobileFilterJobs.length !== 1 ? 's' : ''} found
+                                            </p>
+                                        </div>
+                                        <EnhancedJobList
+                                            tabName={currentCategory.title}
                                             getIconForTitle={getIconForTitle}
                                             editForm={editForm}
                                             deleteItem={deleteItem}
                                             formatWorkingSchedule={formatWorkingSchedule}
                                             formatEmploymentTypes={formatEmploymentTypes}
-                                            jobList={filterJobs}
+                                            jobList={mobileFilterJobs}
                                             handleCategoryClick={handleCategoryClick}
+                                            handleAutoCreate={handleAutoCreate}
                                             setIsOpen={setIsOpen}
                                             loading={loading}
+                                            categorySlug={categorySlug}
+                                            setMode={setMode}
                                         />
                                     </div>
                                 )}
@@ -770,8 +1046,8 @@ export default function Jobs() {
 
                 {/* Job List Section */}
                 <div className="hidden sm:flex w-full">
-                    {jobCategories[activeTab] && (
-                        <JobList
+                    {currentCategory && (
+                        <EnhancedJobList
                             tabName={tabName}
                             getIconForTitle={getIconForTitle}
                             editForm={editForm}
@@ -780,8 +1056,10 @@ export default function Jobs() {
                             formatEmploymentTypes={formatEmploymentTypes}
                             jobList={filterJobs}
                             handleCategoryClick={handleCategoryClick}
+                            handleAutoCreate={handleAutoCreate}
                             setIsOpen={setIsOpen}
                             loading={loading}
+                            setMode={setMode}
                         />
                     )}
                 </div>
@@ -796,7 +1074,7 @@ export default function Jobs() {
                     isOpen={isOpen}
                     setIsOpen={setIsOpen}
                     userProfile={rootContext?.user}
-                    onJobSaved={handleJobSave}
+                    mutated={mutated}
                     loading={loading}
                 />
             )}

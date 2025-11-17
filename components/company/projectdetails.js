@@ -1,9 +1,10 @@
 "use client";
 import { useParams } from "next/navigation";
 import Slider from "../common/slider";
-import { createRef, useEffect, useRef, useState } from "react";
+import { createRef, useContext, useEffect, useRef, useState } from "react";
 import Header from "./companyheader";
-import { useSWRFetch } from "../config/useswrfetch";
+import { Mutated, useSWRFetch } from "../config/useswrfetch";
+import RootContext from "../config/rootcontext";
 
 export default function ProjectDetailsPage() {
     const { id, title } = useParams();
@@ -11,9 +12,13 @@ export default function ProjectDetailsPage() {
     const [activeTab, setActiveTab] = useState("About");
     const [loadedSections, setLoadedSections] = useState(["About"]);
     const [company, setCompany] = useState({});
+    const { rootContext, setRootContext } = useContext(RootContext);
+    const [isAdding, setIsAdding] = useState(false);
+    const [isAdded, setIsAdded] = useState(false);
 
     // Only fetch data if we have a companyID and we're on the client
     const { data, error, isLoading } = useSWRFetch(`/api/companies`);
+    const mutated = Mutated(`/api/companies`);
 
     useEffect(() => {
         if (data) {
@@ -35,6 +40,25 @@ export default function ProjectDetailsPage() {
             setCompany({});
         }
     }, [id, data]);
+
+    // Check if current user has already added this project
+    useEffect(() => {
+        if (rootContext.user && rootContext.user.role === "applicant" && company.projectsOfApplicants) {
+            const currentProjectId = decodeURIComponent(String(title || ""));
+            const currentApplicantId = rootContext.user._id || rootContext.user.id;
+
+            // Check if this applicant has already added this project
+            const hasAdded = company.projectsOfApplicants.some(
+                applicantProject =>
+                    applicantProject.projectId === currentProjectId &&
+                    applicantProject.applicantId === currentApplicantId
+            );
+
+            setIsAdded(hasAdded);
+        } else {
+            setIsAdded(false);
+        }
+    }, [company.projectsOfApplicants, rootContext.user, title]);
 
     const sections = [
         "About",
@@ -141,7 +165,120 @@ export default function ProjectDetailsPage() {
         }, 1500);
     };
 
-    // Enhanced section renderers
+    // Add to My Projects function - Updated to use the new API
+    const handleAddToMyProjects = async () => {
+        if (!rootContext.user || rootContext.user.role !== "applicant") {
+            setRootContext(prev => ({
+                ...prev,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Error",
+                    message: "Only applicants can add projects to their list."
+                }
+            }));
+            return;
+        }
+
+        if (isAdded) {
+            setRootContext(prev => ({
+                ...prev,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "warning",
+                    position: "Warning",
+                    message: "This project is already in your list."
+                }
+            }));
+            return;
+        }
+
+        setIsAdding(true);
+        try {
+            // Create project object with comprehensive data
+            const projectToAdd = {
+                id: decodeURIComponent(String(title || "")),
+                title: project.title,
+                description: project.description || "",
+                propertyType: project.projectType || "Residential",
+                location: project.location,
+                projectSize: project.devSize ? `${project.devSize} acres` : "",
+                budget: project.price ? `₹${project.price} Cr` : "",
+                timeline: project.possessionDate ? `Until ${new Date(project.possessionDate).toLocaleDateString()}` : "",
+                client: project.developer || company.name || "",
+                status: project.status || "Under Construction",
+                teamSize: project.totalUnits ? `${project.totalUnits} units` : "",
+                role: "Interested Buyer/Investor",
+                responsibilities: `Exploring investment opportunities in ${project.title}`,
+                achievements: `Premium ${project.projectType?.toLowerCase()} project in ${project.location}`,
+                technologies: project.amenities || [],
+                link: window.location.href,
+                startDate: new Date().toISOString().split('T')[0],
+                images: project.images || [],
+                addedDate: new Date().toISOString(),
+                // Add company reference for tracking
+                companyId: company._id,
+                companyName: company.name
+            };
+
+            // Call the new API endpoint for applicants
+            const response = await fetch('/api/applicants/projects', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    applicantId: rootContext.user._id || rootContext.user.id,
+                    project: projectToAdd
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                setIsAdded(true);
+                mutated(); // Refresh the company data to update projectsOfApplicants
+                setRootContext(prev => ({
+                    ...prev,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "success",
+                        position: "Success",
+                        message: "Project successfully added to your list!"
+                    }
+                }));
+            } else {
+                setRootContext(prev => ({
+                    ...prev,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        position: "Error",
+                        message: result.error || 'Failed to add project'
+                    }
+                }));
+            }
+        } catch (error) {
+            setRootContext(prev => ({
+                ...prev,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Error",
+                    message: `Failed to add project: ${error.message}`
+                }
+            }));
+        } finally {
+            setIsAdding(false);
+        }
+    };
+
+    // Enhanced section renderers (keep all your existing render functions)
     const renderAboutSection = () => (
         <div className="space-y-6">
             <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-2xl">
@@ -418,6 +555,40 @@ export default function ProjectDetailsPage() {
                             Starting at ₹{project.price} Cr
                         </span>
                     </div>
+
+                    {/* Add to My Projects Button - Only for applicants */}
+                    {rootContext.user && rootContext.user.role === "applicant" && (
+                        <div className="mt-6">
+                            <button
+                                onClick={handleAddToMyProjects}
+                                disabled={isAdding || isAdded}
+                                className={`px-6 py-3 rounded-lg font-semibold transition-colors ${isAdded
+                                        ? "bg-green-600 text-white cursor-not-allowed"
+                                        : isAdding
+                                            ? "bg-gray-400 text-white cursor-not-allowed"
+                                            : "bg-yellow-600 text-white hover:bg-yellow-700"
+                                    }`}
+                            >
+                                {isAdding ? (
+                                    <span className="flex items-center gap-2">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                        Adding...
+                                    </span>
+                                ) : isAdded ? (
+                                    "✓ Added to My Projects"
+                                ) : (
+                                    "Add to My Projects"
+                                )}
+                            </button>
+
+                            {/* Success message */}
+                            {isAdded && (
+                                <p className="text-green-600 text-sm mt-2">
+                                    This project has been added to your profile. You can view it in your dashboard.
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Tabs */}
@@ -427,8 +598,8 @@ export default function ProjectDetailsPage() {
                             key={sec}
                             onClick={() => handleTabClick(sec)}
                             className={`px-4 py-2 rounded-full border text-sm font-medium transition ${activeTab === sec
-                                ? "bg-yellow-600 text-white border-yellow-600"
-                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                                    ? "bg-yellow-600 text-white border-yellow-600"
+                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                                 }`}
                         >
                             {sec}

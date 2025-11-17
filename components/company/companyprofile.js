@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import 'react-image-crop/dist/ReactCrop.css';
 import {
     PencilIcon,
@@ -25,7 +25,7 @@ import {
     BuildingStorefrontIcon,
     ExclamationCircleIcon
 } from '@heroicons/react/24/solid';
-
+import RootContext from '../config/rootcontext';
 // Custom hook for focus management
 const useFocusManagement = (dependencies = []) => {
     const focusRef = useRef(null);
@@ -43,6 +43,13 @@ const useFocusManagement = (dependencies = []) => {
     }, dependencies);
 
     return focusRef;
+};
+
+// Generate unique project ID
+const generateProjectId = () => {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    return `project-${timestamp}-${random}`;
 };
 
 // Memoized Edit Section Components - Defined outside to prevent re-renders
@@ -858,7 +865,9 @@ const EditProjectsSection = ({ tempProfile, onArrayFieldChange, onAddArrayField,
     }, [tempProfile.projects?.length]);
 
     const handleAddProject = () => {
+        const projectId = generateProjectId();
         const newProject = {
+            id: projectId, // Add unique project ID
             title: '',
             description: '',
             location: '',
@@ -1004,6 +1013,7 @@ const EditProjectsSection = ({ tempProfile, onArrayFieldChange, onAddArrayField,
                             <div className="flex justify-between items-center">
                                 <div>
                                     <h5 className="font-medium text-lg">Project {projectIndex + 1}</h5>
+                                    <p className="text-xs text-gray-500">ID: {project.id}</p>
                                     {projectErrors.length > 0 && (
                                         <div className="flex items-center gap-1 mt-1">
                                             <ExclamationCircleIcon className="w-4 h-4 text-red-500" />
@@ -1234,7 +1244,7 @@ const EditProjectsSection = ({ tempProfile, onArrayFieldChange, onAddArrayField,
 };
 
 // Projects Display Component for the main view
-const ProjectsSection = ({ tempProfile, startEditingSection }) => {
+const ProjectsSection = ({ tempProfile, startEditingSection, canEdit }) => {
     const [visibleProjects, setVisibleProjects] = useState(6);
 
     const loadMore = () => {
@@ -1267,13 +1277,15 @@ const ProjectsSection = ({ tempProfile, startEditingSection }) => {
         <section className="mb-16">
             <div className="flex justify-between items-center mb-8">
                 <h2 className="text-4xl font-bold text-gray-900">Our Projects</h2>
-                <button
-                    onClick={() => startEditingSection('projects')}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                    <PencilIcon className="w-4 h-4" />
-                    Manage Projects
-                </button>
+                {canEdit && (
+                    <button
+                        onClick={() => startEditingSection('projects')}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <PencilIcon className="w-4 h-4" />
+                        Manage Projects
+                    </button>
+                )}
             </div>
 
             {displayedProjects.length > 0 ? (
@@ -1367,21 +1379,38 @@ const ProjectsSection = ({ tempProfile, startEditingSection }) => {
                     <p className="text-gray-500 max-w-md mx-auto mb-6">
                         Showcase your company's work by adding projects. Display your achievements, ongoing work, and completed projects to build trust with potential clients.
                     </p>
-                    <button
-                        onClick={() => startEditingSection('projects')}
-                        className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
-                    >
-                        Add Your First Project
-                    </button>
+                    {canEdit && (
+                        <button
+                            onClick={() => startEditingSection('projects')}
+                            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                        >
+                            Add Your First Project
+                        </button>
+                    )}
                 </div>
             )}
         </section>
     );
 };
 
+// Edit Button Component - Only shows for company role
+const EditButton = ({ onClick, children, icon: Icon }) => {
+    return (
+        <button
+            onClick={onClick}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+            <Icon className="w-4 h-4" />
+            {children}
+        </button>
+    );
+};
+
 // Company Landing Page Component
-function CompanyLandingPage({ profile, setRootContext, mutated }) {
-    const [editing, setEditing] = useState(false);
+function CompanyLandingPage({ profile, mutated }) {
+    const { rootContext, setRootContext } = useContext(RootContext);
+    const user = rootContext?.user;
+    const canEdit = user?.role === "company";
     const [tempProfile, setTempProfile] = useState({});
     const [activeEditSection, setActiveEditSection] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -1538,6 +1567,15 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             }
 
             // For object arrays (leadership, achievements, certifications, whyChooseUs, galleryImages, videos)
+            // For projects, ensure we generate a unique ID
+            if (field === 'projects') {
+                const projectId = generateProjectId();
+                return {
+                    ...prev,
+                    [field]: [...prev[field], { ...defaultValue, id: projectId }]
+                };
+            }
+
             return {
                 ...prev,
                 [field]: [...prev[field], { ...defaultValue, id: Date.now() + Math.random() }]
@@ -1645,7 +1683,6 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             const data = await res.json();
 
             if (res.ok) {
-                setEditing(false);
                 setActiveEditSection(null);
                 mutated();
                 setRootContext(prev => ({
@@ -1688,7 +1725,6 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
     }, [tempProfile, profile?._id, mutated, setRootContext]);
 
     const handleCancel = useCallback(() => {
-        setEditing(false);
         setActiveEditSection(null);
         // Reset to original profile data
         if (profile) {
@@ -1729,9 +1765,9 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
     }, [profile]);
 
     const startEditingSection = useCallback((section) => {
-        setEditing(true);
+        if (!canEdit) return;
         setActiveEditSection(section);
-    }, []);
+    }, [canEdit]);
 
     // View Mode - Comprehensive Mini Landing Page
     return (
@@ -1740,7 +1776,7 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             <div className="relative bg-gradient-to-r from-blue-900 via-blue-800 to-blue-600 rounded-3xl overflow-hidden mb-12">
                 <div className="absolute inset-0 bg-black/20"></div>
                 <div className="relative px-8 py-16 text-center text-white">
-                    <h1 className="text-5xl font-bold mb-4">{tempProfile.company || tempProfile.name}</h1>
+                    <h1 className="text-5xl font-bold mb-4">{tempProfile.name || tempProfile.name}</h1>
                     <p className="text-2xl mb-6 opacity-90">{tempProfile.tagline}</p>
                     <p className="text-xl max-w-3xl mx-auto opacity-80">{tempProfile.description}</p>
 
@@ -1760,13 +1796,11 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             <section className="mb-16">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-4xl font-bold text-gray-900">About Our Company</h2>
-                    <button
-                        onClick={() => startEditingSection('about')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        <PencilIcon className="w-4 h-4" />
-                        Edit About
-                    </button>
+                    {canEdit && (
+                        <EditButton onClick={() => startEditingSection('about')} icon={PencilIcon}>
+                            Edit About
+                        </EditButton>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -1827,19 +1861,21 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             </section>
 
             {/* Projects Section */}
-            <ProjectsSection tempProfile={tempProfile} startEditingSection={startEditingSection} />
+            <ProjectsSection
+                tempProfile={tempProfile}
+                startEditingSection={startEditingSection}
+                canEdit={canEdit}
+            />
 
             {/* Gallery Section */}
             <section className="mb-16">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-4xl font-bold text-gray-900">Gallery</h2>
-                    <button
-                        onClick={() => startEditingSection('media')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        <PhotoIcon className="w-4 h-4" />
-                        Manage Media
-                    </button>
+                    {canEdit && (
+                        <EditButton onClick={() => startEditingSection('media')} icon={PhotoIcon}>
+                            Manage Media
+                        </EditButton>
+                    )}
                 </div>
 
                 {/* Images Grid */}
@@ -1930,13 +1966,11 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             <section className="mb-16">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-4xl font-bold text-gray-900">Our Vision</h2>
-                    <button
-                        onClick={() => startEditingSection('vision')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        <PencilIcon className="w-4 h-4" />
-                        Edit Vision
-                    </button>
+                    {canEdit && (
+                        <EditButton onClick={() => startEditingSection('vision')} icon={PencilIcon}>
+                            Edit Vision
+                        </EditButton>
+                    )}
                 </div>
 
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-3xl p-12 text-center">
@@ -1954,13 +1988,11 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             <section className="mb-16">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-4xl font-bold text-gray-900">Our Mission</h2>
-                    <button
-                        onClick={() => startEditingSection('mission')}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                        <PencilIcon className="w-4 h-4" />
-                        Edit Mission
-                    </button>
+                    {canEdit && (
+                        <EditButton onClick={() => startEditingSection('mission')} icon={PencilIcon}>
+                            Edit Mission
+                        </EditButton>
+                    )}
                 </div>
 
                 <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-3xl p-12 text-center">
@@ -1978,13 +2010,11 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             <section className="mb-16">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-4xl font-bold text-gray-900">Leadership Team</h2>
-                    <button
-                        onClick={() => startEditingSection('leadership')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        <PencilIcon className="w-4 h-4" />
-                        Edit Team
-                    </button>
+                    {canEdit && (
+                        <EditButton onClick={() => startEditingSection('leadership')} icon={PencilIcon}>
+                            Edit Team
+                        </EditButton>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -2014,13 +2044,11 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             <section className="mb-16">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-4xl font-bold text-gray-900">Why Choose Us?</h2>
-                    <button
-                        onClick={() => startEditingSection('whyChooseUs')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        <PencilIcon className="w-4 h-4" />
-                        Edit Reasons
-                    </button>
+                    {canEdit && (
+                        <EditButton onClick={() => startEditingSection('whyChooseUs')} icon={PencilIcon}>
+                            Edit Reasons
+                        </EditButton>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -2038,13 +2066,11 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             <section className="mb-16">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-4xl font-bold text-gray-900">Our Services</h2>
-                    <button
-                        onClick={() => startEditingSection('services')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        <PencilIcon className="w-4 h-4" />
-                        Edit Services
-                    </button>
+                    {canEdit && (
+                        <EditButton onClick={() => startEditingSection('services')} icon={PencilIcon}>
+                            Edit Services
+                        </EditButton>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -2063,13 +2089,11 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             <section className="mb-16">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-4xl font-bold text-gray-900">Awards & Certifications</h2>
-                    <button
-                        onClick={() => startEditingSection('achievements')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        <PencilIcon className="w-4 h-4" />
-                        Edit Awards
-                    </button>
+                    {canEdit && (
+                        <EditButton onClick={() => startEditingSection('achievements')} icon={PencilIcon}>
+                            Edit Awards
+                        </EditButton>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -2120,13 +2144,11 @@ function CompanyLandingPage({ profile, setRootContext, mutated }) {
             <section className="mb-16">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-4xl font-bold text-gray-900">Our Values</h2>
-                    <button
-                        onClick={() => startEditingSection('values')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        <PencilIcon className="w-4 h-4" />
-                        Edit Values
-                    </button>
+                    {canEdit && (
+                        <EditButton onClick={() => startEditingSection('values')} icon={PencilIcon}>
+                            Edit Values
+                        </EditButton>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -1,5 +1,8 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useRouter } from 'next/navigation';
+import RootContext from '../config/rootcontext';
+
 
 // Category structure with icons
 const categoryStructure = [
@@ -66,7 +69,82 @@ const categoryStructure = [
 ];
 
 // Job Card Component
-const JobCard = ({ job, logo, company }) => {
+const JobCard = ({ job, logo, company, category }) => {
+    const router = useRouter();
+    const { rootContext, setRootContext } = useContext(RootContext);
+
+    const user = rootContext?.user;
+    const isLoggedIn = user && user.role;
+    const isApplicant = isLoggedIn && user.role === "applicant";
+
+    const [applied, setApplied] = useState(false);
+
+    // -----------------------------------------------------
+    // ✅ CHECK IF USER ALREADY APPLIED FOR THIS JOB
+    // -----------------------------------------------------
+    useEffect(() => {
+        if (isApplicant && job?.applications?.length > 0) {
+            const alreadyApplied = job.applications.some(
+                (a) => a.applicantId === (user._id || user.id)
+            );
+            setApplied(alreadyApplied);
+        }
+    }, [job, user, isApplicant]);
+
+    // -----------------------------------------------------
+    // ✅ HANDLE APPLY
+    // -----------------------------------------------------
+    const handleApply = async () => {
+        if (!isLoggedIn || !user?.role) {
+            router.push("/login");
+            return;
+        }
+
+        if (!isApplicant) return;
+
+        try {
+            const response = await fetch("/api/jobs/apply", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: user._id || user.id,
+                    jobId: job.id,
+                    jobTitle: job.jobTitle,
+                    category: category || job.categorySlug,
+                    companyId: job.companyId,
+                }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "Failed to apply");
+
+            setApplied(true);
+
+            setRootContext({
+                ...rootContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "success",
+                    title: "Applied Successfully",
+                    message: `You applied for ${job.jobTitle}`,
+                },
+            });
+        } catch (err) {
+            console.error(err);
+            setRootContext({
+                ...rootContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    title: "Failed",
+                    message: err.message,
+                },
+            });
+        }
+    };
+
     // Get category icon based on job's categorySlug
     const getCategoryIcon = () => {
         const category = categoryStructure.find(cat => cat.slug === job.categorySlug);
@@ -86,9 +164,37 @@ const JobCard = ({ job, logo, company }) => {
 
             {/* Job Info */}
             <div className="flex-1 w-full pl-24 sm:pl-32">
-                <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800">
-                    {job.jobTitle}
-                </h2>
+
+                {/* Apply Button */}
+                <div className="flex justify-between items-center mb-2">
+                    <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800">
+                        {job.jobTitle}
+                    </h2>
+                    {!isLoggedIn ? (
+                        <button
+                            onClick={() => router.push("/login")}
+                            className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+                        >
+                            Login to Apply
+                        </button>
+                    ) : isApplicant ? (
+                        <button
+                            onClick={handleApply}
+                            disabled={applied}
+                            className={`px-3 py-1 text-xs sm:text-sm font-medium rounded-md transition ${applied
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                }`}
+                        >
+                            {applied ? "Applied" : "Apply"}
+                        </button>
+                    ) : (
+                        <p className="text-sm text-gray-500">
+                            Login as Applicant to apply
+                        </p>
+                    )}
+                </div>
+
                 <p className="text-xs sm:text-sm text-gray-600 mt-1">
                     Company: {company}
                 </p>
@@ -108,8 +214,8 @@ const JobCard = ({ job, logo, company }) => {
                 {/* Job Status */}
                 <div className="mt-2">
                     <span className={`px-2 py-1 rounded text-xs ${job.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
                         }`}>
                         {job.status}
                     </span>
@@ -121,27 +227,26 @@ const JobCard = ({ job, logo, company }) => {
                         {job.applications.length} application{job.applications.length !== 1 ? 's' : ''}
                     </p>
                 )}
-            </div>
-
-            {/* Posted Date */}
-            <div className="text-xs text-gray-500 self-end">
-                Posted: {new Date(job.postedOn).toLocaleDateString()}
+                {/* Posted Date */}
+                <div className="text-xs text-gray-500 flex justify-end">
+                    Posted: {new Date(job.postedOn).toLocaleDateString()}
+                </div>
             </div>
         </div>
     );
 };
 
 // Jobs List Component
-const CompanyJobs = ({ companyProfile }) => {
+const CompanyJobs = ({ profile }) => {
     const [jobsWithLogos, setJobsWithLogos] = useState([]);
     const [categorizedJobs, setCategorizedJobs] = useState({});
 
     useEffect(() => {
-        if (companyProfile?.jobs) {
+        if (profile?.jobs) {
             // Process jobs to add category icons and organize by category
-            processJobs(companyProfile.jobs);
+            processJobs(profile.jobs);
         }
-    }, [companyProfile]);
+    }, [profile]);
 
     const processJobs = (jobs) => {
         // Add category icons to each job
@@ -172,18 +277,6 @@ const CompanyJobs = ({ companyProfile }) => {
         setCategorizedJobs(jobsByCategory);
     };
 
-    // Render all jobs in a single list
-    const renderAllJobs = () => {
-        return jobsWithLogos.map((job, index) => (
-            <JobCard
-                key={job.id || index}
-                job={job}
-                logo={job.categoryIcon}
-                company={companyProfile?.name || companyProfile?.company}
-            />
-        ));
-    };
-
     // Render jobs grouped by category
     const renderJobsByCategory = () => {
         return Object.keys(categorizedJobs).map(categorySlug => {
@@ -199,7 +292,8 @@ const CompanyJobs = ({ companyProfile }) => {
                                 key={job.id || index}
                                 job={job}
                                 logo={job.categoryIcon}
-                                company={companyProfile?.name || companyProfile?.company}
+                                company={profile?.name || profile?.company}
+                                category={categorySlug}
                             />
                         ))}
                     </div>
@@ -208,7 +302,7 @@ const CompanyJobs = ({ companyProfile }) => {
         });
     };
 
-    if (!companyProfile?.jobs || companyProfile.jobs.length === 0) {
+    if (!profile?.jobs || profile.jobs.length === 0) {
         return (
             <div className="text-center py-8 text-gray-500">
                 No jobs posted yet.
@@ -221,7 +315,7 @@ const CompanyJobs = ({ companyProfile }) => {
             {/* Summary */}
             <div className="text-center">
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                    Job Openings at {companyProfile?.name || companyProfile?.company}
+                    Job Openings at {profile?.name || profile?.company}
                 </h2>
                 <p className="text-gray-600">
                     {jobsWithLogos.length} total job{jobsWithLogos.length !== 1 ? 's' : ''} available

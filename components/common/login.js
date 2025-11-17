@@ -4,7 +4,7 @@ import Input from "./input";
 import CheckBox from "./checkbox";
 import RootContext from "../config/rootcontext";
 import { contextObject } from "../config/contextobject";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import { companyData } from "../config/data";
 import Image from "next/image";
@@ -13,6 +13,7 @@ import ForgetPassword from "./forgetpassword";
 
 const SignIn = () => {
   const { setRootContext } = useContext(RootContext);
+  const pathname = usePathname();
   const router = useRouter();
   const { data: users = [], error, isLoading } = useSWRFetch(`/api/users`);
   const [screen, setScreen] = useState("login");
@@ -131,8 +132,12 @@ const SignIn = () => {
       localStorage.setItem("user_details", JSON.stringify(resp.user));
       // Store auth token
       localStorage.setItem("auth_token", authResult.token);
+      if (pathname === "/login") {
+        router.push('/');
+      } else {
+        router.back();
+      }
 
-      router.push("/");
 
     } catch (error) {
       setRootContext((prev) => ({

@@ -36,12 +36,12 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
             {
                 label: "Profile",
                 link: `/details/${rootContext?.user?.id || 1}/${rootContext?.user?.name || ""}`,
-                roles: ["superadmin", "company", "recruiter", "applicant"]
+                roles: ["superadmin", "company"]
             },
             {
                 label: "Add Projects",
                 link: "/projects",
-                roles: ["superadmin", "company", "recruiter", "applicant"]
+                roles: ["superadmin", "company"]
             },
             {
                 label: "Add Recruiters",
@@ -364,15 +364,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                     // Add other required props based on your needs:
                     title="Post New Job"  // or dynamic title
                     mode="create"         // since this is for creating new jobs
-                    userProfile={rootContext?.user} // pass user data if needed
-                    onJobSaved={() => {
-                        // Callback when job is successfully saved
-                        console.log('Job saved successfully');
-                        // You can add additional logic here like:
-                        // - Refresh job listings
-                        // - Show success message
-                        // - Redirect user
-                    }}
+                    userProfile={rootContext?.user} // pass user data if needed                  
                 // editData={null} // Only pass if editing existing job
                 />
             )}

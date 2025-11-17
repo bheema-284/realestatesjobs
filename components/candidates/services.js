@@ -600,29 +600,7 @@ export default function Services({ profile, setRootContext, mutated }) {
       <div className="bg-gradient-to-br mt-5 from-green-50 to-emerald-100 p-6 rounded-xl shadow-lg max-w-4xl mx-auto border border-green-200">
         <div className="flex justify-between items-center mb-5">
           <h2 className="text-2xl font-bold text-green-800 border-b pb-3 border-green-300">My Real Estate Services</h2>
-          {!isAdding && editingIndex === null && services.length > 0 && (
-            <button
-              onClick={handleAdd}
-              disabled={serviceCall}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-2 rounded-lg transition-colors duration-300 font-medium"
-            >
-              <PlusIcon className="w-5 h-5" />
-              {serviceCall ? 'Loading...' : 'Add Service'}
-            </button>
-          )}
         </div>
-
-        {/* Add Form at Top */}
-        {isAdding && (
-          <ServiceForm
-            formData={formData}
-            onChange={handleChange}
-            onSave={handleSave}
-            onCancel={handleCancel}
-            serviceCall={serviceCall}
-          />
-        )}
-
         {/* Services List */}
         {services.length > 0 ? (
           <ul className="space-y-4">
@@ -632,16 +610,6 @@ export default function Services({ profile, setRootContext, mutated }) {
           <div className="text-center py-8">
             <BuildingStorefrontIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 mb-4">No real estate services available.</p>
-            {!isAdding && editingIndex === null && (
-              <button
-                onClick={handleAdd}
-                disabled={serviceCall}
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-6 py-2 rounded-lg transition-colors duration-300 font-medium mx-auto"
-              >
-                <PlusIcon className="w-5 h-5" />
-                {serviceCall ? 'Loading...' : 'Add Your First Service'}
-              </button>
-            )}
           </div>
         )}
       </div>

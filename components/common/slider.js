@@ -2,76 +2,96 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 
 function Slider({ data, imageSize = "400px", rounded }) {
+    const [imagesData, setImagesData] = useState([]);
     const [currentSlide, setCurrentSlide] = useState(1);
     const [isTransitioning, setIsTransitioning] = useState(true);
-    const [loadedImages, setLoadedImages] = useState(new Set()); // Track loaded images
+    const [loadedImages, setLoadedImages] = useState(new Set());
 
     // State for swiping logic
     const [isDragging, setIsDragging] = useState(false);
     const [dragStartX, setDragStartX] = useState(0);
     const [dragDistance, setDragDistance] = useState(0);
 
-    // Clone first and last slides for infinite loop
-    const slides = [data[data.length - 1], ...data, data[0]];
-    const slideWidth = 100; // Represents 100% width of the container
-    const swipeThreshold = 50; // Minimum distance (in pixels) to register a swipe
+    // Clone first and last slides for infinite loop - memoize this calculation
+    const slides = imagesData.length > 0
+        ? [imagesData[imagesData.length - 1], ...imagesData, imagesData[0]]
+        : [];
+
+    const slideWidth = 100;
+    const swipeThreshold = 50;
+
+    // --- Sync data prop with state ---
+    useEffect(() => {
+        if (data && data.length > 0) {
+            setImagesData(data);
+            // Reset current slide when data changes
+            setCurrentSlide(1);
+            // Clear loaded images cache when data changes
+            setLoadedImages(new Set());
+        }
+    }, [data]);
 
     // --- Navigation Functions ---
     const nextSlide = useCallback(() => {
+        if (slides.length <= 1) return;
         setCurrentSlide((prev) => prev + 1);
         setIsTransitioning(true);
-    }, []);
+    }, [slides.length]);
 
     const prevSlide = useCallback(() => {
+        if (slides.length <= 1) return;
         setCurrentSlide((prev) => prev - 1);
         setIsTransitioning(true);
-    }, []);
+    }, [slides.length]);
 
     // --- Auto-scroll Effect ---
     useEffect(() => {
-        // Prevent auto-scroll while dragging to avoid conflicts
-        if (isDragging) return;
+        if (isDragging || slides.length <= 1) return;
 
         const autoScrollInterval = setInterval(nextSlide, 3000);
         return () => clearInterval(autoScrollInterval);
-    }, [nextSlide, isDragging]);
+    }, [nextSlide, isDragging, slides.length]);
 
     // --- Infinite Loop Logic ---
     const handleTransitionEnd = () => {
-        // Reset the drag distance and re-enable transitions
         setDragDistance(0);
         setIsTransitioning(true);
 
         if (currentSlide === slides.length - 1) {
-            // Reached cloned first slide, jump to real first slide (index 1)
             setIsTransitioning(false);
             setCurrentSlide(1);
         } else if (currentSlide === 0) {
-            // Reached cloned last slide, jump to real last slide (index slides.length - 2)
             setIsTransitioning(false);
             setCurrentSlide(slides.length - 2);
         }
     };
 
     // --- Image Loading Handlers ---
-    const handleImageLoad = (imageUrl) => {
-        setLoadedImages(prev => new Set(prev).add(imageUrl));
-    };
+    const handleImageLoad = useCallback((imageUrl) => {
+        setLoadedImages(prev => {
+            const newSet = new Set(prev);
+            newSet.add(imageUrl);
+            return newSet;
+        });
+    }, []);
 
-    const handleImageError = (e, imageUrl) => {
-        console.warn(`Failed to load image: ${imageUrl}`);
-        // Set error image
+    const handleImageError = useCallback((e, imageUrl) => {
         e.target.src = "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg";
-        // Mark as loaded to prevent loading attempts
-        setLoadedImages(prev => new Set(prev).add(imageUrl));
-    };
+        setLoadedImages(prev => {
+            const newSet = new Set(prev);
+            newSet.add(imageUrl);
+            return newSet;
+        });
+    }, []);
 
     // Preload adjacent images for smoother transitions
     useEffect(() => {
+        if (slides.length <= 1) return;
+
         const preloadImages = () => {
             const currentIndex = currentSlide;
-            const prevIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : slides.length - 1;
-            const nextIndex = (currentIndex + 1) % slides.length;
+            const prevIndex = currentSlide - 1 >= 0 ? currentSlide - 1 : slides.length - 1;
+            const nextIndex = (currentSlide + 1) % slides.length;
 
             [currentIndex, prevIndex, nextIndex].forEach(index => {
                 const imageUrl = slides[index]?.image;
@@ -79,43 +99,39 @@ function Slider({ data, imageSize = "400px", rounded }) {
                     const img = new Image();
                     img.src = imageUrl;
                     img.onload = () => handleImageLoad(imageUrl);
-                    img.onerror = () => handleImageLoad(imageUrl); // Still mark as attempted
+                    img.onerror = () => handleImageLoad(imageUrl);
                 }
             });
         };
 
         preloadImages();
-    }, [currentSlide, slides, loadedImages]);
+    }, [currentSlide, slides, loadedImages, handleImageLoad]);
 
     // --- SWIPE HANDLERS ---
     const handleDragStart = (clientX) => {
-        setIsTransitioning(false); // Disable transition for drag
+        if (slides.length <= 1) return;
+        setIsTransitioning(false);
         setIsDragging(true);
         setDragStartX(clientX);
     };
 
     const handleDragMove = (clientX) => {
-        if (!isDragging) return;
+        if (!isDragging || slides.length <= 1) return;
         const newDragDistance = clientX - dragStartX;
         setDragDistance(newDragDistance);
     };
 
     const handleDragEnd = () => {
-        if (!isDragging) return;
+        if (!isDragging || slides.length <= 1) return;
 
         setIsDragging(false);
-        setIsTransitioning(true); // Re-enable transition for snap-back/slide
+        setIsTransitioning(true);
 
-        // Determine if a swipe threshold was met
         if (dragDistance > swipeThreshold) {
-            // Swiped right (to the previous slide)
             prevSlide();
         } else if (dragDistance < -swipeThreshold) {
-            // Swiped left (to the next slide)
             nextSlide();
         } else {
-            // Not enough drag, snap back to the current slide without changing index.
-            // This is handled automatically because we re-enable the transition.
             setDragDistance(0);
         }
     };
@@ -124,7 +140,7 @@ function Slider({ data, imageSize = "400px", rounded }) {
     const onMouseDown = (e) => handleDragStart(e.clientX);
     const onMouseMove = (e) => handleDragMove(e.clientX);
     const onMouseUp = handleDragEnd;
-    const onMouseLeave = (e) => isDragging && handleDragEnd(); // Stop dragging if mouse leaves the area
+    const onMouseLeave = (e) => isDragging && handleDragEnd();
 
     // TOUCH handlers
     const onTouchStart = (e) => handleDragStart(e.touches[0].clientX);
@@ -132,25 +148,43 @@ function Slider({ data, imageSize = "400px", rounded }) {
     const onTouchEnd = handleDragEnd;
 
     // Calculate the total translation including the swipe offset
-    const totalTranslateX = `calc(-${currentSlide * slideWidth}% + ${dragDistance}px)`;
+    const totalTranslateX = slides.length > 0
+        ? `calc(-${currentSlide * slideWidth}% + ${dragDistance}px)`
+        : 'translateX(0)';
 
     // Get current slide data (adjusting for cloned slides)
     const getCurrentSlideData = () => {
+        if (imagesData.length === 0) return null;
+
         let actualIndex = currentSlide - 1;
         if (currentSlide === 0) {
-            actualIndex = data.length - 1; // Last real slide
+            actualIndex = imagesData.length - 1;
         } else if (currentSlide === slides.length - 1) {
-            actualIndex = 0; // First real slide
+            actualIndex = 0;
         }
-        return data[actualIndex];
+        return imagesData[actualIndex];
     };
 
     const currentSlideData = getCurrentSlideData();
 
+    // Early return if no data
+    if (!data || data.length === 0) {
+        return (
+            <div className={`relative w-full bg-white overflow-hidden ${rounded}`} style={{ height: imageSize }}>
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                    <img
+                        src="https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
+                        alt="No images available"
+                        className="object-contain w-1/2 h-1/2"
+                    />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div
             className={`relative w-full bg-white overflow-hidden ${rounded}`}
-            // Add global mouse listeners to handle the release outside the container
             onMouseUp={onMouseUp}
             onMouseLeave={onMouseLeave}
         >
@@ -172,7 +206,7 @@ function Slider({ data, imageSize = "400px", rounded }) {
                 {/* Slides wrapper - Swiping enabled here */}
                 <div
                     className={`flex cursor-grab ${isTransitioning ? "transition-transform duration-700 ease-in-out" : ""}`}
-                    style={{ transform: `translateX(${totalTranslateX})` }}
+                    style={{ transform: totalTranslateX }}
                     onTransitionEnd={handleTransitionEnd}
 
                     // Mouse and Touch Event Handlers
@@ -183,17 +217,17 @@ function Slider({ data, imageSize = "400px", rounded }) {
                     onTouchEnd={onTouchEnd}
                 >
                     {slides.map((item, index) => (
-                        <div key={index} className="relative flex-none w-full h-full">
+                        <div key={`${item?.image || 'empty'}-${index}`} className="relative flex-none w-full h-full">
                             <div className="w-full" style={{ height: imageSize }}>
                                 {item?.image ? (
                                     <img
                                         src={item.image}
                                         alt={`carousel-${index}`}
-                                        className="object-cover w-full h-full select-none" // Fixed: object-fit to object-cover
-                                        draggable="false" // Prevents default browser drag behavior on images
+                                        className="object-cover w-full h-full select-none"
+                                        draggable="false"
                                         onLoad={() => handleImageLoad(item.image)}
                                         onError={(e) => handleImageError(e, item.image)}
-                                        loading="lazy" // Add lazy loading for better performance
+                                        loading="lazy"
                                     />
                                 ) : (
                                     <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -211,8 +245,8 @@ function Slider({ data, imageSize = "400px", rounded }) {
                 </div>
             </div>
 
-            {/* Prev / Next buttons (Z-index updated to be below the status label but above slides) */}
-            {data?.length > 1 && (
+            {/* Prev / Next buttons - Only show if there are multiple images */}
+            {imagesData.length > 1 && (
                 <>
                     <button
                         type="button"
@@ -241,4 +275,4 @@ function Slider({ data, imageSize = "400px", rounded }) {
     );
 }
 
-export default Slider;
+export default React.memo(Slider);

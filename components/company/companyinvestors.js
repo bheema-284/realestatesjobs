@@ -1,19 +1,19 @@
-export default function CompanyInvestors({ companyProfile }) {
+export default function CompanyInvestors({ profile }) {
 
     return (
         <div className="min-h-screen bg-gray-50 p-6 sm:p-10">
             <header className="mb-8">
                 <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-                    Investors for <span className="text-indigo-600">{companyProfile.name}</span>
+                    Investors for <span className="text-indigo-600">{profile?.name}</span>
                 </h1>
                 <p className="mt-2 text-lg text-gray-500">
-                    A list of institutional and private investors supporting {companyProfile.name}'s ventures.
+                    A list of institutional and private investors supporting {profile?.name}'s ventures.
                 </p>
             </header>
 
             <div className="grid gap-6">
-                {companyProfile.investors.length > 0 ? (
-                    companyProfile.investors.map((investor) => (
+                {profile?.investors?.length > 0 ? (
+                    profile?.investors?.map((investor) => (
                         <div
                             key={investor.id}
                             className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition duration-300 border border-gray-100"

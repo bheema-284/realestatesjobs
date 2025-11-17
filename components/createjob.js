@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic';
 
 const DynamicTiptapEditor = dynamic(() => import('../components/common/tiptapeditor'), {
     ssr: false,
-    loading: () => <p className="p-4 border border-gray-300 rounded-md min-h-[200px] bg-gray-50 flex items-center justify-center text-gray-500">Loading editor...</p>,
+    loading: () => <p className="p-3 sm:p-4 border border-gray-300 rounded-md min-h-[150px] sm:min-h-[200px] bg-gray-50 flex items-center justify-center text-gray-500 text-sm sm:text-base">Loading editor...</p>,
 });
 
 const getWordCount = (html) => {
@@ -19,14 +19,16 @@ const getWordCount = (html) => {
     return text.split(/\s+/).filter(word => word.length > 0).length;
 };
 
-export default function JobPostingModal({ title, editData, mode, isOpen, setIsOpen, userProfile, onJobSaved }) {
+export default function JobPostingModal({ title, editData, mode, isOpen, setIsOpen, userProfile, onJobSaved, mutated }) {
     const { setRootContext } = useContext(RootContext);
+    console.log("mode", mode)
     const [user, setUser] = useState(null);
     useEffect(() => {
         // Get user details from localStorage on client side only
         const user_details = JSON.parse(localStorage.getItem('user_details') || '{}');
         setUser(user_details || null);
     }, []);
+
     // State for form fields
     const [jobTitle, setJobTitle] = useState('');
     const [jobDescription, setJobDescription] = useState('');
@@ -153,8 +155,6 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
         { id: 'brokers', name: 'Brokers' },
         { id: 'all', name: 'All Types' },
     ];
-
-    const salaryFrequencies = ['Monthly', 'Yearly', 'Commission Based', 'Performance Based'];
 
     const handleDescriptionChange = (html) => {
         setJobDescription(html);
@@ -337,13 +337,11 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
             jobData.postedBy = user.name
             jobData.postedByRole = user.role
             let apiUrl = '/api/companies/jobs';
-            let method = 'POST';
+            let method = mode === "create" ? 'POST' : "PUT";
             let successMessage = "Job posted successfully";
 
-            if (editData?.id) {
-                // For update, add the job ID and use PUT method
+            if (mode !== "create" && editData?.id) {
                 jobData.id = editData.id;
-                method = 'PUT';
                 successMessage = "Job updated successfully";
             }
 
@@ -368,10 +366,8 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                         message: successMessage
                     }
                 }));
+                mutated && mutated()
 
-                if (onJobSaved) {
-                    onJobSaved(data.job);
-                }
                 closeModal();
             } else {
                 // Handle API validation errors
@@ -395,76 +391,6 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
         }
     };
 
-    const handleDeleteJob = async () => {
-        if (!editData?.id) return;
-
-        if (!confirm('Are you sure you want to delete this job posting? This action cannot be undone.')) {
-            return;
-        }
-
-        setIsSubmitting(true);
-
-        try {
-            const deleteData = {
-                id: editData.id,
-                companyId: userProfile.companyId || userProfile._id
-            };
-
-            const response = await fetch('/api/company/jobs', {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(deleteData),
-            });
-
-            const data = await response.json();
-
-            if (response.ok && data.success) {
-                setRootContext(prev => ({
-                    ...prev,
-                    toast: {
-                        show: true,
-                        dismiss: true,
-                        type: "success",
-                        position: "Success",
-                        message: "Job deleted successfully"
-                    }
-                }));
-
-                if (onJobSaved) {
-                    onJobSaved(null); // Signal that job was deleted
-                }
-                closeModal();
-            } else {
-                throw new Error(data.error || 'Failed to delete job');
-            }
-        } catch (error) {
-            console.error('Delete job error:', error);
-            setRootContext(prev => ({
-                ...prev,
-                toast: {
-                    show: true,
-                    dismiss: true,
-                    type: "error",
-                    position: "Failed",
-                    message: error.message || "Failed to delete job posting"
-                }
-            }));
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const timeSlotOptions = [
-        { label: 'Select a preferred time range', value: '' },
-        { label: 'Morning (9 AM - 1 PM)', value: 'morning_09_13' },
-        { label: 'Afternoon (1 PM - 5 PM)', value: 'afternoon_13_17' },
-        { label: 'Evening (5 PM - 9 PM)', value: 'evening_17_21' },
-        { label: 'Full Day (9 AM - 5 PM)', value: 'full_day_09_17' },
-        { label: 'Night (9 PM - 5 AM)', value: 'night_21_05' },
-        { label: 'Flexible Hours', value: 'flexible' },
-    ];
 
     // If user doesn't have permission, show access denied message
     if (!canPostJobs) {
@@ -484,7 +410,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                     </Transition.Child>
 
                     <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center p-4 text-center" style={{ backgroundColor: '#F0F2F5' }}>
+                        <div className="flex min-h-full items-center justify-center p-3 sm:p-4 text-center" style={{ backgroundColor: '#F0F2F5' }}>
                             <Transition.Child
                                 as={Fragment}
                                 enter="ease-out duration-300"
@@ -494,23 +420,23 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                 leaveFrom="opacity-100 scale-100"
                                 leaveTo="opacity-0 scale-95"
                             >
-                                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-8 text-left align-middle shadow-xl transition-all">
-                                    <div className="flex items-center justify-between mb-5">
-                                        <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">
+                                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-4 sm:p-6 text-left align-middle shadow-xl transition-all">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <Dialog.Title as="h3" className="text-base sm:text-lg font-medium leading-6 text-gray-900">
                                             Access Denied
                                         </Dialog.Title>
-                                        <XMarkIcon className="h-5 fill-gray-900 hover:cursor-pointer hover:font-bold" onClick={closeModal} />
+                                        <XMarkIcon className="h-5 w-5 fill-gray-900 hover:cursor-pointer hover:font-bold" onClick={closeModal} />
                                     </div>
-                                    <div className="mt-4">
+                                    <div className="mt-3">
                                         <p className="text-sm text-gray-500">
                                             You don't have permission to post jobs. Only company accounts, recruiters, and superadmins can create job postings.
                                         </p>
                                     </div>
-                                    <div className="mt-6 flex justify-end">
+                                    <div className="mt-4 sm:mt-5 flex justify-end">
                                         <button
                                             type="button"
                                             onClick={closeModal}
-                                            className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                            className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-3 sm:px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                         >
                                             Close
                                         </button>
@@ -541,7 +467,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                     </Transition.Child>
 
                     <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center p-4 text-center" style={{ backgroundColor: '#F0F2F5' }}>
+                        <div className="flex min-h-full items-center justify-center p-2 sm:p-4 text-center" style={{ backgroundColor: '#F0F2F5' }}>
                             <Transition.Child
                                 as={Fragment}
                                 enter="ease-out duration-300"
@@ -551,16 +477,17 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                 leaveFrom="opacity-100 scale-100"
                                 leaveTo="opacity-0 scale-95"
                             >
-                                <Dialog.Panel className="w-full max-w-5xl transform overflow-hidden rounded-2xl bg-white p-8 text-left align-middle shadow-xl transition-all max-h-[95vh] overflow-y-auto">
-                                    <div className="flex items-center justify-between mb-5">
-                                        <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">
+                                <Dialog.Panel className="w-full max-w-2xl lg:max-w-5xl transform overflow-hidden rounded-xl sm:rounded-2xl bg-white p-3 sm:p-4 lg:p-6 text-left align-middle shadow-xl transition-all max-h-[90vh] sm:max-h-[95vh] overflow-y-auto">
+                                    {/* Header */}
+                                    <div className="flex items-center justify-between mb-4 sm:mb-5">
+                                        <Dialog.Title as="h3" className="text-lg sm:text-xl font-semibold leading-6 text-gray-900">
                                             {editData?.id ? 'Edit Job Posting' : 'Create Real Estate Job Posting'}
                                         </Dialog.Title>
-                                        <XMarkIcon className="h-5 fill-gray-900 hover:cursor-pointer hover:font-bold" onClick={closeModal} />
+                                        <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6 fill-gray-900 hover:cursor-pointer hover:font-bold" onClick={closeModal} />
                                     </div>
 
                                     {/* Company Information */}
-                                    <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                    <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-200">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <h4 className="text-sm font-medium text-blue-900">Posting as:</h4>
@@ -574,11 +501,11 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                         </div>
                                     </div>
 
-                                    <form onSubmit={handleSubmit} className="space-y-6">
+                                    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                                         {/* Basic Job Information */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 gap-4 sm:gap-6">
                                             {/* Job Title */}
-                                            <div className="col-span-2">
+                                            <div>
                                                 <label htmlFor="jobTitle" className="block text-sm font-medium text-gray-700 mb-2">
                                                     Job title *
                                                 </label>
@@ -587,126 +514,132 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                     id="jobTitle"
                                                     value={jobTitle}
                                                     onChange={(e) => setJobTitle(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                     placeholder="e.g. Sales Executive, Property Consultant, Tele Caller"
                                                     required
                                                 />
                                             </div>
 
-                                            {/* Job Category */}
-                                            <div>
-                                                <label htmlFor="categorySlug" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Job Category *
-                                                </label>
-                                                <select
-                                                    id="categorySlug"
-                                                    value={categorySlug}
-                                                    onChange={(e) => setCategorySlug(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                    required
-                                                >
-                                                    <option value="">Select a category</option>
-                                                    {jobCategories.map((category) => (
-                                                        <option key={category.slug} value={category.slug}>
-                                                            {category.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                                {/* Job Category */}
+                                                <div>
+                                                    <label htmlFor="categorySlug" className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Job Category *
+                                                    </label>
+                                                    <select
+                                                        id="categorySlug"
+                                                        value={categorySlug}
+                                                        onChange={(e) => setCategorySlug(e.target.value)}
+                                                        className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                        required
+                                                    >
+                                                        <option value="">Select a category</option>
+                                                        {jobCategories.map((category) => (
+                                                            <option key={category.slug} value={category.slug}>
+                                                                {category.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {/* Job Role Type */}
+                                                <div>
+                                                    <label htmlFor="jobRoleType" className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Job Role Type
+                                                    </label>
+                                                    <select
+                                                        id="jobRoleType"
+                                                        value={jobRoleType}
+                                                        onChange={(e) => setJobRoleType(e.target.value)}
+                                                        className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    >
+                                                        <option value="">Select role type</option>
+                                                        {jobRoleTypeOptions.map((role) => (
+                                                            <option key={role.id} value={role.id}>
+                                                                {role.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
 
-                                            {/* Job Role Type */}
-                                            <div>
-                                                <label htmlFor="jobRoleType" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Job Role Type
-                                                </label>
-                                                <select
-                                                    id="jobRoleType"
-                                                    value={jobRoleType}
-                                                    onChange={(e) => setJobRoleType(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                >
-                                                    <option value="">Select role type</option>
-                                                    {jobRoleTypeOptions.map((role) => (
-                                                        <option key={role.id} value={role.id}>
-                                                            {role.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                                {/* Location */}
+                                                <div>
+                                                    <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Job Location *
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        id="location"
+                                                        value={location}
+                                                        onChange={(e) => setLocation(e.target.value)}
+                                                        className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                        placeholder="e.g. Hyderabad, Mumbai"
+                                                        required
+                                                    />
+                                                </div>
+
+                                                {/* Target Areas */}
+                                                <div>
+                                                    <label htmlFor="targetAreas" className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Target Areas/Localities
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        id="targetAreas"
+                                                        value={targetAreas}
+                                                        onChange={(e) => setTargetAreas(e.target.value)}
+                                                        className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                        placeholder="e.g. Gachibowli, Hitech City, Financial District"
+                                                    />
+                                                </div>
                                             </div>
 
-                                            {/* Location */}
-                                            <div>
-                                                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Job Location *
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id="location"
-                                                    value={location}
-                                                    onChange={(e) => setLocation(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                    placeholder="e.g. Hyderabad, Mumbai"
-                                                    required
-                                                />
-                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                                {/* Experience */}
+                                                <div>
+                                                    <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Experience Required *
+                                                    </label>
+                                                    <select
+                                                        id="experience"
+                                                        value={experience}
+                                                        onChange={(e) => setExperience(e.target.value)}
+                                                        className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                        required
+                                                    >
+                                                        <option value="">Select experience level</option>
+                                                        {experienceOptions.map((exp) => (
+                                                            <option key={exp} value={exp}>{exp}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
 
-                                            {/* Target Areas */}
-                                            <div>
-                                                <label htmlFor="targetAreas" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Target Areas/Localities
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id="targetAreas"
-                                                    value={targetAreas}
-                                                    onChange={(e) => setTargetAreas(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                    placeholder="e.g. Gachibowli, Hitech City, Financial District"
-                                                />
-                                            </div>
-
-                                            {/* Experience */}
-                                            <div>
-                                                <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Experience Required *
-                                                </label>
-                                                <select
-                                                    id="experience"
-                                                    value={experience}
-                                                    onChange={(e) => setExperience(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                    required
-                                                >
-                                                    <option value="">Select experience level</option>
-                                                    {experienceOptions.map((exp) => (
-                                                        <option key={exp} value={exp}>{exp}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-                                            {/* Target Audience */}
-                                            <div>
-                                                <label htmlFor="targetAudience" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Target Audience
-                                                </label>
-                                                <select
-                                                    id="targetAudience"
-                                                    value={targetAudience}
-                                                    onChange={(e) => setTargetAudience(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                >
-                                                    <option value="">Select target audience</option>
-                                                    {targetAudienceOptions.map((audience) => (
-                                                        <option key={audience.id} value={audience.id}>
-                                                            {audience.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                {/* Target Audience */}
+                                                <div>
+                                                    <label htmlFor="targetAudience" className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Target Audience
+                                                    </label>
+                                                    <select
+                                                        id="targetAudience"
+                                                        value={targetAudience}
+                                                        onChange={(e) => setTargetAudience(e.target.value)}
+                                                        className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    >
+                                                        <option value="">Select target audience</option>
+                                                        {targetAudienceOptions.map((audience) => (
+                                                            <option key={audience.id} value={audience.id}>
+                                                                {audience.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
                                         </div>
 
                                         {/* Salary Information */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                             {/* Salary Range */}
                                             <div>
                                                 <label htmlFor="salaryRange" className="block text-sm font-medium text-gray-700 mb-2">
@@ -717,7 +650,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                     id="salaryRange"
                                                     value={salaryRange}
                                                     onChange={(e) => setSalaryRange(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                     placeholder="e.g. ₹ 3-5 LPA, Commission Based"
                                                     required
                                                 />
@@ -733,7 +666,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                     id="commissionStructure"
                                                     value={commissionStructure}
                                                     onChange={(e) => setCommissionStructure(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                     placeholder="e.g. 1% on sales, 20-40% on brokerage"
                                                 />
                                             </div>
@@ -748,7 +681,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                     id="incentives"
                                                     value={incentives}
                                                     onChange={(e) => setIncentives(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                     placeholder="e.g. Performance bonus, Travel allowance"
                                                 />
                                             </div>
@@ -763,7 +696,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                     id="salesTargets"
                                                     value={salesTargets}
                                                     onChange={(e) => setSalesTargets(e.target.value)}
-                                                    className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                     placeholder="e.g. 2 deals per month, ₹50L quarterly target"
                                                 />
                                             </div>
@@ -772,88 +705,90 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                         <div className='border-b border-gray-300'></div>
 
                                         {/* Property Types */}
-                                        <div className="flex flex-col md:flex-row items-start">
-                                            <label className="w-full md:w-1/3 text-gray-700 font-medium text-sm md:text-base">
-                                                Property Types
+                                        <div className="flex flex-col gap-3 sm:gap-4">
+                                            <div>
+                                                <label className="text-gray-700 font-medium text-sm sm:text-base">
+                                                    Property Types
+                                                </label>
                                                 <p className="text-xs text-gray-500 mt-1">Select property types involved</p>
-                                            </label>
-                                            <div className="w-full md:w-2/3 mt-2 md:mt-0">
-                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                                    {propertyTypeOptions.map((property) => (
-                                                        <div
-                                                            key={property.id}
-                                                            className={`relative flex cursor-pointer rounded-lg px-4 py-3 shadow-sm border
-                                                            ${propertyTypes.includes(property.id) ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
-                                                            hover:border-green-500 hover:shadow-md transition-all duration-200`}
-                                                            onClick={() => handlePropertyTypeChange(property.id)}
-                                                        >
-                                                            <div className="flex w-full items-center justify-between">
-                                                                <div className="flex items-center">
-                                                                    <div className="text-sm">
-                                                                        <p className="font-medium">
-                                                                            {property.name}
-                                                                        </p>
-                                                                    </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                                                {propertyTypeOptions.map((property) => (
+                                                    <div
+                                                        key={property.id}
+                                                        className={`relative flex cursor-pointer rounded-lg px-3 py-2 sm:px-4 sm:py-3 shadow-sm border text-xs sm:text-sm
+                                                        ${propertyTypes.includes(property.id) ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
+                                                        hover:border-green-500 hover:shadow-md transition-all duration-200`}
+                                                        onClick={() => handlePropertyTypeChange(property.id)}
+                                                    >
+                                                        <div className="flex w-full items-center justify-between">
+                                                            <div className="flex items-center">
+                                                                <div>
+                                                                    <p className="font-medium">
+                                                                        {property.name}
+                                                                    </p>
                                                                 </div>
-                                                                {propertyTypes.includes(property.id) && (
-                                                                    <div className="flex-shrink-0 text-white">
-                                                                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                                                                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                                                                        </svg>
-                                                                    </div>
-                                                                )}
                                                             </div>
+                                                            {propertyTypes.includes(property.id) && (
+                                                                <div className="flex-shrink-0 text-white">
+                                                                    <svg className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24" fill="currentColor">
+                                                                        <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    ))}
-                                                </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
 
                                         {/* Language Requirements */}
-                                        <div className="flex flex-col md:flex-row items-start">
-                                            <label className="w-full md:w-1/3 text-gray-700 font-medium text-sm md:text-base">
-                                                Language Requirements
+                                        <div className="flex flex-col gap-3 sm:gap-4">
+                                            <div>
+                                                <label className="text-gray-700 font-medium text-sm sm:text-base">
+                                                    Language Requirements
+                                                </label>
                                                 <p className="text-xs text-gray-500 mt-1">Select required languages</p>
-                                            </label>
-                                            <div className="w-full md:w-2/3 mt-2 md:mt-0">
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                                    {languageOptions.map((language) => (
-                                                        <div
-                                                            key={language.id}
-                                                            className={`relative flex cursor-pointer rounded-lg px-3 py-2 shadow-sm border
-                                                            ${languageRequirements.includes(language.id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
-                                                            hover:border-blue-500 hover:shadow-md transition-all duration-200`}
-                                                            onClick={() => handleLanguageRequirementChange(language.id)}
-                                                        >
-                                                            <div className="flex w-full items-center justify-between">
-                                                                <div className="flex items-center">
-                                                                    <div className="text-xs">
-                                                                        <p className="font-medium">
-                                                                            {language.name}
-                                                                        </p>
-                                                                    </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+                                                {languageOptions.map((language) => (
+                                                    <div
+                                                        key={language.id}
+                                                        className={`relative flex cursor-pointer rounded-lg px-2 py-2 sm:px-3 sm:py-2 shadow-sm border text-xs
+                                                        ${languageRequirements.includes(language.id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
+                                                        hover:border-blue-500 hover:shadow-md transition-all duration-200`}
+                                                        onClick={() => handleLanguageRequirementChange(language.id)}
+                                                    >
+                                                        <div className="flex w-full items-center justify-between">
+                                                            <div className="flex items-center">
+                                                                <div>
+                                                                    <p className="font-medium">
+                                                                        {language.name}
+                                                                    </p>
                                                                 </div>
-                                                                {languageRequirements.includes(language.id) && (
-                                                                    <div className="flex-shrink-0 text-white">
-                                                                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                                                                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                                                                        </svg>
-                                                                    </div>
-                                                                )}
                                                             </div>
+                                                            {languageRequirements.includes(language.id) && (
+                                                                <div className="flex-shrink-0 text-white">
+                                                                    <svg className="h-3 w-3 sm:h-4 sm:w-4" viewBox="0 0 24 24" fill="currentColor">
+                                                                        <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    ))}
-                                                </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
 
                                         {/* Job Description */}
-                                        <div className="flex flex-col md:flex-row items-start">
-                                            <label htmlFor="jobDescription" className="w-full md:w-1/3 text-gray-700 font-medium text-sm md:text-base">
-                                                Job description *
+                                        <div className="flex flex-col gap-3 sm:gap-4">
+                                            <div>
+                                                <label className="text-gray-700 font-medium text-sm sm:text-base">
+                                                    Job description *
+                                                </label>
                                                 <p className="text-xs text-gray-500 mt-1">Provide detailed job responsibilities and requirements</p>
-                                            </label>
-                                            <div className="w-full md:w-2/3 mt-2 md:mt-0 relative">
+                                            </div>
+                                            <div className="relative">
                                                 <DynamicTiptapEditor
                                                     ref={tiptapEditorRef}
                                                     initialContent={jobDescription}
@@ -867,7 +802,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                         </div>
 
                                         {/* Additional Requirements */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                             {/* Employment Type */}
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -877,14 +812,14 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                     {employmentOptions.map((option) => (
                                                         <div
                                                             key={option.id}
-                                                            className={`relative flex cursor-pointer rounded-lg px-4 py-3 shadow-sm border
+                                                            className={`relative flex cursor-pointer rounded-lg px-3 py-2 sm:px-4 sm:py-3 shadow-sm border text-sm
                                                             ${employmentTypes.includes(option.id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
                                                             hover:border-blue-500 hover:shadow-md transition-all duration-200`}
                                                             onClick={() => handleEmploymentTypeChange(option.id)}
                                                         >
                                                             <div className="flex w-full items-center justify-between">
                                                                 <div className="flex items-center">
-                                                                    <div className="text-sm">
+                                                                    <div>
                                                                         <p className="font-medium">
                                                                             {option.name}
                                                                         </p>
@@ -892,7 +827,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                                 </div>
                                                                 {employmentTypes.includes(option.id) && (
                                                                     <div className="flex-shrink-0 text-white">
-                                                                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                                                                        <svg className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24" fill="currentColor">
                                                                             <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
                                                                         </svg>
                                                                     </div>
@@ -962,28 +897,18 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                         </div>
 
                                         {/* Action Buttons */}
-                                        <div className="mt-8 flex justify-end space-x-3">
-                                            {editData?.id && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleDeleteJob}
-                                                    disabled={isSubmitting}
-                                                    className="inline-flex justify-center rounded-md border border-red-300 bg-white px-6 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    Delete Job
-                                                </button>
-                                            )}
+                                        <div className="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row justify-end gap-3 sm:space-x-3">
                                             <button
                                                 type="button"
                                                 onClick={closeModal}
-                                                className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-6 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                                className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 sm:px-6 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                             >
                                                 Cancel
                                             </button>
                                             <button
                                                 type="submit"
                                                 disabled={isSubmitting}
-                                                className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 sm:px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
                                             >
                                                 {isSubmitting ? (
                                                     <>

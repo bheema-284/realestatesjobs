@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useState } from "react";
+import Slider from "./slider";
 
 export default function EnquiryForm({ drawerOpen, setDrawerOpen }) {
     const [formData, setFormData] = useState({
@@ -40,16 +41,20 @@ export default function EnquiryForm({ drawerOpen, setDrawerOpen }) {
                         ✕
                     </button>
                 </div>
-                {drawerOpen.image !== "" && <Image
-                    src={
-                        drawerOpen.image ||
-                        "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
-                    }
-                    alt={"image"}
-                    width={200}
-                    height={200}
-                    className="w-full h-40 object-cover"
-                />}
+                {drawerOpen.image && <div>
+                    {drawerOpen.image?.length > 0 ?
+                        <Slider data={drawerOpen.image?.map(item => ({ image: item.url }))} imageSize={"170px"} />
+                        : <Image
+                            src={
+                                drawerOpen.image ||
+                                "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
+                            }
+                            alt={"image"}
+                            width={200}
+                            height={200}
+                            className="w-full h-40 object-cover"
+                        />}
+                </div>}
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Name */}
                     <div>

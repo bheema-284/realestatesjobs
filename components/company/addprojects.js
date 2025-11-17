@@ -43,6 +43,23 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
     const [selectedStatus, setSelectedStatus] = useState({ value: "ONGOING", label: "ONGOING" });
     const [selectedProjectType, setSelectedProjectType] = useState({ value: "Apartments", label: "Apartments" });
     const [selectedPaymentPlan, setSelectedPaymentPlan] = useState({ value: "", label: "Select Payment Plan" });
+
+    // Detect mobile device
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
+        return () => {
+            window.removeEventListener('resize', checkMobile);
+        };
+    }, []);
+
     const { setRootContext } = useContext(RootContext);
 
     // Cleanup object URLs on unmount
@@ -300,14 +317,6 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                 }
             });
 
-            console.log('📤 Submitting project:', {
-                projectId,
-                projectIndex,
-                imageCount: formData.images.length,
-                projectTitle: newProject.title,
-                totalProjects: updatedProjects.length
-            });
-
             // 5️⃣ Send request
             const response = await fetch("/api/users", {
                 method: "PUT",
@@ -364,22 +373,23 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                <div className="p-6">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-gray-800">Add New Real Estate Project</h2>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-lg w-full max-w-4xl max-h-[95vh] overflow-y-auto mx-auto">
+                <div className="p-4 sm:p-6">
+                    {/* Header */}
+                    <div className="flex justify-between items-center mb-4 sm:mb-6">
+                        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Add New Real Estate Project</h2>
                         <button
                             onClick={onClose}
-                            className="text-gray-500 hover:text-gray-700 text-2xl"
+                            className="text-gray-500 hover:text-gray-700 text-2xl sm:text-3xl p-1"
                         >
                             ×
                         </button>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                         {/* Basic Information Section */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-3 sm:gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Project Title *
@@ -390,7 +400,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     value={formData.title}
                                     onChange={handleInputChange}
                                     required
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., DLF Cyber Residency"
                                 />
                             </div>
@@ -405,13 +415,14 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     value={formData.location}
                                     onChange={handleInputChange}
                                     required
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., DLF Cyber City, Gurugram"
                                 />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Price, Status, Project Type - Stack on mobile, row on larger screens */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Price *
@@ -422,7 +433,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     value={formData.price}
                                     onChange={handleInputChange}
                                     required
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., ₹ 2.5 Cr onwards"
                                 />
                             </div>
@@ -434,10 +445,10 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                 </label>
                                 <Listbox value={selectedStatus} onChange={setSelectedStatus}>
                                     <div className="relative">
-                                        <Listbox.Button className="relative w-full cursor-default rounded-md bg-white py-2 pl-3 pr-10 text-left border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <Listbox.Button className="relative w-full cursor-default rounded-md bg-white py-2 pl-3 pr-10 text-left border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base">
                                             <span className="block truncate">{selectedStatus.label}</span>
                                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                                                <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                                                <ChevronUpDownIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" aria-hidden="true" />
                                             </span>
                                         </Listbox.Button>
                                         <Transition
@@ -483,10 +494,10 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                 </label>
                                 <Listbox value={selectedProjectType} onChange={setSelectedProjectType}>
                                     <div className="relative">
-                                        <Listbox.Button className="relative w-full cursor-default rounded-md bg-white py-2 pl-3 pr-10 text-left border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <Listbox.Button className="relative w-full cursor-default rounded-md bg-white py-2 pl-3 pr-10 text-left border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base">
                                             <span className="block truncate">{selectedProjectType.label}</span>
                                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                                                <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                                                <ChevronUpDownIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" aria-hidden="true" />
                                             </span>
                                         </Listbox.Button>
                                         <Transition
@@ -526,8 +537,8 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                             </div>
                         </div>
 
-                        {/* Project Details Section */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Project Details Section - Responsive grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Bedrooms Configuration
@@ -537,7 +548,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="bedrooms"
                                     value={formData.bedrooms}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., 2, 3, 4 BHK"
                                 />
                             </div>
@@ -551,7 +562,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="devSize"
                                     value={formData.devSize}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., 15 Acres"
                                 />
                             </div>
@@ -565,14 +576,14 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="totalUnits"
                                     value={formData.totalUnits}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., 1200 Units"
                                 />
                             </div>
                         </div>
 
-                        {/* Property Specifications */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        {/* Property Specifications - Stack on mobile, 2 columns on tablet, 4 on desktop */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Carpet Area
@@ -582,7 +593,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="carpetArea"
                                     value={formData.carpetArea}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., 1200 sq.ft."
                                 />
                             </div>
@@ -596,7 +607,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="superArea"
                                     value={formData.superArea}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., 1400 sq.ft."
                                 />
                             </div>
@@ -610,7 +621,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="floorRange"
                                     value={formData.floorRange}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., 2-15"
                                 />
                             </div>
@@ -624,14 +635,14 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="totalFloors"
                                     value={formData.totalFloors}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., 20"
                                 />
                             </div>
                         </div>
 
                         {/* Location Details */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     RERA Number
@@ -641,7 +652,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="reraNumber"
                                     value={formData.reraNumber}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., PR/12345/2019"
                                 />
                             </div>
@@ -655,7 +666,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="possessionDate"
                                     value={formData.possessionDate}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
 
@@ -668,14 +679,14 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="developer"
                                     value={formData.developer}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="Developer name"
                                 />
                             </div>
                         </div>
 
                         {/* Financial Details */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Booking Amount
@@ -685,7 +696,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="bookingAmount"
                                     value={formData.bookingAmount}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., ₹ 5 Lakhs"
                                 />
                             </div>
@@ -697,10 +708,10 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                 </label>
                                 <Listbox value={selectedPaymentPlan} onChange={setSelectedPaymentPlan}>
                                     <div className="relative">
-                                        <Listbox.Button className="relative w-full cursor-default rounded-md bg-white py-2 pl-3 pr-10 text-left border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <Listbox.Button className="relative w-full cursor-default rounded-md bg-white py-2 pl-3 pr-10 text-left border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base">
                                             <span className="block truncate">{selectedPaymentPlan.label}</span>
                                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                                                <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                                                <ChevronUpDownIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" aria-hidden="true" />
                                             </span>
                                         </Listbox.Button>
                                         <Transition
@@ -748,7 +759,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                     name="additionalCharges"
                                     value={formData.additionalCharges}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., GST, Maintenance"
                                 />
                             </div>
@@ -759,33 +770,33 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Amenities
                             </label>
-                            <div className="flex gap-2 mb-3">
+                            <div className="flex flex-col sm:flex-row gap-2 mb-3">
                                 <input
                                     type="text"
                                     value={amenityInput}
                                     onChange={(e) => setAmenityInput(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAmenity())}
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="flex-1 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="Add custom amenity"
                                 />
                                 <button
                                     type="button"
                                     onClick={addAmenity}
-                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm sm:text-base whitespace-nowrap"
                                 >
-                                    Add
+                                    Add Amenity
                                 </button>
                             </div>
 
                             <div className="mb-3">
                                 <p className="text-sm text-gray-600 mb-2">Common Amenities:</p>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1 sm:gap-2">
                                     {commonAmenities.map(amenity => (
                                         <button
                                             key={amenity}
                                             type="button"
                                             onClick={() => addCommonAmenity(amenity)}
-                                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200"
+                                            className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs sm:text-sm hover:bg-blue-200 whitespace-nowrap"
                                         >
                                             + {amenity}
                                         </button>
@@ -793,17 +804,17 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                 </div>
                             </div>
 
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-1 sm:gap-2">
                                 {formData.amenities.map(amenity => (
                                     <span
                                         key={amenity}
-                                        className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm flex items-center gap-1"
+                                        className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs sm:text-sm flex items-center gap-1"
                                     >
                                         {amenity}
                                         <button
                                             type="button"
                                             onClick={() => removeAmenity(amenity)}
-                                            className="text-red-500 hover:text-red-700"
+                                            className="text-red-500 hover:text-red-700 text-xs"
                                         >
                                             ×
                                         </button>
@@ -814,13 +825,13 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
 
                         {/* IMAGES UPLOAD SECTION */}
                         <div className="mb-4">
-                            <label className="block font-medium mb-1">Project Images *</label>
+                            <label className="block font-medium mb-1 text-sm sm:text-base">Project Images *</label>
 
                             <div
-                                className="border-2 border-dashed border-gray-300 p-5 text-center cursor-pointer rounded-lg hover:border-blue-500 transition-colors"
+                                className="border-2 border-dashed border-gray-300 p-4 sm:p-5 text-center cursor-pointer rounded-lg hover:border-blue-500 transition-colors"
                                 onClick={() => document.getElementById("projectImages").click()}
                             >
-                                <p className="text-gray-500">Click to upload images</p>
+                                <p className="text-gray-500 text-sm sm:text-base">Click to upload images</p>
                                 <p className="text-xs text-gray-400 mt-1">Max 5MB per image</p>
                             </div>
 
@@ -833,26 +844,26 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                 onChange={handleProjectImageUpload}
                             />
 
-                            {/* PREVIEW GRID */}
+                            {/* PREVIEW GRID - Responsive grid */}
                             {formData.images.length > 0 && (
                                 <div className="mt-4">
                                     <p className="text-sm text-gray-600 mb-2">
                                         Selected images ({formData.images.length}):
                                     </p>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                                         {formData.images.map((img, index) => (
                                             <div key={img.tempId} className="relative border rounded-lg p-2 bg-gray-50">
                                                 <img
                                                     src={img.url}
                                                     alt={`Preview ${index + 1}`}
-                                                    className="h-32 w-full object-cover rounded"
+                                                    className="h-24 sm:h-32 w-full object-cover rounded"
                                                 />
 
                                                 {/* REMOVE BUTTON */}
                                                 <button
                                                     type="button"
                                                     onClick={() => removeImage(img)}
-                                                    className="absolute top-2 right-2 bg-red-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center"
+                                                    className="absolute top-1 right-1 bg-red-600 text-white text-xs w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center"
                                                 >
                                                     ✕
                                                 </button>
@@ -860,7 +871,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                                 {/* CAPTION INPUT */}
                                                 <input
                                                     type="text"
-                                                    className="mt-2 w-full border rounded px-2 py-1 text-sm"
+                                                    className="mt-2 w-full border rounded px-2 py-1 text-xs sm:text-sm"
                                                     value={img.caption || ""}
                                                     onChange={(e) => updateCaption(img.tempId, e.target.value)}
                                                     placeholder="Image Caption"
@@ -882,7 +893,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 rows="3"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="Describe the project features, amenities, etc."
                             />
                         </div>
@@ -897,17 +908,17 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                                 value={formData.highlights}
                                 onChange={handleInputChange}
                                 rows="2"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="Key selling points and features"
                             />
                         </div>
 
-                        {/* Buttons */}
-                        <div className="flex justify-end space-x-3 pt-4 border-t">
+                        {/* Buttons - Stack on mobile, row on larger screens */}
+                        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3 pt-4 border-t">
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                                className="px-4 sm:px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm sm:text-base order-2 sm:order-1"
                                 disabled={loading}
                             >
                                 Cancel
@@ -915,7 +926,7 @@ const AddProjectForm = ({ companyId, onClose, existingProjects = [], mutated }) 
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                                className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm sm:text-base order-1 sm:order-2"
                             >
                                 {loading ? 'Adding Project...' : 'Add Project'}
                             </button>

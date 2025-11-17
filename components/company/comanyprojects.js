@@ -13,8 +13,9 @@ import {
 } from "@heroicons/react/24/solid";
 import { useState } from "react";
 import EnquiryForm from "../common/enquirynow";
+import Slider from "../common/slider";
 
-export default function ProjectsPage({ companyProfile }) {
+export default function ProjectsPage({ profile }) {
 
     const router = useRouter();
     const [drawerOpen, setDrawerOpen] = useState({
@@ -22,7 +23,7 @@ export default function ProjectsPage({ companyProfile }) {
         image: ""
     });
 
-    if (!companyProfile?.projects?.length) {
+    if (!profile?.projects?.length) {
         return (
             <div className="py-12 px-6 text-center">
                 <h2 className="text-2xl font-bold text-gray-700">
@@ -34,7 +35,7 @@ export default function ProjectsPage({ companyProfile }) {
 
     const projectDetails = (p) => {
         const slug = encodeURIComponent(p.id);
-        router.push(`/companies/${companyProfile._id}/${slug}`);
+        router.push(`/companies/${profile._id}/${slug}`);
     };
 
     return (
@@ -71,7 +72,7 @@ export default function ProjectsPage({ companyProfile }) {
 
             {/* ✅ Project Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4">
-                {companyProfile.projects.map((p, index) => (
+                {profile.projects.map((p, index) => (
                     <div
                         key={index}
                         className="group relative cursor-pointer bg-white border border-gray-300 overflow-hidden hover:shadow-xl transition flex flex-col"
@@ -81,31 +82,12 @@ export default function ProjectsPage({ companyProfile }) {
                             className="relative cursor-pointer"
                             onClick={() => projectDetails(p)}
                         >
-                            <Image
-                                src={
-                                    p.image ||
-                                    "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
-                                }
-                                alt={p.title}
-                                width={600}
-                                height={400}
-                                className="w-full h-56 object-cover"
-                            />
+                            {p.images && p.images.length > 0 && (
+                                <Slider data={p.images.map(item => ({ image: item.url }))} imageSize={"400px"} />
+                            )}
                             <span className="absolute top-3 right-3 bg-yellow-600 text-white text-xs font-semibold px-3 py-1 rounded">
                                 {p.status}
                             </span>
-                            <div className="absolute bottom-3 left-3 bg-yellow-600 text-white text-xs font-semibold">
-                                <Image
-                                    src={
-                                        companyProfile.logo ||
-                                        "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
-                                    }
-                                    alt={companyProfile.name}
-                                    width={40}
-                                    height={40}
-                                    className="object-contain"
-                                />
-                            </div>
                         </div>
 
                         {/* Content */}
@@ -169,8 +151,7 @@ export default function ProjectsPage({ companyProfile }) {
                                 <button
                                     onClick={() => setDrawerOpen({
                                         open: true,
-                                        image: `${p.image ||
-                                            "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}`
+                                        image: p.images
                                     })}
                                     className="flex items-center gap-1 border border-purple-700 text-purple-900 py-1 px-3 text-[9px] bg-purple-100 whitespace-nowrap"
                                 >
