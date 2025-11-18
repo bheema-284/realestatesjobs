@@ -16,18 +16,6 @@ import Loading from '../common/loading';
 import RootContext from '../config/rootcontext';
 import Chat from '../common/chat';
 
-// Move static options outside component to prevent re-renders
-const statusOptions = [
-  'Applied',
-  'Under Review',
-  'Interview Scheduled',
-  'Interview Completed',
-  'Offer Received',
-  'Offer Accepted',
-  'Rejected',
-  'Withdrawn'
-];
-
 const getStatusColor = (status) => {
   switch (status) {
     case 'Offer Received':
@@ -202,13 +190,12 @@ export default function Applications({ profile, setRootContext, mutated }) {
 
   // Handle opening chat with company
   const handleOpenChat = useCallback((application) => {
-    console.log('Opening chat with application:', application);
-
     // Prepare company data for chat - ensure all required fields
     const companyData = {
-      _id: application.companyId || application._id, // Try multiple possible fields
-      name: application.company,
-      profileImage: application.companyLogo || application.profileImage,
+      ...application.companyDetails, // Spread existing company details first
+      _id: application.companyId || application._id,
+      name: application.companyDetails.name || application.companyName,
+      profileImage: application.companyDetails.profileImage || application.companyLogo,
       jobTitle: application.jobTitle,
       jobId: application.jobId
     };
@@ -222,7 +209,7 @@ export default function Applications({ profile, setRootContext, mutated }) {
       jobTitle: application.jobTitle,
       jobId: application.jobId
     };
-   
+
     // Validate required fields
     if (!companyData._id || !applicantData.applicantId || !application.jobId) {
       console.error('Missing required chat data:', {

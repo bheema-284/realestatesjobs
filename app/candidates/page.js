@@ -3,9 +3,9 @@ import Chat from '@/components/common/chat';
 import RootContext from '@/components/config/rootcontext';
 import { Mutated, useSWRFetch } from '@/components/config/useswrfetch';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid';
-import { ChatBubbleOvalLeftEllipsisIcon, EyeIcon, MapPinIcon } from '@heroicons/react/24/solid';
+import { ChatBubbleOvalLeftEllipsisIcon, EyeIcon, MapPinIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useRouter } from 'next/navigation';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
     FaGraduationCap,
     FaHandshake,
@@ -23,7 +23,67 @@ import {
     FaCog
 } from 'react-icons/fa';
 
-// Candidate Card
+// Chat Notification Component
+const ChatNotification = ({ notification, onClose, onClick }) => {
+    const [isVisible, setIsVisible] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsVisible(false);
+            setTimeout(() => onClose(notification.id), 300);
+        }, 5000);
+
+        return () => clearTimeout(timer);
+    }, [notification.id, onClose]);
+
+    const handleClose = (e) => {
+        e.stopPropagation();
+        setIsVisible(false);
+        setTimeout(() => onClose(notification.id), 300);
+    };
+
+    return (
+        <div
+            className={`transform transition-all duration-300 ease-in-out mb-2 ${isVisible
+                ? 'translate-x-0 opacity-100'
+                : 'translate-x-full opacity-0'
+                } cursor-pointer`}
+            onClick={() => onClick(notification)}
+        >
+            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 max-w-xs sm:max-w-sm w-full hover:shadow-xl transition-shadow">
+                <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                            <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 truncate">
+                                New message from {notification.candidateName}
+                            </p>
+                            <p className="text-xs text-gray-600 truncate">
+                                {notification.jobTitle}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1 truncate">
+                                {notification.message}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
+                                {new Date(notification.timestamp).toLocaleTimeString()}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleClose}
+                        className="flex-shrink-0 ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                        <XMarkIcon className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Candidate Card (Your existing component remains the same)
 const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange }) => {
     const router = useRouter();
     const [status, setStatus] = useState(candidate.status || 'Applied');
@@ -32,7 +92,6 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange })
     const ratingValue = candidate.ratings || 0;
     const handleViewProfile = () => router.push(`/profile/${candidate.applicantId}/${candidate.category}`);
 
-    // Handle status change
     const handleStatusChange = async (newStatus) => {
         setStatus(newStatus);
         setIsUpdating(true);
@@ -41,7 +100,6 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange })
             await onStatusChange(candidate.applicantId, candidate.jobId, newStatus);
         } catch (error) {
             console.error('Failed to update status:', error);
-            // Revert on error
             setStatus(candidate.status || 'Applied');
         } finally {
             setIsUpdating(false);
@@ -66,20 +124,16 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange })
         );
     };
 
-    // Get company logo from jobDetails or companyDetails
     const companyLogo = candidate.comapnyLogo || candidate.jobDetails?.companyProfileImage ||
         candidate.companyDetails?.profileImage ||
         candidate.companyProfileImage;
 
-    // Get location from jobDetails
     const jobLocation = candidate.jobDetails?.location || candidate.location;
 
     return (
         <div className="border rounded-xl shadow-sm p-4 flex flex-col lg:flex-row gap-4">
-            {/* Main Content */}
             <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-3">
-                    {/* Avatar - Now shows company logo */}
                     <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold flex-shrink-0 overflow-hidden">
                         {companyLogo ? (
                             <img
@@ -97,12 +151,10 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange })
                         </div>
                     </div>
 
-                    {/* Details */}
                     <div className="flex-1 min-w-0">
-                        {/* Header */}
                         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-800 break-words">
-                                {candidate.applicantName?.toUpperCase() || 'Applicant'}
+                            <h3 className="text-md font-semibold text-gray-800 break-words">
+                                {candidate.companyName?.toUpperCase() || 'Applicant'}
                             </h3>
                             <div className="flex items-center gap-2">
                                 {jobLocation && (
@@ -115,7 +167,6 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange })
                             </div>
                         </div>
 
-                        {/* Info Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-3 text-sm">
                             <div className="min-w-0">
                                 <span className="text-gray-600">Job: </span>
@@ -131,7 +182,6 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange })
                             </div>
                         </div>
 
-                        {/* Company Info */}
                         {candidate.companyName && (
                             <div className="mb-2 text-sm">
                                 <span className="text-gray-600">Company: </span>
@@ -139,7 +189,6 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange })
                             </div>
                         )}
 
-                        {/* Footer */}
                         <div className="flex flex-wrap items-center gap-3">
                             <div className="flex items-center gap-2">
                                 <FaGraduationCap title='Education' className='w-4 h-4 text-gray-600' />
@@ -162,7 +211,6 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange })
                 </div>
             </div>
 
-            {/* Actions */}
             <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-stretch gap-2 flex-shrink-0">
                 <select
                     className={`border rounded px-3 py-2 text-sm min-w-[140px] ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -213,40 +261,224 @@ const categoryIcons = {
     'hr-manager': FaUsers,
     'operations': FaCog,
     'marketing': FaChartBar,
+    'web-development': FaCog,
     'default': FaBuilding
 };
 
-// Helper function to get icon for category
 const getCategoryIcon = (category) => {
     const normalizedCategory = category?.toLowerCase().replace(/\s+/g, '-');
     return categoryIcons[normalizedCategory] || categoryIcons.default;
 };
 
-// Main List
+// Helper function to generate stable unique keys
+const generateUniqueKey = (candidate, index) => {
+    if (candidate._id && candidate.applicantId && candidate.jobId) {
+        return `${candidate._id}-${candidate.applicantId}-${candidate.jobId}`;
+    }
+    if (candidate._id && candidate.applicantId) {
+        return `${candidate._id}-${candidate.applicantId}`;
+    }
+    if (candidate._id) {
+        return candidate._id.toString();
+    }
+    if (candidate.id && candidate.applicantId && candidate.jobId) {
+        return `${candidate.id}-${candidate.applicantId}-${candidate.jobId}`;
+    }
+    if (candidate.id) {
+        return candidate.id.toString();
+    }
+    return `candidate-${index}`;
+};
+
+// Remove duplicates from the data
+const removeDuplicateCandidates = (candidates) => {
+    const seen = new Set();
+    return candidates.filter(candidate => {
+        const key = generateUniqueKey(candidate, 0);
+        if (seen.has(key)) {
+            console.warn('Duplicate candidate found:', candidate);
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
+};
+
+// Main List Component with Improved Notification System
 const ApplicationList = () => {
     const { rootContext, setRootContext } = useContext(RootContext);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [selectedCandidate, setSelectedCandidate] = useState(null);
     const [openCategory, setOpenCategory] = useState('');
+    const [notifications, setNotifications] = useState([]);
+    const [previousChats, setPreviousChats] = useState([]);
+    const [readMessages, setReadMessages] = useState(new Set()); // Track read messages
     const { data, error, isLoading } = useSWRFetch(`/api/companies`);
     const [isMounted, setIsMounted] = useState(false);
     const mutated = Mutated(`/api/companies`);
 
     useEffect(() => {
         setIsMounted(true);
+        return () => setIsMounted(false);
     }, []);
 
-    // Extract appliedJobs from company data
+    // Initialize previous chats when data loads
+    const initializePreviousChats = useCallback(() => {
+        if (data && data.length > 0 && data[0].chats) {
+            setPreviousChats(data[0].chats);
+
+            // Initialize read messages from existing chats
+            const initialReadMessages = new Set();
+            data[0].chats.forEach(chat => {
+                if (chat.lastMessage && chat.lastMessage.read) {
+                    initialReadMessages.add(chat.lastMessage._id);
+                }
+            });
+            setReadMessages(initialReadMessages);
+        }
+    }, [data]);
+
+    useEffect(() => {
+        initializePreviousChats();
+    }, [initializePreviousChats]);
+
+    // Check for new messages by comparing with previous chats
+    const checkForNewMessages = useCallback(() => {
+        if (!data || !data.length || !data[0].chats) return;
+
+        const currentChats = data[0].chats;
+        let hasNewMessages = false;
+
+        // Find new messages that weren't in previousChats
+        currentChats.forEach(currentChat => {
+            const previousChat = previousChats.find(chat =>
+                chat.chatId === currentChat.chatId
+            );
+
+            // If this is a new chat or has a new message
+            if (!previousChat ||
+                (currentChat.lastMessage &&
+                    currentChat.lastMessage._id !== previousChat.lastMessage?._id)) {
+
+                // Only show notification if:
+                // 1. Message is from applicant (not company)
+                // 2. Message is not already read
+                // 3. We haven't already shown notification for this message
+                if (currentChat.lastMessage &&
+                    currentChat.lastMessage.senderType === 'applicant' &&
+                    !currentChat.lastMessage.read &&
+                    !readMessages.has(currentChat.lastMessage._id)) {
+
+                    handleNewChatMessage(currentChat);
+                    hasNewMessages = true;
+                }
+            }
+        });
+
+        // Update previous chats only if there are new messages
+        if (hasNewMessages) {
+            setPreviousChats(currentChats);
+        }
+    }, [data, previousChats, readMessages]);
+
+    // Set up polling with proper cleanup
+    useEffect(() => {
+        if (!data || !data.length) return;
+
+        const pollingInterval = setInterval(() => {
+            checkForNewMessages();
+        }, 3000); // Poll every 3 seconds
+
+        return () => {
+            clearInterval(pollingInterval);
+        };
+    }, [data, checkForNewMessages]);
+
+    const handleNewChatMessage = (chatData) => {
+        // Check if this notification already exists to avoid duplicates
+        const existingNotification = notifications.find(notif =>
+            notif.chatId === chatData.chatId &&
+            notif.messageId === chatData.lastMessage?._id
+        );
+
+        if (existingNotification) return;
+
+        const newNotification = {
+            id: `${chatData.chatId}-${chatData.lastMessage?._id || Date.now()}`,
+            chatId: chatData.chatId,
+            messageId: chatData.lastMessage?._id,
+            candidateId: chatData.applicantId,
+            candidateName: getCandidateName(chatData.applicantId) || 'Candidate',
+            jobTitle: chatData.jobTitle,
+            message: chatData.lastMessage?.content || 'New message',
+            timestamp: chatData.lastMessage?.timestamp || new Date(),
+            isNew: true
+        };
+
+        setNotifications(prev => [newNotification, ...prev.slice(0, 4)]); // Keep max 5 notifications
+
+        // Show toast notification
+        setRootContext(prevContext => ({
+            ...prevContext,
+            toast: {
+                show: true,
+                dismiss: true,
+                type: "info",
+                position: "New Message",
+                message: `New message from ${newNotification.candidateName}`
+            }
+        }));
+    };
+
+    // Helper function to get candidate name from appliedJobs
+    const getCandidateName = (applicantId) => {
+        if (!data || !data.length) return null;
+
+        const appliedJobs = data[0].appliedJobs || [];
+        const candidate = appliedJobs.find(job => job.applicantId === applicantId);
+        return candidate?.applicantName || null;
+    };
+
+    const removeNotification = (notificationId) => {
+        setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+    };
+
+    const handleNotificationClick = async (notification) => {
+        // Find the candidate that matches this notification
+        const appliedJobs = getAppliedJobs();
+        const candidate = appliedJobs.find(app =>
+            app.applicantId === notification.candidateId
+        );
+
+        if (candidate) {
+            setSelectedCandidate(candidate);
+            setIsChatOpen(true);
+        }
+
+        removeNotification(notification.id);
+    };
+
+    const handleOpenChatWithCandidate = async (candidate) => {
+        setSelectedCandidate(candidate);
+        setIsChatOpen(true);
+    };
+
+    const handleCloseChat = () => {
+        setIsChatOpen(false);
+        setSelectedCandidate(null);
+    };
+
     const getAppliedJobs = () => {
         if (!data || !Array.isArray(data) || data.length === 0) return [];
+        const company = data[0];
+        const appliedJobs = company.appliedJobs || [];
 
-        const company = data[0]; // Assuming we're working with the first company
-        return company.appliedJobs || [];
+        // Remove duplicates before returning
+        return removeDuplicateCandidates(appliedJobs);
     };
 
     const appliedJobs = getAppliedJobs();
 
-    // Group applied jobs by category
     const jobsByCategory = appliedJobs.reduce((acc, job) => {
         const category = job.category || 'Other';
         if (!acc[category]) {
@@ -256,7 +488,6 @@ const ApplicationList = () => {
         return acc;
     }, {});
 
-    // Get company data
     const getCompanyData = () => {
         if (data && Array.isArray(data) && data.length > 0) {
             return {
@@ -274,7 +505,6 @@ const ApplicationList = () => {
 
     const company = getCompanyData();
 
-    // Handle status change API call
     const handleStatusChange = async (applicantId, jobId, newStatus) => {
         try {
             const response = await fetch('/api/jobs/status', {
@@ -323,41 +553,29 @@ const ApplicationList = () => {
         }
     };
 
-    // Handle chat with candidate
-    const handleOpenChatWithCandidate = (candidate) => {
-        setSelectedCandidate(candidate);
-        setIsChatOpen(true);
-    };
-
-    const handleCloseChat = () => {
-        setIsChatOpen(false);
-        setSelectedCandidate(null);
-    };
-
-    // Handle sending chat message - FIXED API CALL
     const handleSendMessage = async (message) => {
         try {
-            // Use the correct field names expected by your API
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    applicantId: selectedCandidate.applicantId, // Changed from candidateId
+                    applicantId: selectedCandidate.applicantId,
                     companyId: company._id,
                     jobId: selectedCandidate.jobId,
                     jobTitle: selectedCandidate.jobTitle,
                     message: message,
-                    senderType: 'company', // Changed to 'company' for company messages
-                    senderId: company._id, // Company ID as sender
-                    senderName: company.name // Company name as sender
+                    senderType: 'company',
+                    senderId: company._id,
+                    senderName: company.name
                 })
             });
 
             const result = await response.json();
 
             if (result.success) {
+                mutated();
                 setRootContext(prevContext => ({
                     ...prevContext,
                     toast: {
@@ -393,6 +611,18 @@ const ApplicationList = () => {
         setOpenCategory(openCategory === category ? '' : category);
     };
 
+    // Get unread message count (only unread messages from applicants)
+    const getUnreadMessageCount = () => {
+        if (!data || !data.length || !data[0].chats) return 0;
+
+        return data[0].chats.filter(chat =>
+            chat.lastMessage &&
+            chat.lastMessage.senderType === 'applicant' &&
+            !chat.lastMessage.read &&
+            !readMessages.has(chat.lastMessage._id)
+        ).length;
+    };
+
     if (!isMounted) return null;
 
     if (isLoading) {
@@ -411,8 +641,23 @@ const ApplicationList = () => {
         );
     }
 
+    const unreadCount = getUnreadMessageCount();
+
     return (
-        <div className="w-full sm:w-[80%] mx-auto">
+        <div className="w-full sm:w-[80%] mx-auto relative">
+            {/* Chat Notifications Container */}
+            <div className="fixed top-4 right-4 z-50 max-w-sm w-full sm:w-96 space-y-2 pointer-events-none">
+                {notifications.map((notification) => (
+                    <div key={notification.id} className="pointer-events-auto">
+                        <ChatNotification
+                            notification={notification}
+                            onClose={removeNotification}
+                            onClick={handleNotificationClick}
+                        />
+                    </div>
+                ))}
+            </div>
+
             {/* Header */}
             <div className="mb-6 p-4 bg-white rounded-lg shadow-sm border">
                 <h1 className="text-2xl font-bold text-gray-800">Job Applications</h1>
@@ -428,6 +673,18 @@ const ApplicationList = () => {
                         <span className="font-semibold text-green-800">Categories:</span>
                         <span className="ml-2 text-green-600">{Object.keys(jobsByCategory).length}</span>
                     </div>
+                    {unreadCount > 0 && (
+                        <div className="bg-orange-50 px-3 py-2 rounded-lg">
+                            <span className="font-semibold text-orange-800">Unread Messages:</span>
+                            <span className="ml-2 text-orange-600">{unreadCount}</span>
+                        </div>
+                    )}
+                    {notifications.length > 0 && (
+                        <div className="bg-purple-50 px-3 py-2 rounded-lg">
+                            <span className="font-semibold text-purple-800">New Notifications:</span>
+                            <span className="ml-2 text-purple-600">{notifications.length}</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -447,7 +704,6 @@ const ApplicationList = () => {
 
                         return (
                             <div key={category} className="flex flex-col gap-2">
-                                {/* Accordion Header */}
                                 <div
                                     className={`flex w-full cursor-pointer gap-5 justify-between text-left px-4 py-3 sm:text-xl rounded font-semibold border items-center ${isOpen ? 'bg-blue-400 text-white' : 'bg-blue-600 text-white hover:bg-blue-500'
                                         }`}
@@ -464,7 +720,6 @@ const ApplicationList = () => {
                                     )}
                                 </div>
 
-                                {/* Collapsible Candidates */}
                                 <div
                                     className={`transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
                                         }`}
@@ -472,9 +727,9 @@ const ApplicationList = () => {
                                     <div className="grid grid-cols-1 gap-4 p-2">
                                         {jobs.map((candidate, index) => (
                                             <ApplicationCard
-                                                key={candidate._id || candidate.id || index}
+                                                key={generateUniqueKey(candidate, index)}
                                                 candidate={candidate}
-                                                onOpenChatWithCandidate={handleOpenChatWithCandidate}
+                                                onOpenChatWithCandidate={() => handleOpenChatWithCandidate(candidate)}
                                                 onStatusChange={handleStatusChange}
                                             />
                                         ))}

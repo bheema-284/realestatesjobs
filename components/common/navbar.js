@@ -191,7 +191,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                                     leaveFrom="transform opacity-100 scale-100"
                                     leaveTo="transform opacity-0 scale-95"
                                 >
-                                    <Menu.Items className="absolute no-focus-outline top-full right-0 mt-2 w-36 bg-white shadow-lg rounded-md z-50 focus:outline-none">
+                                    <Menu.Items className="absolute no-focus-outline top-full right-0 mt-2 w-36 bg-white shadow-lg rounded-md z-[99999999] focus:outline-none">
                                         {/* Dashboard/Profile based on role */}
                                         {["superadmin", "company", "recruiter"].includes(role) ? (
                                             <>
