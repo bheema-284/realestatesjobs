@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useContext } from 'react';
 import {
   PencilIcon,
   TrashIcon,
@@ -10,6 +10,7 @@ import {
   LinkIcon
 } from '@heroicons/react/24/outline';
 import Loading from '../common/loading';
+import RootContext from '../config/rootcontext';
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -35,9 +36,9 @@ const getStatusColor = (status) => {
 const ProjectItem = React.memo(({
   project,
   index,
-  onEdit,
   onDelete,
   serviceCall,
+  canEdit // Add canEdit prop
 }) => {
   // Normalize project data to handle both formats
   const normalizedProject = useMemo(() => {
@@ -176,16 +177,20 @@ const ProjectItem = React.memo(({
             </p>
           )}
         </div>
-        <div className="flex gap-2 ml-4">
-          <button
-            onClick={() => onDelete(normalizedProject.id, index)}
-            disabled={serviceCall}
-            className="flex items-center gap-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white px-3 py-2 rounded text-sm transition-colors duration-300"
-            title="Delete Project"
-          >
-            <TrashIcon className="w-4 h-4" />
-          </button>
-        </div>
+
+        {/* Only show action buttons if canEdit is true */}
+        {canEdit && (
+          <div className="flex gap-2 ml-4">
+            <button
+              onClick={() => onDelete(normalizedProject.id, index)}
+              disabled={serviceCall}
+              className="flex items-center gap-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white px-3 py-2 rounded text-sm transition-colors duration-300"
+              title="Delete Project"
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </li>
   );
@@ -196,9 +201,13 @@ ProjectItem.displayName = 'ProjectItem';
 export default function Projects({ profile, setRootContext, mutated }) {
   const [projects, setProjects] = useState(profile.projects || []);
   const [serviceCall, setServiceCall] = useState(false);
-
+  const { rootContext } = useContext(RootContext);
+  const canEdit = rootContext?.user?.role === "applicant"; // Determine if the user can edit
   // DELETE Service for projects
   const deleteProject = async (projectId, index) => {
+    // Only allow deletion if user can edit
+    if (!canEdit) return;
+
     if (!window.confirm('Are you sure you want to delete this project?')) {
       return;
     }
@@ -273,9 +282,12 @@ export default function Projects({ profile, setRootContext, mutated }) {
 
   // Handle edit function (you can implement this later)
   const handleEdit = useCallback((index) => {
+    // Only allow edit if user can edit
+    if (!canEdit) return;
+
     // Add your edit implementation here
     console.log('Edit project at index:', index);
-  }, []);
+  }, [canEdit]);
 
   // Memoize the projects list
   const projectsList = useMemo(() => {
@@ -284,12 +296,12 @@ export default function Projects({ profile, setRootContext, mutated }) {
         key={project.id || idx}
         project={project}
         index={idx}
-        onEdit={handleEdit}
         onDelete={deleteProject}
         serviceCall={serviceCall}
+        canEdit={canEdit} // Pass canEdit to ProjectItem
       />
     ));
-  }, [projects, serviceCall, handleEdit, deleteProject]);
+  }, [projects, serviceCall, deleteProject, canEdit]);
 
   return (
     <div className="bg-gray-50 min-h-screen font-sans antialiased">

@@ -11,7 +11,7 @@ import Services from './services';
 import Marketing from './marketing';
 import ButtonTab from '../common/buttontab';
 import RootContext from '../config/rootcontext';
-import { Mutated } from '../config/useswrfetch';
+import { Mutated, useSWRFetch } from '../config/useswrfetch';
 import { useParams } from 'next/navigation';
 import Loading from '../common/loading';
 
@@ -31,7 +31,7 @@ const ASPECT_RATIOS = [
     { label: "16:9", value: 16 / 9 },
 ];
 
-function ProfilePage({ userData, userId }) {
+function ProfilePage() {
     const params = useParams();
     const { id, category } = params;
     const [activeTab, setActiveTab] = useState(0);
@@ -45,7 +45,6 @@ function ProfilePage({ userData, userId }) {
     const [accordionOpen, setAccordionOpen] = useState(null);
     const [previewImage, setPreviewImage] = useState('');
     const [serviceCall, setServiceCall] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
 
     // Enhanced Crop states
     const [cropping, setCropping] = useState(false);
@@ -70,7 +69,8 @@ function ProfilePage({ userData, userId }) {
 
     const { rootContext, setRootContext } = useContext(RootContext);
     // Use users API
-    const mutated = Mutated(userId ? `/api/users?id=${userId}` : null);
+    const { data: userData = [], error, isLoading } = useSWRFetch(id ? `/api/users?id=${id}` : null);
+    const mutated = Mutated(id ? `/api/users?id=${id}` : null);
 
     useEffect(() => {
         if (userData) {
@@ -100,8 +100,14 @@ function ProfilePage({ userData, userId }) {
 
     const ActiveComponent = tabs[activeTab].component;
 
+    // Check if current user can edit this profile
+    const canEditProfile = rootContext?.user?.role === "applicant" && rootContext?.user?._id === id;
+
     /** ─── Enhanced Image Upload + Crop ────────────────────── **/
     const handleImageChange = (e) => {
+        // Only allow image change if user can edit
+        if (!canEditProfile) return;
+
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -328,7 +334,7 @@ function ProfilePage({ userData, userId }) {
         setServiceCall(true);
         try {
             const formData = new FormData();
-            formData.append("id", userId);
+            formData.append("id", id);
             formData.append("name", tempProfile.name || "");
             formData.append("email", tempProfile.email || "");
             formData.append("position", tempProfile.position || "");
@@ -396,7 +402,6 @@ function ProfilePage({ userData, userId }) {
         setEditingHeader(false);
         setPreviewImage("");
         setTempProfile(profile);
-        setShowPassword(false);
         setCropping(false);
         setCropImage(null);
         setCompletedCrop(null);
@@ -428,16 +433,16 @@ function ProfilePage({ userData, userId }) {
                     <div className="absolute -top-12 left-6 sm:left-6">
                         <label
                             htmlFor="profileImageInput"
-                            className={`${editingHeader ? "cursor-pointer group" : "cursor-default"} relative block`}
+                            className={`${editingHeader && canEditProfile ? "cursor-pointer group" : "cursor-default"} relative block`}
                         >
                             <input
                                 id="profileImageInput"
                                 ref={fileInputRef}
                                 type="file"
                                 accept="image/*"
-                                disabled={!editingHeader}
+                                disabled={!editingHeader || !canEditProfile}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                onChange={editingHeader ? handleImageChange : undefined}
+                                onChange={editingHeader && canEditProfile ? handleImageChange : undefined}
                             />
                             <div className="relative">
                                 <img
@@ -445,7 +450,7 @@ function ProfilePage({ userData, userId }) {
                                     alt="Profile Avatar"
                                     className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border-4 border-white object-cover shadow-lg"
                                 />
-                                {editingHeader && (
+                                {editingHeader && canEditProfile && (
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl text-white font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                         Change
                                     </div>
@@ -489,20 +494,22 @@ function ProfilePage({ userData, userId }) {
                                         />
                                     </div>
 
-                                    <div className="flex gap-3 mt-2">
-                                        <button
-                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                                            onClick={handleSaveHeader}
-                                        >
-                                            Save Changes
-                                        </button>
-                                        <button
-                                            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                                            onClick={handleCancelEdit}
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
+                                    {canEditProfile && (
+                                        <div className="flex gap-3 mt-2">
+                                            <button
+                                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                                onClick={handleSaveHeader}
+                                            >
+                                                Save Changes
+                                            </button>
+                                            <button
+                                                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                                onClick={handleCancelEdit}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div>
@@ -513,12 +520,12 @@ function ProfilePage({ userData, userId }) {
                             )}
                         </div>
 
-                        {!editingHeader && rootContext?.user?.role !== "recruiter" && (
+                        {/* Only show edit button if user is applicant and owns this profile */}
+                        {!editingHeader && canEditProfile && (
                             <button
                                 onClick={() => {
                                     setEditingHeader(true);
                                     setTempProfile(profile);
-                                    setShowPassword(false);
                                 }}
                                 className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0"
                             >
@@ -539,7 +546,12 @@ function ProfilePage({ userData, userId }) {
                         <div className="hidden sm:block">
                             <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                             <div className="py-3">
-                                <ActiveComponent profile={profile} setRootContext={setRootContext} mutated={mutated} />
+                                <ActiveComponent
+                                    profile={profile}
+                                    setRootContext={setRootContext}
+                                    mutated={mutated}
+                                    canEdit={canEditProfile} // Pass edit permission to components
+                                />
                             </div>
                         </div>
 
@@ -561,7 +573,12 @@ function ProfilePage({ userData, userId }) {
                                         </button>
                                         {isOpen && (
                                             <div className="p-2">
-                                                <Component profile={profile} setRootContext={setRootContext} mutated={mutated} />
+                                                <Component
+                                                    profile={profile}
+                                                    setRootContext={setRootContext}
+                                                    mutated={mutated}
+                                                    canEdit={canEditProfile} // Pass edit permission to components
+                                                />
                                             </div>
                                         )}
                                     </div>

@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 
 // ✅ JOI Schema
 const applySchema = Joi.object({
+    companyId: Joi.string().required(),
     userId: Joi.string().required(),
     jobId: Joi.string().required(),
     jobTitle: Joi.string().required(),
@@ -23,7 +24,7 @@ export async function POST(request) {
             );
         }
 
-        const { userId, jobId, jobTitle, category } = value;
+        const { companyId, userId, jobId, jobTitle, category } = value;
 
         // 🔗 Connect DB
         const client = await clientPromise;
@@ -59,17 +60,94 @@ export async function POST(request) {
             );
         }
 
-        // 📌 Application object
+        // 🔍 Check if company exists
+        const company = await users.findOne({ _id: new ObjectId(companyId) });
+        if (!company) {
+            return new Response(
+                JSON.stringify({ error: "Company not found" }),
+                { status: 404 }
+            );
+        }
+
+        // 🔍 Find the specific job object from company's jobs array
+        const job = company.jobs?.find(job => job.id === jobId);
+        if (!job) {
+            return new Response(
+                JSON.stringify({ error: "Job not found in company" }),
+                { status: 404 }
+            );
+        }
+
+        // 📌 Application object with MongoDB ObjectId and complete job details
+        const applicationId = new ObjectId();
         const application = {
-            id: Date.now(),
+            _id: applicationId,
+            id: applicationId.toString(), // Keep both _id and id for compatibility
             jobId,
             jobTitle,
             category,
             appliedAt: new Date(),
             status: "Applied",
+            companyId: companyId,
+            companyName: company.name || company.company || "",
+            companyDetails: {
+                name: company.name || company.company || "",
+                email: company.email || "",
+                mobile: company.mobile || "",
+                location: company.location || "",
+                profileImage: company.profileImage || "",
+                website: company.website || ""
+            },
+            applicantId: userId,
+            applicantName: user.name || "",
+            applicantEmail: user.email || "",
+            applicantMobile: user.mobile || "",
+            // ✅ COMPLETE JOB OBJECT INCLUDED
+            jobDetails: {
+                // Basic job info
+                jobTitle: job.jobTitle,
+                jobDescription: job.jobDescription,
+                employmentTypes: job.employmentTypes || [],
+                workingSchedule: job.workingSchedule || {},
+                salaryType: job.salaryType,
+                salaryAmount: job.salaryAmount,
+                salaryFrequency: job.salaryFrequency,
+                salaryNegotiable: job.salaryNegotiable,
+                hiringMultiple: job.hiringMultiple,
+                location: job.location,
+                experience: job.experience,
+                salary: job.salary,
+                categorySlug: job.categorySlug,
+                status: job.status,
+                postedBy: job.postedBy,
+                postedByRole: job.postedByRole,
+                companyId: job.companyId,
+                companyName: job.companyName,
+
+                // Real estate specific fields
+                jobRoleType: job.jobRoleType,
+                commissionStructure: job.commissionStructure,
+                incentives: job.incentives,
+                propertyTypes: job.propertyTypes || [],
+                targetAreas: job.targetAreas,
+                languageRequirements: job.languageRequirements || [],
+                vehicleRequirement: job.vehicleRequirement,
+                targetAudience: job.targetAudience,
+                salesTargets: job.salesTargets,
+                leadProvided: job.leadProvided,
+                trainingProvided: job.trainingProvided,
+                certificationRequired: job.certificationRequired,
+
+                // Additional job metadata
+                views: job.views || 0,
+                id: job.id,
+                postedOn: job.postedOn,
+                createdAt: job.createdAt,
+                updatedAt: job.updatedAt
+            }
         };
 
-        // 📝 Add inside applicant
+        // 📝 Add application to applicant's applications array
         await users.updateOne(
             { _id: new ObjectId(userId) },
             { $push: { applications: application } }
@@ -79,19 +157,6 @@ export async function POST(request) {
         // 🏢 UPDATE THE COMPANY'S JOB ENTRY WITH APPLICANT DETAILS
         // ---------------------------------------------------------
 
-        // Find which company posted this job
-        const company = await users.findOne(
-            { "jobs.id": jobId },
-            { projection: { jobs: 1 } }
-        );
-
-        if (!company) {
-            return new Response(
-                JSON.stringify({ error: "Job owner not found" }),
-                { status: 404 }
-            );
-        }
-
         // Applicant reference for company job
         const applicantEntry = {
             applicantId: userId,
@@ -100,14 +165,79 @@ export async function POST(request) {
             mobile: user.mobile || "",
             appliedAt: new Date(),
             status: "Applied",
+            // Include some applicant details for company reference
+            applicantProfile: {
+                position: user.position || "",
+                location: user.location || "",
+                experience: user.experience || [],
+                education: user.education || [],
+                skills: user.skills || [],
+                profileImage: user.profileImage || ""
+            }
         };
 
         // 🛠 Push applicant into company.jobs[index].applications
         await users.updateOne(
-            { _id: company._id, "jobs.id": jobId },
+            { _id: new ObjectId(companyId), "jobs.id": jobId },
             {
                 $push: {
                     "jobs.$.applications": applicantEntry
+                },
+                $inc: {
+                    "jobs.$.views": 1 // Increment views when someone applies
+                }
+            }
+        );
+
+        // ---------------------------------------------------------
+        // 🆕 ADD COMPLETE APPLICATION TO COMPANY'S appliedJobs ARRAY
+        // ---------------------------------------------------------
+
+        // Create the applied job object for company's appliedJobs array
+        const appliedJob = {
+            _id: applicationId,
+            id: applicationId.toString(),
+            jobId,
+            jobTitle,
+            category,
+            appliedAt: new Date(),
+            status: "Applied",
+            applicantId: userId,
+            applicantName: user.name || "",
+            applicantEmail: user.email || "",
+            applicantMobile: user.mobile || "",
+            companyId: companyId,
+            companyName: company.name || company.company || "",
+            comapnyLogo: company.profileImage || company.logo || "https://placehold.co/80x80/F0F0F0/000000?text=Logo",
+            // Include complete job details for company reference
+            jobDetails: {
+                jobTitle: job.jobTitle,
+                jobDescription: job.jobDescription,
+                location: job.location,
+                experience: job.experience,
+                salary: job.salary,
+                employmentTypes: job.employmentTypes || [],
+                categorySlug: job.categorySlug
+            },
+            // Include applicant profile for quick reference
+            applicantProfile: {
+                position: user.position || "",
+                location: user.location || "",
+                summary: user.summary || "",
+                experience: user.experience?.length || 0,
+                education: user.education?.length || 0,
+                skills: user.skills || [],
+                profileImage: user.profileImage || "",
+                name: user.name || ""
+            }
+        };
+
+        // 🛠 Push complete application object to company's appliedJobs array
+        await users.updateOne(
+            { _id: new ObjectId(companyId) },
+            {
+                $push: {
+                    appliedJobs: appliedJob
                 }
             }
         );

@@ -251,7 +251,7 @@ export default function RootLayoutClient({ children }) {
                             )}
 
                         {/* Main content */}
-                        <main className={`w-full m-auto ${shouldShowSidebar() ? 'lg:ml-64' : ''}`}>
+                        <main className={`w-full p-1 ${shouldShowSidebar() ? 'lg:ml-64' : ''}`}>
                             {children}
                         </main>
                     </div>

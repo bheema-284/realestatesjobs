@@ -86,7 +86,11 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
         <nav className="bg-white shadow-md fixed top-0 left-0 w-full px-4 sm:px-6 z-50">
             <div className="flex h-20 sm:h-20 items-center justify-between gap-4">
                 {/* Logo */}
-                <Link href="/" className="flex items-center">
+                <Link
+                    href="/"
+                    className="flex items-center"
+                    prefetch={true}
+                >
                     <Image
                         src="/logo.webp"
                         alt="logo"
@@ -99,24 +103,44 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
 
                 {/* Desktop Menu */}
                 <div className="hidden sm:flex items-center gap-4 h-full flex-1 justify-end">
-                    <Link href="/" className={linkClasses("/")}>
+                    <Link
+                        href="/"
+                        className={linkClasses("/")}
+                        prefetch={true}
+                    >
                         Home
                     </Link>
-                    <Link href="/about" className={linkClasses("/about")}>
+                    <Link
+                        href="/about"
+                        className={linkClasses("/about")}
+                        prefetch={true}
+                    >
                         About Us
                     </Link>
                     {(role !== "recruiter" && role !== "company" && role !== "superadmin" || !authenticated) && (
-                        <Link href="/companies" className={linkClasses("/companies")}>
+                        <Link
+                            href="/companies"
+                            className={linkClasses("/companies")}
+                            prefetch={true}
+                        >
                             Companies
                         </Link>
                     )}
                     {(role !== "recruiter" && role !== "company" && role !== "superadmin" || !authenticated) && (
-                        <Link href="/jobs" className={linkClasses("/jobs")}>
+                        <Link
+                            href="/jobs"
+                            className={linkClasses("/jobs")}
+                            prefetch={true}
+                        >
                             Jobs
                         </Link>
                     )}
                     {authenticated && (
-                        <Link href="/services" className={linkClasses("/services")}>
+                        <Link
+                            href="/services"
+                            className={linkClasses("/services")}
+                            prefetch={true}
+                        >
                             Premium Services
                         </Link>
                     )}
@@ -232,6 +256,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                         <Link
                             href="/login"
                             className="ml-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-purple-600"
+                            prefetch={true}
                         >
                             Login
                         </Link>
@@ -259,6 +284,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                         href="/"
                         className={linkClasses("/")}
                         onClick={() => setMenuOpen(false)}
+                        prefetch={true}
                     >
                         Home
                     </Link>
@@ -266,6 +292,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                         href="/about"
                         className={linkClasses("/about")}
                         onClick={() => setMenuOpen(false)}
+                        prefetch={true}
                     >
                         About Us
                     </Link>
@@ -276,6 +303,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                                 href="/companies"
                                 className={linkClasses("/companies")}
                                 onClick={() => setMenuOpen(false)}
+                                prefetch={true}
                             >
                                 Companies
                             </Link>
@@ -283,6 +311,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                                 href="/jobs"
                                 className={linkClasses("/jobs")}
                                 onClick={() => setMenuOpen(false)}
+                                prefetch={true}
                             >
                                 Jobs
                             </Link>
@@ -295,6 +324,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                             href="/services"
                             className={linkClasses("/services")}
                             onClick={() => setMenuOpen(false)}
+                            prefetch={true}
                         >
                             Premium Services
                         </Link>
@@ -309,6 +339,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                                     href={item.link}
                                     className={linkClasses(item.link)}
                                     onClick={() => setMenuOpen(false)}
+                                    prefetch={true}
                                 >
                                     {item.label}
                                 </Link>
@@ -332,6 +363,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                             href={jobSeekerProfileLink}
                             className={linkClasses(jobSeekerProfileLink)}
                             onClick={() => setMenuOpen(false)}
+                            prefetch={true}
                         >
                             Profile
                         </Link>
@@ -343,6 +375,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                             href="/login"
                             className="w-full px-4 py-2 rounded-lg text-center bg-indigo-600 text-white hover:bg-purple-600 mt-2"
                             onClick={() => setMenuOpen(false)}
+                            prefetch={true}
                         >
                             Login
                         </Link>

@@ -34,7 +34,7 @@ const JobCard = ({ job, category }) => {
     // -----------------------------------------------------
     // ✅ HANDLE APPLY
     // -----------------------------------------------------
-    const handleApply = async () => {
+    const handleApply = async (companyId) => {
         if (!isLoggedIn || !user?.role) {
             router.push("/login");
             return;
@@ -47,6 +47,7 @@ const JobCard = ({ job, category }) => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                    companyId: companyId || 1,
                     userId: user._id || user.id,
                     jobId: job.id,
                     jobTitle: job.jobTitle,
@@ -144,7 +145,7 @@ const JobCard = ({ job, category }) => {
                     </button>
                 ) : isApplicant ? (
                     <button
-                        onClick={handleApply}
+                        onClick={() => handleApply(job.companyId)}
                         disabled={applied}
                         className={`mt-3 px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition ${applied
                             ? "bg-gray-400 cursor-not-allowed"

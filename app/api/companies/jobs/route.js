@@ -322,14 +322,19 @@ export async function POST(req) {
             return NextResponse.json({ success: false, error: 'Company not found or invalid role' }, { status: 404 });
         }
 
-        // Create job object
-        const jobId = `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        // Create MongoDB ObjectId for the job
+        const jobObjectId = new ObjectId();
+
+        // Create job object with MongoDB ObjectId
         const newJob = {
             ...value,
-            id: jobId,
+            _id: jobObjectId, // MongoDB ObjectId as _id
+            id: jobObjectId.toString(), // Also store string representation as id for compatibility
             postedOn: new Date().toISOString(),
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
+            applications: [], // Initialize empty applications array
+            views: 0 // Initialize views count
         };
 
         // Push into jobs array
@@ -345,7 +350,11 @@ export async function POST(req) {
             return NextResponse.json({ success: false, error: 'Job creation failed' }, { status: 400 });
         }
 
-        return NextResponse.json({ success: true, message: 'Job created successfully', job: newJob }, { status: 200 });
+        return NextResponse.json({
+            success: true,
+            message: 'Job created successfully',
+            job: newJob
+        }, { status: 200 });
 
     } catch (err) {
         console.error('❌ POST Job Error:', err);
@@ -368,6 +377,9 @@ export async function PUT(req) {
         const db = client.db(process.env.MONGODB_DBNAME);
         const usersCollection = db.collection('rej_users');
 
+        // Convert job ID to ObjectId if it's a valid ObjectId string, otherwise use as string
+        const jobIdFilter = ObjectId.isValid(id) ? new ObjectId(id) : id;
+
         const setFields = {};
         for (const key in updateData) {
             setFields[`jobs.$.${key}`] = updateData[key];
@@ -375,14 +387,20 @@ export async function PUT(req) {
         setFields['jobs.$.updatedAt'] = new Date();
         setFields['updatedAt'] = new Date();
 
+        // Build the query to find the job - search by both _id and id for compatibility
+        const query = {
+            $or: [
+                { _id: new ObjectId(companyId) },
+                { companyId: new ObjectId(companyId) }
+            ],
+            $or: [
+                { 'jobs._id': jobIdFilter },
+                { 'jobs.id': id }
+            ]
+        };
+
         const result = await usersCollection.updateOne(
-            {
-                $or: [
-                    { _id: new ObjectId(companyId) },
-                    { companyId: new ObjectId(companyId) }
-                ],
-                'jobs.id': id
-            },
+            query,
             { $set: setFields }
         );
 
@@ -390,6 +408,7 @@ export async function PUT(req) {
             return NextResponse.json({ success: false, error: 'Job not found or update failed' }, { status: 404 });
         }
 
+        // Fetch the updated job
         const company = await usersCollection.findOne(
             {
                 $or: [
@@ -400,8 +419,16 @@ export async function PUT(req) {
             { projection: { jobs: 1 } }
         );
 
-        const updatedJob = company.jobs.find(job => job.id === id);
-        return NextResponse.json({ success: true, message: 'Job updated successfully', job: updatedJob });
+        // Find the updated job by both _id and id for compatibility
+        const updatedJob = company.jobs.find(job =>
+            (job._id && job._id.toString() === id) || job.id === id
+        );
+
+        return NextResponse.json({
+            success: true,
+            message: 'Job updated successfully',
+            job: updatedJob
+        });
 
     } catch (err) {
         console.error('❌ PUT Job Error:', err);
@@ -424,7 +451,32 @@ export async function DELETE(req) {
         const db = client.db(process.env.MONGODB_DBNAME);
         const usersCollection = db.collection('rej_users');
 
-        const result = await usersCollection.updateOne(
+        // First, find the company and the specific job
+        const company = await usersCollection.findOne(
+            {
+                $or: [
+                    { _id: new ObjectId(companyId) },
+                    { companyId: new ObjectId(companyId) }
+                ]
+            },
+            { projection: { jobs: 1 } }
+        );
+
+        if (!company) {
+            return NextResponse.json({ success: false, error: 'Company not found' }, { status: 404 });
+        }
+
+        // Find the job by either _id or id
+        const jobToDelete = company.jobs.find(job =>
+            (job._id && job._id.toString() === jobId) || job.id === jobId
+        );
+
+        if (!jobToDelete) {
+            return NextResponse.json({ success: false, error: 'Job not found' }, { status: 404 });
+        }
+
+        // Use the actual job _id for deletion (most reliable)
+        const deleteResult = await usersCollection.updateOne(
             {
                 $or: [
                     { _id: new ObjectId(companyId) },
@@ -432,13 +484,13 @@ export async function DELETE(req) {
                 ]
             },
             {
-                $pull: { jobs: { id: jobId } },
+                $pull: { jobs: { _id: jobToDelete._id } },
                 $set: { updatedAt: new Date() }
             }
         );
 
-        if (result.modifiedCount === 0) {
-            return NextResponse.json({ success: false, error: 'Job not found or delete failed' }, { status: 404 });
+        if (deleteResult.modifiedCount === 0) {
+            return NextResponse.json({ success: false, error: 'Job deletion failed' }, { status: 404 });
         }
 
         return NextResponse.json({

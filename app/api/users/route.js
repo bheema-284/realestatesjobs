@@ -707,10 +707,40 @@ export async function PUT(request) {
                     if (Array.isArray(parsedProjects)) {
                         if (["company", "superadmin", "recruiter"].includes(existingUser.role)) {
 
+                            // Process projects to ensure they have MongoDB ObjectIds
+                            const processedProjects = parsedProjects.map(project => {
+                                // If project doesn't have _id, create a new ObjectId
+                                if (!project._id) {
+                                    const projectObjectId = new ObjectId();
+                                    return {
+                                        ...project,
+                                        _id: projectObjectId,
+                                        id: projectObjectId.toString(), // Keep string id for compatibility
+                                        addedDate: project.addedDate || new Date(),
+                                        lastUpdated: new Date()
+                                    };
+                                }
+
+                                // If project has _id but it's a string, convert to ObjectId
+                                if (project._id && typeof project._id === 'string') {
+                                    return {
+                                        ...project,
+                                        _id: new ObjectId(project._id),
+                                        lastUpdated: new Date()
+                                    };
+                                }
+
+                                // Existing project with proper ObjectId, just update lastUpdated
+                                return {
+                                    ...project,
+                                    lastUpdated: new Date()
+                                };
+                            });
+
                             // ---- NEW: robust project handling using helper above ----
                             updateFields.projects = await handleUpdatedProjectImages(
                                 formData,
-                                parsedProjects,
+                                processedProjects,
                                 existingUser.projects || [],
                                 userId
                             );
@@ -745,7 +775,41 @@ export async function PUT(request) {
                     if (Array.isArray(parsedRecruiters)) {
                         // Check if user has permission to manage recruiters
                         if (["company", "superadmin"].includes(existingUser.role)) {
-                            updateFields.recruiters = processRecruitersData(parsedRecruiters, existingUser.recruiters || []);
+
+                            // Process recruiters to ensure they have MongoDB ObjectIds
+                            const processedRecruiters = parsedRecruiters.map(recruiter => {
+                                // If recruiter doesn't have _id, create a new ObjectId
+                                if (!recruiter._id) {
+                                    const recruiterObjectId = new ObjectId();
+                                    return {
+                                        ...recruiter,
+                                        _id: recruiterObjectId,
+                                        id: `recruiter-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // Keep your existing ID format
+                                        addedDate: recruiter.addedDate || new Date(),
+                                        lastUpdated: new Date(),
+                                        updatedAt: new Date()
+                                    };
+                                }
+
+                                // If recruiter has _id but it's a string, convert to ObjectId
+                                if (recruiter._id && typeof recruiter._id === 'string') {
+                                    return {
+                                        ...recruiter,
+                                        _id: new ObjectId(recruiter._id),
+                                        lastUpdated: new Date(),
+                                        updatedAt: new Date()
+                                    };
+                                }
+
+                                // Existing recruiter with proper ObjectId, just update timestamps
+                                return {
+                                    ...recruiter,
+                                    lastUpdated: new Date(),
+                                    updatedAt: new Date()
+                                };
+                            });
+
+                            updateFields.recruiters = processRecruitersData(processedRecruiters, existingUser.recruiters || []);
                         }
                     }
                 } catch (error) {

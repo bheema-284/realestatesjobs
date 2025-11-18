@@ -19,7 +19,7 @@ export default function Page() {
 
     // Only fetch data if we have a companyID and we're on the client
     const { data, error, isLoading } = useSWRFetch(`/api/companies`);
-    const mutated = Mutated(companyID ? `/api/employees?companyId=${companyID}` : null);
+    const mutated = Mutated(companyID ? `/api/companies?companyId=${companyID}` : null);
     // Handle loading state
     if (!isClient || isLoading) {
         return (

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useContext } from 'react';
-import { PencilIcon, PlusIcon, TrashIcon, EyeIcon, EyeSlashIcon, DocumentArrowUpIcon, DocumentIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, PlusIcon, TrashIcon, DocumentArrowUpIcon, DocumentIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Mutated } from '../config/useswrfetch';
 import RootContext from '../config/rootcontext';
 import { formatDateTime } from '../config/sitesettings';
@@ -20,7 +20,6 @@ export default function AboutMe({ profile }) {
     const [editingSummary, setEditingSummary] = useState(false);
     const [tempSummary, setTempSummary] = useState('');
     const [summary, setSummary] = useState(profile?.summary || 'Write a brief summary about yourself, your skills, and your professional goals.');
-    const [previewSummary, setPreviewSummary] = useState(false);
 
     // State for Experience section
     const [experience, setExperience] = useState([]);
@@ -36,7 +35,6 @@ export default function AboutMe({ profile }) {
         document: null,
         documentUrl: ''
     });
-    const [previewExperience, setPreviewExperience] = useState(false);
     const [uploadingExpDoc, setUploadingExpDoc] = useState(null);
     const [expDocumentPreview, setExpDocumentPreview] = useState({ show: false, file: null, index: null });
 
@@ -51,7 +49,6 @@ export default function AboutMe({ profile }) {
         document: null,
         documentUrl: ''
     });
-    const [previewEducation, setPreviewEducation] = useState(false);
     const [uploadingEduDoc, setUploadingEduDoc] = useState(null);
     const [eduDocumentPreview, setEduDocumentPreview] = useState({ show: false, file: null, index: null });
 
@@ -67,11 +64,12 @@ export default function AboutMe({ profile }) {
     });
 
     const [editingPersonal, setEditingPersonal] = useState(false);
-    const { setRootContext } = useContext(RootContext);
+    const { rootContext, setRootContext } = useContext(RootContext);
     const [isAddingOrEditing, setIsAddingOrEditing] = useState(false);
     const [serviceCall, setServiceCall] = useState(false);
 
-
+    // Check if user is applicant
+    const isApplicant = rootContext?.user?.role === "applicant";
     // Use users API instead of employees API
     const mutated = Mutated(profile?._id ? `/api/users?id=${profile?._id}` : null);
 
@@ -201,6 +199,8 @@ export default function AboutMe({ profile }) {
 
     // Handle document file selection for experience
     const handleExperienceDocumentChange = (e, index) => {
+        if (!isApplicant) return;
+
         const file = e.target.files[0];
         if (file) {
             // Check file type (PDF, DOC, DOCX)
@@ -266,6 +266,8 @@ export default function AboutMe({ profile }) {
 
     // Handle document file selection for education
     const handleEducationDocumentChange = (e, index) => {
+        if (!isApplicant) return;
+
         const file = e.target.files[0];
         if (file) {
             const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -329,7 +331,7 @@ export default function AboutMe({ profile }) {
 
     // Save experience document from preview
     const handleSaveExperienceDocument = async () => {
-        if (!expDocumentPreview.file || expDocumentPreview.index === null) return;
+        if (!isApplicant || !expDocumentPreview.file || expDocumentPreview.index === null) return;
 
         setUploadingExpDoc(expDocumentPreview.index);
 
@@ -355,7 +357,7 @@ export default function AboutMe({ profile }) {
 
     // Save education document from preview
     const handleSaveEducationDocument = async () => {
-        if (!eduDocumentPreview.file || eduDocumentPreview.index === null) return;
+        if (!isApplicant || !eduDocumentPreview.file || eduDocumentPreview.index === null) return;
 
         setUploadingEduDoc(eduDocumentPreview.index);
 
@@ -390,6 +392,8 @@ export default function AboutMe({ profile }) {
 
     // Delete entire experience entry
     const handleRemoveExperience = async (index) => {
+        if (!isApplicant) return;
+
         setServiceCall(true);
         try {
             const res = await fetch(`/api/users?id=${profile?._id}&index=${index}&type=experience&deleteType=entry`, {
@@ -430,6 +434,8 @@ export default function AboutMe({ profile }) {
 
     // Delete only experience document (keep the entry)
     const handleRemoveExperienceDocument = async (index) => {
+        if (!isApplicant) return;
+
         setServiceCall(true);
         try {
             if (editingExperienceIndex === index) {
@@ -478,6 +484,8 @@ export default function AboutMe({ profile }) {
 
     // Delete entire education entry
     const handleRemoveEducation = async (index) => {
+        if (!isApplicant) return;
+
         setServiceCall(true);
         try {
             const res = await fetch(`/api/users?id=${profile?._id}&index=${index}&type=education&deleteType=entry`, {
@@ -518,6 +526,8 @@ export default function AboutMe({ profile }) {
 
     // Delete only education document (keep the entry)
     const handleRemoveEducationDocument = async (index) => {
+        if (!isApplicant) return;
+
         setServiceCall(true);
         try {
             if (editingEducationIndex === index) {
@@ -565,7 +575,6 @@ export default function AboutMe({ profile }) {
     };
 
     // Document Preview Modal Component
-    // Document Preview Modal Component
     const DocumentPreviewModal = ({
         isOpen,
         onClose,
@@ -575,7 +584,6 @@ export default function AboutMe({ profile }) {
         index,
         uploading,
     }) => {
-        // Move useEffect to the top level - before any conditional returns
         useEffect(() => {
             if (isOpen) {
                 document.body.style.overflow = "hidden";
@@ -587,9 +595,8 @@ export default function AboutMe({ profile }) {
             return () => {
                 document.body.style.overflow = "auto";
             };
-        }, [isOpen]); // Add isOpen as dependency
+        }, [isOpen]);
 
-        // Now the conditional return can come after all hooks
         if (!isOpen || !file) return null;
 
         const isPDF = file.type === "application/pdf";
@@ -667,6 +674,8 @@ export default function AboutMe({ profile }) {
 
     // Summary Handlers
     const handleSaveSummary = async () => {
+        if (!isApplicant) return;
+
         const success = await updateProfileWithDocuments({ summary: tempSummary });
         if (success) {
             setEditingSummary(false);
@@ -681,6 +690,8 @@ export default function AboutMe({ profile }) {
 
     // Experience Handlers
     const handleAddExperience = () => {
+        if (!isApplicant) return;
+
         const newExperience = {
             company: '',
             location: '',
@@ -700,6 +711,8 @@ export default function AboutMe({ profile }) {
     };
 
     const handleEditExperience = (index) => {
+        if (!isApplicant) return;
+
         setEditingExperienceIndex(index);
         setTempExperience({
             ...experience[index],
@@ -708,6 +721,8 @@ export default function AboutMe({ profile }) {
     };
 
     const handleSaveExperience = async (index) => {
+        if (!isApplicant) return;
+
         const documents = [];
         if (tempExperience.document && tempExperience.document instanceof File) {
             documents.push({ type: 'experience', file: tempExperience.document, index: index });
@@ -740,6 +755,8 @@ export default function AboutMe({ profile }) {
     };
 
     const handleCancelExperience = () => {
+        if (!isApplicant) return;
+
         if (editingExperienceIndex !== null && !experience[editingExperienceIndex]?.company) {
             setExperience(experience.filter((_, i) => i !== editingExperienceIndex));
         }
@@ -758,6 +775,8 @@ export default function AboutMe({ profile }) {
     };
 
     const handleExperienceChange = (e, field) => {
+        if (!isApplicant) return;
+
         setTempExperience({ ...tempExperience, [field]: e.target.value });
     };
 
@@ -769,6 +788,8 @@ export default function AboutMe({ profile }) {
 
     // Education Handlers
     const handleAddEducation = () => {
+        if (!isApplicant) return;
+
         const newEducation = {
             degree: '',
             board: '',
@@ -784,6 +805,8 @@ export default function AboutMe({ profile }) {
     };
 
     const handleEditEducation = (index) => {
+        if (!isApplicant) return;
+
         setEditingEducationIndex(index);
         setTempEducation({
             ...education[index],
@@ -792,6 +815,8 @@ export default function AboutMe({ profile }) {
     };
 
     const handleSaveEducation = async (index) => {
+        if (!isApplicant) return;
+
         const documents = [];
         if (tempEducation.document && tempEducation.document instanceof File) {
             documents.push({ type: 'education', file: tempEducation.document, index: index });
@@ -821,6 +846,8 @@ export default function AboutMe({ profile }) {
     };
 
     const handleCancelEducation = () => {
+        if (!isApplicant) return;
+
         if (editingEducationIndex !== null && !education[editingEducationIndex]?.degree) {
             setEducation(education.filter((_, i) => i !== editingEducationIndex));
         }
@@ -836,11 +863,15 @@ export default function AboutMe({ profile }) {
     };
 
     const handleEducationChange = (e, field) => {
+        if (!isApplicant) return;
+
         setTempEducation({ ...tempEducation, [field]: e.target.value });
     };
 
     // Personal Details Handlers
     const handleSavePersonal = async () => {
+        if (!isApplicant) return;
+
         const success = await updateProfileWithDocuments(tempPersonal);
         if (success) {
             setEditingPersonal(false);
@@ -914,23 +945,15 @@ export default function AboutMe({ profile }) {
                             </>
                         ) : (
                             <div className="flex space-x-2">
-                                <button
-                                    onClick={() => setPreviewSummary(!previewSummary)}
-                                    className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                >
-                                    {previewSummary ? (
-                                        <EyeSlashIcon className="w-5 h-5 text-gray-600" />
-                                    ) : (
-                                        <EyeIcon className="w-5 h-5 text-gray-600" />
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => { setEditingSummary(true); setTempSummary(summary); }}
-                                    className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                    disabled={isAddingOrEditing}
-                                >
-                                    <PencilIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-gray-600'}`} />
-                                </button>
+                                {isApplicant && (
+                                    <button
+                                        onClick={() => { setEditingSummary(true); setTempSummary(summary); }}
+                                        className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                        disabled={isAddingOrEditing}
+                                    >
+                                        <PencilIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-gray-600'}`} />
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -944,14 +967,6 @@ export default function AboutMe({ profile }) {
                             onChange={(e) => setTempSummary(e.target.value)}
                             placeholder="Write a comprehensive summary about your professional journey..."
                         />
-                        {previewSummary && (
-                            <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                                <h4 className="font-semibold text-gray-700 mb-2">Preview:</h4>
-                                <p className="text-base text-gray-700 leading-relaxed whitespace-pre-line">
-                                    {tempSummary}
-                                </p>
-                            </div>
-                        )}
                     </div>
                 ) : (
                     <p className="text-base text-gray-700 leading-relaxed whitespace-pre-line">
@@ -964,7 +979,7 @@ export default function AboutMe({ profile }) {
             <section className="bg-white rounded-xl p-2 sm:p-6 text-gray-800 shadow-lg border border-gray-200 mb-6">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-gray-800">PERSONAL DETAILS</h3>
-                    {!editingPersonal ? (
+                    {!editingPersonal && isApplicant ? (
                         <button
                             onClick={() => setEditingPersonal(true)}
                             className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 shadow-md"
@@ -1086,28 +1101,20 @@ export default function AboutMe({ profile }) {
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-gray-800">EXPERIENCE</h3>
                     <div className="flex space-x-2">
-                        <button
-                            onClick={() => setPreviewExperience(!previewExperience)}
-                            className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                        >
-                            {previewExperience ? (
-                                <EyeSlashIcon className="w-5 h-5 text-gray-600" />
-                            ) : (
-                                <EyeIcon className="w-5 h-5 text-gray-600" />
-                            )}
-                        </button>
-                        <button
-                            onClick={handleAddExperience}
-                            className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 shadow-md"
-                            disabled={isAddingOrEditing}
-                        >
-                            <PlusIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-white'}`} />
-                        </button>
+                        {isApplicant && (
+                            <button
+                                onClick={handleAddExperience}
+                                className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 shadow-md"
+                                disabled={isAddingOrEditing}
+                            >
+                                <PlusIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-white'}`} />
+                            </button>
+                        )}
                     </div>
                 </div>
                 <div className="space-y-6">
                     {experience.length === 0 ? (
-                        <p className="text-gray-600 text-center py-4">No experience added yet. Click the '+' button to add one.</p>
+                        <p className="text-gray-600 text-center py-4">No experience added yet. {isApplicant && "Click the '+' button to add one."}</p>
                     ) : (
                         experience.map((exp, index) => {
                             const isPresent = exp.endDate?.toLowerCase() === "present";
@@ -1203,119 +1210,75 @@ export default function AboutMe({ profile }) {
                                                 </div>
 
                                                 {/* Document Upload for Experience */}
-                                                <div className="md:col-span-2">
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Experience Document
-                                                    </label>
-                                                    <div className="flex items-center gap-3">
-                                                        <input
-                                                            type="file"
-                                                            accept=".pdf,.doc,.docx"
-                                                            onChange={(e) => handleExperienceDocumentChange(e, index)}
-                                                            className="hidden"
-                                                            id={`exp-doc-${index}`}
-                                                        />
-                                                        <label
-                                                            htmlFor={`exp-doc-${index}`}
-                                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors duration-200 cursor-pointer"
-                                                        >
-                                                            <DocumentArrowUpIcon className="w-4 h-4" />
-                                                            {tempExperience.document ? 'Change Document' : 'Upload Document'}
+                                                {isApplicant && (
+                                                    <div className="md:col-span-2">
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            Experience Document
                                                         </label>
+                                                        <div className="flex items-center gap-3">
+                                                            <input
+                                                                type="file"
+                                                                accept=".pdf,.doc,.docx"
+                                                                onChange={(e) => handleExperienceDocumentChange(e, index)}
+                                                                className="hidden"
+                                                                id={`exp-doc-${index}`}
+                                                            />
+                                                            <label
+                                                                htmlFor={`exp-doc-${index}`}
+                                                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors duration-200 cursor-pointer"
+                                                            >
+                                                                <DocumentArrowUpIcon className="w-4 h-4" />
+                                                                {tempExperience.document ? 'Change Document' : 'Upload Document'}
+                                                            </label>
 
-                                                        {tempExperience.documentUrl && (
-                                                            <div className="flex items-center gap-2">
-                                                                <Link
-                                                                    href={tempExperience.documentUrl}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors duration-200"
-                                                                >
-                                                                    <DocumentIcon className="w-4 h-4" />
-                                                                    View Document
-                                                                </Link>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleRemoveExperienceDocument(index)}
-                                                                    className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-200"
-                                                                    aria-label="Remove document"
-                                                                >
-                                                                    <TrashIcon className="w-4 h-4" />
-                                                                </button>
-                                                            </div>
-                                                        )}
+                                                            {tempExperience.documentUrl && (
+                                                                <div className="flex items-center gap-2">
+                                                                    <Link
+                                                                        href={tempExperience.documentUrl}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors duration-200"
+                                                                    >
+                                                                        <DocumentIcon className="w-4 h-4" />
+                                                                        View Document
+                                                                    </Link>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveExperienceDocument(index)}
+                                                                        className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-200"
+                                                                        aria-label="Remove document"
+                                                                    >
+                                                                        <TrashIcon className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mt-1">
+                                                            {tempExperience.document
+                                                                ? `Selected: ${tempExperience.document.name}`
+                                                                : 'Upload experience certificate, offer letter, or relevant document (PDF/DOC, max 5MB)'
+                                                            }
+                                                        </p>
                                                     </div>
-                                                    <p className="text-xs text-gray-500 mt-1">
-                                                        {tempExperience.document
-                                                            ? `Selected: ${tempExperience.document.name}`
-                                                            : 'Upload experience certificate, offer letter, or relevant document (PDF/DOC, max 5MB)'
-                                                        }
-                                                    </p>
-                                                </div>
+                                                )}
                                             </div>
 
-                                            {previewExperience && (
-                                                <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-white">
-                                                    <h4 className="font-semibold text-gray-700 mb-3">Experience Preview:</h4>
-                                                    <div className="flex items-center gap-4">
-                                                        <img
-                                                            src={tempExperience.logo || dummyLogos[index % dummyLogos.length]}
-                                                            alt={`${tempExperience.company} Logo`}
-                                                            className="w-12 h-12 object-contain border border-gray-200 rounded-full p-1 bg-white shadow-sm"
-                                                        />
-                                                        <div>
-                                                            <h4 className="text-base font-semibold text-gray-900">{tempExperience.role || 'Your Role'}</h4>
-                                                            <p className="text-sm text-gray-700">
-                                                                {tempExperience.company || 'Company'} • {tempExperience.location || 'Location'}
-                                                            </p>
-                                                            <p className="text-xs text-gray-500">
-                                                                {tempExperience.startDate || 'Start Date'} – {tempExperience.endDate?.toLowerCase() === "present" ? (
-                                                                    <span className="text-green-600 font-medium">Present</span>
-                                                                ) : (
-                                                                    tempExperience.endDate || 'End Date'
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className='flex gap-5 justify-between'>
-                                                        {tempExperience.description && (
-                                                            <div className="mt-3">
-                                                                <p className="text-sm text-gray-800 whitespace-pre-line">
-                                                                    {tempExperience.description}
-                                                                </p>
-                                                            </div>
-                                                        )}
-                                                        {tempExperience.documentUrl && (
-                                                            <div className="mt-3">
-                                                                <Link
-                                                                    href={tempExperience.documentUrl}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="inline-flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors duration-200"
-                                                                >
-                                                                    <DocumentIcon className="w-4 h-4" />
-                                                                    View Document
-                                                                </Link>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                            {isApplicant && (
+                                                <div className="flex justify-end space-x-3 mt-4">
+                                                    <button
+                                                        onClick={() => handleSaveExperience(index)}
+                                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200 shadow-md"
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        onClick={handleCancelExperience}
+                                                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors duration-200"
+                                                    >
+                                                        Cancel
+                                                    </button>
                                                 </div>
                                             )}
-
-                                            <div className="flex justify-end space-x-3 mt-4">
-                                                <button
-                                                    onClick={() => handleSaveExperience(index)}
-                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200 shadow-md"
-                                                >
-                                                    Save
-                                                </button>
-                                                <button
-                                                    onClick={handleCancelExperience}
-                                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors duration-200"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
                                         </div>
                                     ) : (
                                         <div className="flex flex-col w-full">
@@ -1348,24 +1311,26 @@ export default function AboutMe({ profile }) {
                                                     </span>
                                                 )}
 
-                                                <div className="flex space-x-2">
-                                                    <button
-                                                        onClick={() => handleEditExperience(index)}
-                                                        className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                                        aria-label="Edit experience"
-                                                        disabled={isAddingOrEditing && editingExperienceIndex !== index}
-                                                    >
-                                                        <PencilIcon className={`w-5 h-5 ${isAddingOrEditing && editingExperienceIndex !== index ? 'text-gray-400' : 'text-blue-600'}`} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleRemoveExperience(index)}
-                                                        className="p-2 rounded-full hover:bg-red-100 transition-colors duration-200"
-                                                        aria-label="Delete experience"
-                                                        disabled={isAddingOrEditing}
-                                                    >
-                                                        <TrashIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-red-600'}`} />
-                                                    </button>
-                                                </div>
+                                                {isApplicant && (
+                                                    <div className="flex space-x-2">
+                                                        <button
+                                                            onClick={() => handleEditExperience(index)}
+                                                            className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                            aria-label="Edit experience"
+                                                            disabled={isAddingOrEditing && editingExperienceIndex !== index}
+                                                        >
+                                                            <PencilIcon className={`w-5 h-5 ${isAddingOrEditing && editingExperienceIndex !== index ? 'text-gray-400' : 'text-blue-600'}`} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleRemoveExperience(index)}
+                                                            className="p-2 rounded-full hover:bg-red-100 transition-colors duration-200"
+                                                            aria-label="Delete experience"
+                                                            disabled={isAddingOrEditing}
+                                                        >
+                                                            <TrashIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-red-600'}`} />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className='flex gap-5 sm:justify-between'>
                                                 {exp.description && (
@@ -1403,7 +1368,7 @@ export default function AboutMe({ profile }) {
                                             </div>
 
                                             {/* Document upload for non-editing mode */}
-                                            {(!editingExperienceIndex && (exp.documentUrl === "" || !exp.documentUrl)) && (
+                                            {isApplicant && (!editingExperienceIndex && (exp.documentUrl === "" || !exp.documentUrl)) && (
                                                 <div className="mt-3">
                                                     <input
                                                         type="file"
@@ -1435,28 +1400,20 @@ export default function AboutMe({ profile }) {
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-gray-800">QUALIFICATION</h3>
                     <div className="flex space-x-2">
-                        <button
-                            onClick={() => setPreviewEducation(!previewEducation)}
-                            className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                        >
-                            {previewEducation ? (
-                                <EyeSlashIcon className="w-5 h-5 text-gray-600" />
-                            ) : (
-                                <EyeIcon className="w-5 h-5 text-gray-600" />
-                            )}
-                        </button>
-                        <button
-                            onClick={handleAddEducation}
-                            className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 shadow-md"
-                            disabled={isAddingOrEditing}
-                        >
-                            <PlusIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-white'}`} />
-                        </button>
+                        {isApplicant && (
+                            <button
+                                onClick={handleAddEducation}
+                                className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 shadow-md"
+                                disabled={isAddingOrEditing}
+                            >
+                                <PlusIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-white'}`} />
+                            </button>
+                        )}
                     </div>
                 </div>
                 <div className="space-y-6">
                     {education.length === 0 ? (
-                        <p className="text-gray-600 text-center py-4">No education added yet. Click the '+' button to add one.</p>
+                        <p className="text-gray-600 text-center py-4">No education added yet. {isApplicant && "Click the '+' button to add one."}</p>
                     ) : (
                         education.map((edu, index) => (
                             <div key={index} className="flex flex-col md:flex-row items-start md:items-center border border-gray-200 rounded-lg p-4 bg-gray-50 shadow-sm">
@@ -1509,100 +1466,78 @@ export default function AboutMe({ profile }) {
                                             </div>
 
                                             {/* Document Upload for Education */}
-                                            <div className="md:col-span-3">
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Education Document
-                                                </label>
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="file"
-                                                        accept=".pdf,.doc,.docx"
-                                                        onChange={(e) => handleEducationDocumentChange(e, index)}
-                                                        className="hidden"
-                                                        id={`edu-doc-${index}`}
-                                                    />
-                                                    <label
-                                                        htmlFor={`edu-doc-${index}`}
-                                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors duration-200 cursor-pointer"
-                                                    >
-                                                        <DocumentArrowUpIcon className="w-4 h-4" />
-                                                        {tempEducation.document ? 'Change Document' : 'Upload Document'}
+                                            {isApplicant && (
+                                                <div className="md:col-span-3">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                        Education Document
                                                     </label>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="file"
+                                                            accept=".pdf,.doc,.docx"
+                                                            onChange={(e) => handleEducationDocumentChange(e, index)}
+                                                            className="hidden"
+                                                            id={`edu-doc-${index}`}
+                                                        />
+                                                        <label
+                                                            htmlFor={`edu-doc-${index}`}
+                                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors duration-200 cursor-pointer"
+                                                        >
+                                                            <DocumentArrowUpIcon className="w-4 h-4" />
+                                                            {tempEducation.document ? 'Change Document' : 'Upload Document'}
+                                                        </label>
 
-                                                    {tempEducation.documentUrl && (
-                                                        <div className="flex items-center gap-2">
-                                                            <Link
-                                                                href={`${tempEducation.documentUrl.replace(
-                                                                    "/upload/",
-                                                                    "/upload/fl_attachment:original_document/"
-                                                                )}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors duration-200"
-                                                            >
-                                                                <DocumentIcon className="w-4 h-4" />
-                                                                View Document
-                                                            </Link>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleRemoveEducationDocument(index)}
-                                                                className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-200"
-                                                                aria-label="Remove document"
-                                                            >
-                                                                <TrashIcon className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    )}
+                                                        {tempEducation.documentUrl && (
+                                                            <div className="flex items-center gap-2">
+                                                                <Link
+                                                                    href={`${tempEducation.documentUrl.replace(
+                                                                        "/upload/",
+                                                                        "/upload/fl_attachment:original_document/"
+                                                                    )}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors duration-200"
+                                                                >
+                                                                    <DocumentIcon className="w-4 h-4" />
+                                                                    View Document
+                                                                </Link>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveEducationDocument(index)}
+                                                                    className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-200"
+                                                                    aria-label="Remove document"
+                                                                >
+                                                                    <TrashIcon className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {tempEducation.document
+                                                            ? `Selected: ${tempEducation.document.name}`
+                                                            : 'Upload degree certificate, marksheet, or relevant document (PDF/DOC, max 5MB)'
+                                                        }
+                                                    </p>
                                                 </div>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    {tempEducation.document
-                                                        ? `Selected: ${tempEducation.document.name}`
-                                                        : 'Upload degree certificate, marksheet, or relevant document (PDF/DOC, max 5MB)'
-                                                    }
-                                                </p>
-                                            </div>
+                                            )}
                                         </div>
 
-                                        {previewEducation && (
-                                            <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-white">
-                                                <h4 className="font-semibold text-gray-700 mb-2">Education Preview:</h4>
-                                                <div>
-                                                    <h4 className="text-base font-semibold text-gray-900">{tempEducation.degree || 'Your Degree'}</h4>
-                                                    <p className="text-sm text-gray-700">{tempEducation.board || 'University/Board'}</p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {tempEducation.startYear || 'Start'} - {tempEducation.endYear || 'End'}
-                                                    </p>
-                                                    {tempEducation.documentUrl && (
-                                                        <div className="mt-2">
-                                                            <Link
-                                                                href={tempEducation.documentUrl}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors duration-200"
-                                                            >
-                                                                <DocumentIcon className="w-4 h-4" />
-                                                                View Education Document
-                                                            </Link>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                        {isApplicant && (
+                                            <div className="flex justify-end space-x-3 mt-4">
+                                                <button
+                                                    onClick={() => handleSaveEducation(index)}
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200 shadow-md"
+                                                >
+                                                    Save
+                                                </button>
+                                                <button
+                                                    onClick={handleCancelEducation}
+                                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors duration-200"
+                                                >
+                                                    Cancel
+                                                </button>
                                             </div>
                                         )}
-
-                                        <div className="flex justify-end space-x-3 mt-4">
-                                            <button
-                                                onClick={() => handleSaveEducation(index)}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200 shadow-md"
-                                            >
-                                                Save
-                                            </button>
-                                            <button
-                                                onClick={handleCancelEducation}
-                                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors duration-200"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
                                     </div>
                                 ) : (
                                     <div className="flex items-center justify-between w-full">
@@ -1629,44 +1564,46 @@ export default function AboutMe({ profile }) {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="flex space-x-2 ml-4">
-                                            {/* Document upload for non-editing mode */}
-                                            {!editingEducationIndex && (edu.documentUrl === "" || !edu.documentUrl) && (
-                                                <div className="mr-2">
-                                                    <input
-                                                        type="file"
-                                                        accept=".pdf,.doc,.docx"
-                                                        onChange={(e) => handleEducationDocumentChange(e, index)}
-                                                        className="hidden"
-                                                        id={`edu-doc-view-${index}`}
-                                                    />
-                                                    <label
-                                                        htmlFor={`edu-doc-view-${index}`}
-                                                        className="inline-flex items-center gap-1 px-2 py-2 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors duration-200 cursor-pointer"
-                                                        title="Upload Document"
-                                                    >
-                                                        <DocumentArrowUpIcon className="w-3 h-3" />
-                                                        Upload
-                                                    </label>
-                                                </div>
-                                            )}
-                                            <button
-                                                onClick={() => handleEditEducation(index)}
-                                                className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                                aria-label="Edit education"
-                                                disabled={isAddingOrEditing && editingEducationIndex !== index}
-                                            >
-                                                <PencilIcon className={`w-5 h-5 ${isAddingOrEditing && editingEducationIndex !== index ? 'text-gray-400' : 'text-blue-600'}`} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleRemoveEducation(index)}
-                                                className="p-2 rounded-full hover:bg-red-100 transition-colors duration-200"
-                                                aria-label="Delete education"
-                                                disabled={isAddingOrEditing}
-                                            >
-                                                <TrashIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-red-600'}`} />
-                                            </button>
-                                        </div>
+                                        {isApplicant && (
+                                            <div className="flex space-x-2 ml-4">
+                                                {/* Document upload for non-editing mode */}
+                                                {!editingEducationIndex && (edu.documentUrl === "" || !edu.documentUrl) && (
+                                                    <div className="mr-2">
+                                                        <input
+                                                            type="file"
+                                                            accept=".pdf,.doc,.docx"
+                                                            onChange={(e) => handleEducationDocumentChange(e, index)}
+                                                            className="hidden"
+                                                            id={`edu-doc-view-${index}`}
+                                                        />
+                                                        <label
+                                                            htmlFor={`edu-doc-view-${index}`}
+                                                            className="inline-flex items-center gap-1 px-2 py-2 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors duration-200 cursor-pointer"
+                                                            title="Upload Document"
+                                                        >
+                                                            <DocumentArrowUpIcon className="w-3 h-3" />
+                                                            Upload
+                                                        </label>
+                                                    </div>
+                                                )}
+                                                <button
+                                                    onClick={() => handleEditEducation(index)}
+                                                    className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                    aria-label="Edit education"
+                                                    disabled={isAddingOrEditing && editingEducationIndex !== index}
+                                                >
+                                                    <PencilIcon className={`w-5 h-5 ${isAddingOrEditing && editingEducationIndex !== index ? 'text-gray-400' : 'text-blue-600'}`} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRemoveEducation(index)}
+                                                    className="p-2 rounded-full hover:bg-red-100 transition-colors duration-200"
+                                                    aria-label="Delete education"
+                                                    disabled={isAddingOrEditing}
+                                                >
+                                                    <TrashIcon className={`w-5 h-5 ${isAddingOrEditing ? 'text-gray-400' : 'text-red-600'}`} />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

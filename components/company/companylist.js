@@ -2,7 +2,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-// import { companyData } from '../config/data'
 import Link from 'next/link';
 import { useSWRFetch } from '../config/useswrfetch';
 
@@ -17,9 +16,9 @@ const CompanyCard = ({ company }) => {
     };
 
     return (
-        <div className="relative w-full sm:w-[80%] mx-auto bg-white border border-gray-400 shadow-lg rounded-2xl shadow-md flex flex-col sm:flex-row items-start p-4 sm:p-6 gap-6">
-            {/* Logo with overlay effect */}
-            <div className="absolute w-24 h-24 sm:w-32 sm:h-32 md:w-42 md:h-42 -top-3 -left-3 border border-gray-400 shadow-lg bg-white rounded-xl sm:rounded-2xl shadow-md flex items-center justify-center p-2">
+        <div className="relative w-full sm:w-[80%] mx-auto bg-white border border-gray-400 shadow-lg rounded-2xl p-4 sm:p-6">
+            {/* Logo */}
+            <div className="absolute w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 -top-2 -left-2 sm:-top-3 sm:-left-3 border border-gray-400 shadow-lg bg-white rounded-lg sm:rounded-xl flex items-center justify-center p-1 sm:p-2 z-10">
                 <img
                     src={company.profileImage || company.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
                     alt={company.name}
@@ -27,42 +26,55 @@ const CompanyCard = ({ company }) => {
                 />
             </div>
 
-            {/* Main content (with padding to avoid overlap) */}
-            <div className="flex-1 w-full break-words flex flex-col sm:flex-row justify-between items-center pl-28 sm:pl-40 md:pl-48">
-                {/* Left section: Name + Industry + Button */}
-                <div className="flex-1 w-full sm:w-[60%] flex flex-col justify-center">
-                    <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800">
-                        {company.name.toUpperCase()}
-                    </h2>
-                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                        Industry: {company.industry}
-                    </p>
+            {/* Main Content */}
+            <div className="ml-16 sm:ml-24 md:ml-28 flex flex-col gap-4">
+                {/* Header Section */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                        <h2 className="text-lg sm:text-xl font-semibold text-gray-800 break-words leading-tight">
+                            {company.name.toUpperCase()}
+                        </h2>
+                        <p className="text-sm text-gray-600 mt-1 break-words">
+                            Industry: {company.industry}
+                        </p>
+                    </div>
+
                     <button
                         onClick={handleViewCompany}
-                        className="mt-3 px-3 sm:px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-md hover:bg-blue-700 transition w-fit"
+                        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition w-full sm:w-auto"
                     >
                         Know More
                     </button>
                 </div>
 
-                {/* Right section: Divider + Info */}
-                <div className="flex flex-col sm:flex-row w-full sm:w-[40%] items-start sm:items-center gap-2 sm:gap-4 mt-4 sm:mt-0">
-                    {/* Divider */}
-                    <div className="hidden sm:block w-px bg-blue-600 h-full"></div>
+                {/* Info Section */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-gray-200">
+                    <div className="space-y-2">
+                        <p className="text-sm text-gray-700 break-words">
+                            <span className="font-medium">📍 Location:</span><br />
+                            {company.location || "Not specified"}
+                        </p>
+                        <p className="text-sm text-gray-700 break-words">
+                            <span className="font-medium">🏢 Established:</span><br />
+                            {company.established || "Not specified"}
+                        </p>
+                    </div>
 
-                    <div className="text-xs sm:text-sm text-gray-700 space-y-1">
-                        <p className="truncate">📍 Location: {company.location}</p>
-                        <p>🏢 Established: {company.established}</p>
-                        <p className="truncate break-all">
-                            🌐 Website:{" "}
-                            <Link
-                                href={company.website || "#"}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline break-all"
-                            >
-                                {company.website}
-                            </Link>
+                    <div className="space-y-2">
+                        <p className="text-sm text-gray-700 break-words">
+                            <span className="font-medium">🌐 Website:</span><br />
+                            {company.website ? (
+                                <Link
+                                    href={company.website}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline break-all"
+                                >
+                                    {company.website}
+                                </Link>
+                            ) : (
+                                "Not provided"
+                            )}
                         </p>
                     </div>
                 </div>
