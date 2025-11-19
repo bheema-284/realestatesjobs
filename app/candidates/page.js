@@ -3,9 +3,9 @@ import Chat from '@/components/common/chat';
 import RootContext from '@/components/config/rootcontext';
 import { Mutated, useSWRFetch } from '@/components/config/useswrfetch';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid';
-import { ChatBubbleOvalLeftEllipsisIcon, EyeIcon, MapPinIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { ChatBubbleOvalLeftEllipsisIcon, EyeIcon, MapPinIcon } from '@heroicons/react/24/solid';
 import { useRouter } from 'next/navigation';
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
     FaGraduationCap,
     FaHandshake,
@@ -23,73 +23,14 @@ import {
     FaCog
 } from 'react-icons/fa';
 
-// Chat Notification Component
-const ChatNotification = ({ notification, onClose, onClick }) => {
-    const [isVisible, setIsVisible] = useState(true);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setIsVisible(false);
-            setTimeout(() => onClose(notification.id), 300);
-        }, 5000);
-
-        return () => clearTimeout(timer);
-    }, [notification.id, onClose]);
-
-    const handleClose = (e) => {
-        e.stopPropagation();
-        setIsVisible(false);
-        setTimeout(() => onClose(notification.id), 300);
-    };
-
-    return (
-        <div
-            className={`transform transition-all duration-300 ease-in-out mb-2 ${isVisible
-                ? 'translate-x-0 opacity-100'
-                : 'translate-x-full opacity-0'
-                } cursor-pointer`}
-            onClick={() => onClick(notification)}
-        >
-            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 max-w-xs sm:max-w-sm w-full hover:shadow-xl transition-shadow">
-                <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                            <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4 text-blue-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-800 truncate">
-                                New message from {notification.candidateName}
-                            </p>
-                            <p className="text-xs text-gray-600 truncate">
-                                {notification.jobTitle}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1 truncate">
-                                {notification.message}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">
-                                {new Date(notification.timestamp).toLocaleTimeString()}
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleClose}
-                        className="flex-shrink-0 ml-2 text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                        <XMarkIcon className="w-4 h-4" />
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Candidate Card (Your existing component remains the same)
-const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange }) => {
+// Candidate Card Component
+const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange, unreadCount = 0 }) => {
     const router = useRouter();
     const [status, setStatus] = useState(candidate.status || 'Applied');
     const [isUpdating, setIsUpdating] = useState(false);
     const isNotChatEnabled = status === 'Not Interested';
     const ratingValue = candidate.ratings || 0;
+
     const handleViewProfile = () => router.push(`/profile/${candidate.applicantId}/${candidate.category}`);
 
     const handleStatusChange = async (newStatus) => {
@@ -211,7 +152,7 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange })
                 </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-stretch gap-2 flex-shrink-0">
+            <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-stretch sm:items-center gap-2 flex-shrink-0">
                 <select
                     className={`border rounded px-3 py-2 text-sm min-w-[140px] ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                     value={status}
@@ -229,13 +170,18 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange })
                     <button
                         onClick={() => onOpenChatWithCandidate(candidate)}
                         disabled={isNotChatEnabled || isUpdating}
-                        className={`flex-1 px-3 py-2 rounded text-sm flex items-center gap-2 justify-center min-w-[80px] border
+                        className={`flex-1 px-3 py-2 rounded text-sm flex items-center gap-2 justify-center min-w-[80px] border relative
                             ${!isNotChatEnabled && !isUpdating
                                 ? 'text-gray-600 border-gray-300 hover:bg-gray-50'
                                 : 'text-gray-400 border-gray-200 cursor-not-allowed'}`}
                     >
                         <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4" />
                         <span>Chat</span>
+                        {unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                {unreadCount}
+                            </span>
+                        )}
                     </button>
 
                     <button
@@ -304,190 +250,30 @@ const removeDuplicateCandidates = (candidates) => {
     });
 };
 
-// Main List Component with Improved Notification System
+// Main List Component with Notification Integration
 const ApplicationList = () => {
     const { rootContext, setRootContext } = useContext(RootContext);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [selectedCandidate, setSelectedCandidate] = useState(null);
     const [openCategory, setOpenCategory] = useState('');
-    const [notifications, setNotifications] = useState([]);
-    const [previousChats, setPreviousChats] = useState([]);
-    const [readMessages, setReadMessages] = useState(new Set()); // Track read messages
+    const [unreadChats, setUnreadChats] = useState({});
+    const [currentlyOpenChatId, setCurrentlyOpenChatId] = useState(null);
     const { data, error, isLoading } = useSWRFetch(`/api/companies`);
     const [isMounted, setIsMounted] = useState(false);
     const mutated = Mutated(`/api/companies`);
+    const pollingRef = useRef(null);
 
     useEffect(() => {
         setIsMounted(true);
-        return () => setIsMounted(false);
+        return () => {
+            setIsMounted(false);
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+            }
+        };
     }, []);
 
-    // Initialize previous chats when data loads
-    const initializePreviousChats = useCallback(() => {
-        if (data && data.length > 0 && data[0].chats) {
-            setPreviousChats(data[0].chats);
-
-            // Initialize read messages from existing chats
-            const initialReadMessages = new Set();
-            data[0].chats.forEach(chat => {
-                if (chat.lastMessage && chat.lastMessage.read) {
-                    initialReadMessages.add(chat.lastMessage._id);
-                }
-            });
-            setReadMessages(initialReadMessages);
-        }
-    }, [data]);
-
-    useEffect(() => {
-        initializePreviousChats();
-    }, [initializePreviousChats]);
-
-    // Check for new messages by comparing with previous chats
-    const checkForNewMessages = useCallback(() => {
-        if (!data || !data.length || !data[0].chats) return;
-
-        const currentChats = data[0].chats;
-        let hasNewMessages = false;
-
-        // Find new messages that weren't in previousChats
-        currentChats.forEach(currentChat => {
-            const previousChat = previousChats.find(chat =>
-                chat.chatId === currentChat.chatId
-            );
-
-            // If this is a new chat or has a new message
-            if (!previousChat ||
-                (currentChat.lastMessage &&
-                    currentChat.lastMessage._id !== previousChat.lastMessage?._id)) {
-
-                // Only show notification if:
-                // 1. Message is from applicant (not company)
-                // 2. Message is not already read
-                // 3. We haven't already shown notification for this message
-                if (currentChat.lastMessage &&
-                    currentChat.lastMessage.senderType === 'applicant' &&
-                    !currentChat.lastMessage.read &&
-                    !readMessages.has(currentChat.lastMessage._id)) {
-
-                    handleNewChatMessage(currentChat);
-                    hasNewMessages = true;
-                }
-            }
-        });
-
-        // Update previous chats only if there are new messages
-        if (hasNewMessages) {
-            setPreviousChats(currentChats);
-        }
-    }, [data, previousChats, readMessages]);
-
-    // Set up polling with proper cleanup
-    useEffect(() => {
-        if (!data || !data.length) return;
-
-        const pollingInterval = setInterval(() => {
-            checkForNewMessages();
-        }, 3000); // Poll every 3 seconds
-
-        return () => {
-            clearInterval(pollingInterval);
-        };
-    }, [data, checkForNewMessages]);
-
-    const handleNewChatMessage = (chatData) => {
-        // Check if this notification already exists to avoid duplicates
-        const existingNotification = notifications.find(notif =>
-            notif.chatId === chatData.chatId &&
-            notif.messageId === chatData.lastMessage?._id
-        );
-
-        if (existingNotification) return;
-
-        const newNotification = {
-            id: `${chatData.chatId}-${chatData.lastMessage?._id || Date.now()}`,
-            chatId: chatData.chatId,
-            messageId: chatData.lastMessage?._id,
-            candidateId: chatData.applicantId,
-            candidateName: getCandidateName(chatData.applicantId) || 'Candidate',
-            jobTitle: chatData.jobTitle,
-            message: chatData.lastMessage?.content || 'New message',
-            timestamp: chatData.lastMessage?.timestamp || new Date(),
-            isNew: true
-        };
-
-        setNotifications(prev => [newNotification, ...prev.slice(0, 4)]); // Keep max 5 notifications
-
-        // Show toast notification
-        setRootContext(prevContext => ({
-            ...prevContext,
-            toast: {
-                show: true,
-                dismiss: true,
-                type: "info",
-                position: "New Message",
-                message: `New message from ${newNotification.candidateName}`
-            }
-        }));
-    };
-
-    // Helper function to get candidate name from appliedJobs
-    const getCandidateName = (applicantId) => {
-        if (!data || !data.length) return null;
-
-        const appliedJobs = data[0].appliedJobs || [];
-        const candidate = appliedJobs.find(job => job.applicantId === applicantId);
-        return candidate?.applicantName || null;
-    };
-
-    const removeNotification = (notificationId) => {
-        setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
-    };
-
-    const handleNotificationClick = async (notification) => {
-        // Find the candidate that matches this notification
-        const appliedJobs = getAppliedJobs();
-        const candidate = appliedJobs.find(app =>
-            app.applicantId === notification.candidateId
-        );
-
-        if (candidate) {
-            setSelectedCandidate(candidate);
-            setIsChatOpen(true);
-        }
-
-        removeNotification(notification.id);
-    };
-
-    const handleOpenChatWithCandidate = async (candidate) => {
-        setSelectedCandidate(candidate);
-        setIsChatOpen(true);
-    };
-
-    const handleCloseChat = () => {
-        setIsChatOpen(false);
-        setSelectedCandidate(null);
-    };
-
-    const getAppliedJobs = () => {
-        if (!data || !Array.isArray(data) || data.length === 0) return [];
-        const company = data[0];
-        const appliedJobs = company.appliedJobs || [];
-
-        // Remove duplicates before returning
-        return removeDuplicateCandidates(appliedJobs);
-    };
-
-    const appliedJobs = getAppliedJobs();
-
-    const jobsByCategory = appliedJobs.reduce((acc, job) => {
-        const category = job.category || 'Other';
-        if (!acc[category]) {
-            acc[category] = [];
-        }
-        acc[category].push(job);
-        return acc;
-    }, {});
-
+    // Get company data
     const getCompanyData = () => {
         if (data && Array.isArray(data) && data.length > 0) {
             return {
@@ -504,6 +290,171 @@ const ApplicationList = () => {
     };
 
     const company = getCompanyData();
+
+    // // Mark messages as read for a specific chat
+    // const markMessagesAsRead = async (chatId, candidateId) => {
+    //     try {
+    //         const response = await fetch('/api/chat/read', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //             },
+    //             body: JSON.stringify({
+    //                 chatId: chatId,
+    //                 readerType: 'company',
+    //                 companyId: company._id,
+    //                 applicantId: candidateId
+    //             })
+    //         });
+
+    //         const result = await response.json();
+
+    //         if (result.success) {
+    //             setUnreadChats(prev => {
+    //                 const updated = { ...prev };
+    //                 delete updated[chatId];
+    //                 return updated;
+    //             });
+    //             mutated();
+    //         }
+    //     } catch (error) {
+    //         console.error('Error marking messages as read:', error);
+    //     }
+    // };
+
+    // // Check for new unread messages and update notifications in rootContext
+    // const checkForNewMessages = useCallback(async () => {
+    //     if (!company._id) return;
+
+    //     try {
+    //         const response = await fetch(`/api/chat/read?userId=${company._id}&userType=company&excludeChatId=${currentlyOpenChatId || ''}`);
+    //         const result = await response.json();
+
+    //         if (result.success) {
+    //             const newUnreadChats = result.unreadMessagesByChat || {};
+    //             let totalUnreadCount = 0;
+    //             const newNotifications = [];
+
+    //             // Process unread messages and create notifications
+    //             Object.entries(newUnreadChats).forEach(([chatId, chatData]) => {
+    //                 if (chatData.messages && chatData.messages.length > 0) {
+    //                     totalUnreadCount += chatData.count || 0;
+
+    //                     // Check if we need to create new notifications
+    //                     const existingNotifications = rootContext?.notifications?.items || [];
+    //                     const existingNotification = existingNotifications.find(
+    //                         n => n.chatId === chatId
+    //                     );
+
+    //                     if (!existingNotification) {
+    //                         const latestMessage = chatData.messages[chatData.messages.length - 1];
+    //                         const candidateName = getCandidateName(chatData.applicantId) || 'Candidate';
+
+    //                         const newNotification = {
+    //                             id: `${chatId}-${latestMessage.id}-${Date.now()}`,
+    //                             type: 'chat',
+    //                             title: candidateName,
+    //                             message: latestMessage.content,
+    //                             timestamp: latestMessage.timestamp,
+    //                             read: false,
+    //                             meta: chatData.jobTitle,
+    //                             chatId: chatId,
+    //                             applicantId: chatData.applicantId,
+    //                             companyId: chatData.companyId,
+    //                             jobId: chatData.jobId,
+    //                             onClick: () => {
+    //                                 // Navigate to applications when notification is clicked
+    //                                 // The actual chat opening will be handled in the applications page
+    //                             }
+    //                         };
+
+    //                         newNotifications.push(newNotification);
+    //                     }
+    //                 }
+    //             });
+
+    //             // Update rootContext with new notifications
+    //             const currentUnreadCount = rootContext?.notifications?.unreadCount || 0;
+    //             if (newNotifications.length > 0 || totalUnreadCount !== currentUnreadCount) {
+    //                 setRootContext(prev => ({
+    //                     ...prev,
+    //                     notifications: {
+    //                         items: [...(newNotifications || []), ...(prev.notifications?.items || [])].slice(0, 20),
+    //                         unreadCount: totalUnreadCount,
+    //                         lastChecked: new Date().toISOString(),
+    //                         isDropdownOpen: prev.notifications?.isDropdownOpen || false
+    //                     }
+    //                 }));
+    //             }
+
+    //             setUnreadChats(newUnreadChats);
+    //         }
+    //     } catch (error) {
+    //         console.error('Error checking for new messages:', error);
+    //     }
+    // }, [company._id, currentlyOpenChatId, rootContext?.notifications]);
+
+    // Set up polling
+    useEffect(() => {
+        if (!company._id) return;
+
+        // Check immediately on mount
+    //    checkForNewMessages();
+
+        pollingRef.current = setInterval(() => {
+        //    checkForNewMessages();
+        }, 3000);
+
+        return () => {
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+            }
+        };
+    }, [company._id]);
+
+    const handleOpenChatWithCandidate = async (candidate, chatId = null) => {
+        let targetChatId = chatId;
+
+        if (!targetChatId) {
+            const chat = data[0].chats?.find(chat =>
+                chat.applicantId?.toString() === candidate.applicantId &&
+                chat.jobId === candidate.jobId
+            );
+            targetChatId = chat?.chatId;
+        }
+
+        if (targetChatId) {
+            setCurrentlyOpenChatId(targetChatId.toString());
+            //await markMessagesAsRead(targetChatId, candidate.applicantId);
+        }
+
+        setSelectedCandidate(candidate);
+        setIsChatOpen(true);
+    };
+
+    const handleCloseChat = () => {
+        setIsChatOpen(false);
+        setSelectedCandidate(null);
+        setCurrentlyOpenChatId(null);
+    };
+
+    const getAppliedJobs = () => {
+        if (!data || !Array.isArray(data) || data.length === 0) return [];
+        const companyData = data[0];
+        const appliedJobs = companyData.appliedJobs || [];
+        return removeDuplicateCandidates(appliedJobs);
+    };
+
+    const appliedJobs = getAppliedJobs();
+
+    const jobsByCategory = appliedJobs.reduce((acc, job) => {
+        const category = job.category || 'Other';
+        if (!acc[category]) {
+            acc[category] = [];
+        }
+        acc[category].push(job);
+        return acc;
+    }, {});
 
     const handleStatusChange = async (applicantId, jobId, newStatus) => {
         try {
@@ -576,34 +527,11 @@ const ApplicationList = () => {
 
             if (result.success) {
                 mutated();
-                setRootContext(prevContext => ({
-                    ...prevContext,
-                    toast: {
-                        show: true,
-                        dismiss: true,
-                        type: "success",
-                        position: "Success",
-                        message: "Message sent successfully"
-                    }
-                }));
-                return true;
             } else {
                 console.error('Chat API Error:', result.error);
-                throw new Error(result.error || 'Failed to send message');
             }
         } catch (error) {
             console.error('Chat message error:', error);
-            setRootContext(prevContext => ({
-                ...prevContext,
-                toast: {
-                    show: true,
-                    dismiss: true,
-                    type: "error",
-                    position: "Failed",
-                    message: "Failed to send message: " + error.message
-                }
-            }));
-            return false;
         }
     };
 
@@ -611,16 +539,33 @@ const ApplicationList = () => {
         setOpenCategory(openCategory === category ? '' : category);
     };
 
-    // Get unread message count (only unread messages from applicants)
-    const getUnreadMessageCount = () => {
+    // Helper function to get candidate name from appliedJobs
+    const getCandidateName = (applicantId) => {
+        if (!data || !data.length) return null;
+        const appliedJobs = data[0].appliedJobs || [];
+        const candidate = appliedJobs.find(job => job.applicantId === applicantId);
+        return candidate?.applicantName || null;
+    };
+
+    // Get unread count for a specific candidate
+    const getUnreadCountForCandidate = (candidate) => {
         if (!data || !data.length || !data[0].chats) return 0;
 
-        return data[0].chats.filter(chat =>
-            chat.lastMessage &&
-            chat.lastMessage.senderType === 'applicant' &&
-            !chat.lastMessage.read &&
-            !readMessages.has(chat.lastMessage._id)
+        const chat = data[0].chats.find(chat =>
+            chat.applicantId?.toString() === candidate.applicantId &&
+            chat.jobId === candidate.jobId
+        );
+
+        if (!chat || !chat.messages) return 0;
+
+        // Count unread messages from applicant
+        return chat.messages.filter(message =>
+            message.senderType === 'applicant' && !message.read
         ).length;
+    };
+
+    const getTotalUnreadCount = () => {
+        return Object.values(unreadChats).reduce((total, chatData) => total + chatData.count, 0);
     };
 
     if (!isMounted) return null;
@@ -641,23 +586,10 @@ const ApplicationList = () => {
         );
     }
 
-    const unreadCount = getUnreadMessageCount();
+    const totalUnreadCount = getTotalUnreadCount();
 
     return (
-        <div className="w-full sm:w-[80%] mx-auto relative">
-            {/* Chat Notifications Container */}
-            <div className="fixed top-4 right-4 z-50 max-w-sm w-full sm:w-96 space-y-2 pointer-events-none">
-                {notifications.map((notification) => (
-                    <div key={notification.id} className="pointer-events-auto">
-                        <ChatNotification
-                            notification={notification}
-                            onClose={removeNotification}
-                            onClick={handleNotificationClick}
-                        />
-                    </div>
-                ))}
-            </div>
-
+        <div className="w-full sm:w-[80%] mx-auto">
             {/* Header */}
             <div className="mb-6 p-4 bg-white rounded-lg shadow-sm border">
                 <h1 className="text-2xl font-bold text-gray-800">Job Applications</h1>
@@ -673,16 +605,10 @@ const ApplicationList = () => {
                         <span className="font-semibold text-green-800">Categories:</span>
                         <span className="ml-2 text-green-600">{Object.keys(jobsByCategory).length}</span>
                     </div>
-                    {unreadCount > 0 && (
+                    {totalUnreadCount > 0 && (
                         <div className="bg-orange-50 px-3 py-2 rounded-lg">
                             <span className="font-semibold text-orange-800">Unread Messages:</span>
-                            <span className="ml-2 text-orange-600">{unreadCount}</span>
-                        </div>
-                    )}
-                    {notifications.length > 0 && (
-                        <div className="bg-purple-50 px-3 py-2 rounded-lg">
-                            <span className="font-semibold text-purple-800">New Notifications:</span>
-                            <span className="ml-2 text-purple-600">{notifications.length}</span>
+                            <span className="ml-2 text-orange-600">{totalUnreadCount}</span>
                         </div>
                     )}
                 </div>
@@ -731,6 +657,7 @@ const ApplicationList = () => {
                                                 candidate={candidate}
                                                 onOpenChatWithCandidate={() => handleOpenChatWithCandidate(candidate)}
                                                 onStatusChange={handleStatusChange}
+                                                unreadCount={getUnreadCountForCandidate(candidate)}
                                             />
                                         ))}
                                     </div>
@@ -747,6 +674,15 @@ const ApplicationList = () => {
                     company={company}
                     onClose={handleCloseChat}
                     onSendMessage={handleSendMessage}
+                    onMarkAsRead={() => {
+                        const chat = data[0].chats?.find(chat =>
+                            chat.applicantId?.toString() === selectedCandidate.applicantId &&
+                            chat.jobId === selectedCandidate.jobId
+                        );
+                        // if (chat?.chatId) {
+                        //     markMessagesAsRead(chat.chatId, selectedCandidate.applicantId);
+                        // }
+                    }}
                 />
             )}
         </div>

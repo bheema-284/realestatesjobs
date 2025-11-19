@@ -87,7 +87,9 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
           senderId: msg.senderId,
           senderName: msg.senderName,
           read: msg.read,
-          isSelected: false
+          isSelected: false,
+          // Add status for messages from server
+          status: msg.read ? 'read' : 'delivered'
         }));
 
         if (transformedMessages.length === 0) {
@@ -363,17 +365,19 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     e.preventDefault();
     if (!input.trim()) return;
 
+    const tempMessageId = `temp-${Date.now()}`;
     const userMessage = {
-      id: `temp-${Date.now()}`,
+      id: tempMessageId,
       role: isCompany ? 'company' : 'candidate',
       content: input,
       timestamp: new Date(),
       senderId: currentUser?._id,
       senderName: isCompany ? company?.name : candidate?.applicantName,
-      status: 'sending',
+      status: 'sending', // Start with sending status
       isSelected: false
     };
 
+    // Add message immediately to show below the spinner
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
@@ -382,41 +386,54 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       const success = await onSendMessage(input);
 
       if (success) {
+        // Update status to sent immediately
         setMessages(prev =>
           prev.map(msg =>
-            msg.id === userMessage.id
+            msg.id === tempMessageId
               ? { ...msg, status: 'sent' }
               : msg
           )
         );
 
+        // Reload chat history after a short delay to get the actual message with proper status
         setTimeout(() => {
           loadChatHistory();
-        }, 1000);
+        }, 500);
+
       } else {
+        // If onSendMessage returns false, mark as failed
         setMessages(prev =>
           prev.map(msg =>
-            msg.id === userMessage.id
-              ? { ...msg, status: 'failed' }
+            msg.id === tempMessageId
+              ? {
+                ...msg,
+                status: 'failed',
+                id: `error-${Date.now()}` // Change ID to prevent conflicts
+              }
               : msg
           )
         );
       }
     } catch (err) {
       console.error('Send message error:', err);
+      // If there's an error, mark as failed
       setMessages(prev =>
         prev.map(msg =>
-          msg.id === userMessage.id
-            ? { ...msg, status: 'failed' }
+          msg.id === tempMessageId
+            ? {
+              ...msg,
+              status: 'failed',
+              id: `error-${Date.now()}` // Change ID to prevent conflicts
+            }
             : msg
         )
       );
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
-  // Poll for new messages without showing loader
+  // Poll for new messages to update read status
   useEffect(() => {
     const pollInterval = setInterval(() => {
       loadChatHistory();
@@ -460,19 +477,61 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     return currentDate !== previousDate;
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status, message) => {
     switch (status) {
       case 'sending':
-        return <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />;
+        return (
+          <div className="flex items-center">
+            <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+        );
       case 'sent':
-        return <CheckIcon className="w-3 h-3 text-gray-500" />;
+        return (
+          <div className="flex items-center">
+            <CheckIcon className="w-3 h-3 text-gray-500" />
+          </div>
+        );
       case 'delivered':
-        return <><CheckIcon className="w-3 h-3 text-gray-500" /><CheckIcon className="w-3 h-3 -ml-2 text-gray-500" /></>;
+        return (
+          <div className="flex items-center">
+            <CheckIcon className="w-3 h-3 text-gray-500" />
+            <CheckIcon className="w-3 h-3 text-gray-500 -ml-2" />
+          </div>
+        );
       case 'read':
-        return <><CheckIcon className="w-3 h-3 text-blue-500" /><CheckIcon className="w-3 h-3 -ml-2 text-blue-500" /></>;
+        return (
+          <div className="flex items-center">
+            <CheckIcon className="w-3 h-3 text-blue-500" />
+            <CheckIcon className="w-3 h-3 text-blue-500 -ml-2" />
+          </div>
+        );
       case 'failed':
-        return <span className="text-xs text-red-500">!</span>;
+        return (
+          <div className="relative group flex items-center">
+            <span className="text-xs text-red-500 font-bold">❗</span>
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-red-500 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+              Failed to send. Tap to retry.
+            </div>
+          </div>
+        );
       default:
+        // For messages loaded from server without explicit status
+        if (message?.read) {
+          return (
+            <div className="flex items-center">
+              <CheckIcon className="w-3 h-3 text-blue-500" />
+              <CheckIcon className="w-3 h-3 text-blue-500 -ml-2" />
+            </div>
+          );
+        } else if (message && !message.id.startsWith('temp-') && !message.id.startsWith('error-')) {
+          // Assume delivered if it's not a temp message and not read
+          return (
+            <div className="flex items-center">
+              <CheckIcon className="w-3 h-3 text-gray-500" />
+              <CheckIcon className="w-3 h-3 text-gray-500 -ml-2" />
+            </div>
+          );
+        }
         return null;
     }
   };
@@ -614,8 +673,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
                 </h2>
                 <p className="text-green-100 text-xs flex items-center gap-1 truncate">
                   <span className="truncate">{userRole === "company" ? headerInfo?.user?.applicantProfile?.position : headerInfo?.title}</span>
-                  <span>•</span>
-                  <span>{onlineStatus.text}</span>
                 </p>
               </div>
             </>
@@ -698,15 +755,19 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
                     {/* Message Bubble with Selection */}
                     <div className="group relative">
                       <div
-                        className={`p-1.5 rounded-3xl items-center text-sm break-words cursor-pointer transition-all duration-200 ${isOwnMessage
-                          ? `bg-green-500 text-white rounded-br-lg ${isSelected ? 'ring-2 ring-green-300 ring-offset-2' : ''}`
+                        className={`p-3 rounded-2xl text-sm break-words cursor-pointer transition-all duration-200 ${isOwnMessage
+                          ? `bg-green-500 text-white rounded-br-md ${isSelected ? 'ring-2 ring-green-300 ring-offset-2' : ''}`
                           : message.role === 'system'
                             ? 'bg-yellow-100 text-yellow-800 text-center border border-yellow-200 rounded-lg'
-                            : `bg-white text-gray-800 rounded-bl-lg shadow-sm ${isSelected ? 'ring-2 ring-blue-300 ring-offset-2' : ''}`
+                            : `bg-white text-gray-800 rounded-bl-md shadow-sm ${isSelected ? 'ring-2 ring-blue-300 ring-offset-2' : ''}`
                           }`}
                         onClick={() => {
                           if (isSelectionMode) {
                             handleMessageSelect(message.id);
+                          } else if (message.status === 'failed') {
+                            // Retry sending failed message
+                            setInput(message.content);
+                            setMessages(prev => prev.filter(msg => msg.id !== message.id));
                           }
                         }}
                         onContextMenu={(e) => handleMessageLongPress(message, e)}
@@ -728,7 +789,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
                       </div>
 
                       {/* Three dots menu for own messages (only show when not in selection mode) */}
-                      {isOwnMessage && !isSelectionMode && (
+                      {isOwnMessage && message.role !== 'system' && !isSelectionMode && (
                         <button
                           onClick={(e) => handleMessageMenuClick(message, e)}
                           className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200 rounded-full p-1 hover:bg-gray-300"
@@ -740,11 +801,11 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
 
                     <div className={`flex items-center gap-1 mt-1 text-xs ${isOwnMessage ? 'text-gray-500' : 'text-gray-400'}`}>
                       <span>{formatTime(message.timestamp)}</span>
-                      {isOwnMessage && message.status && (
+                      {isOwnMessage && message.role !== 'system' && (
                         <>
                           <span>•</span>
                           <div className="flex items-center gap-1">
-                            {getStatusIcon(message.status)}
+                            {getStatusIcon(message.status, message)}
                           </div>
                         </>
                       )}

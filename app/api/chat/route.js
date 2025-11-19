@@ -10,7 +10,15 @@ export async function GET(req) {
         const applicantId = searchParams.get("applicantId");
         const companyId = searchParams.get("companyId");
         const jobId = searchParams.get("jobId");
+        const userId = searchParams.get("userId");
+        const userType = searchParams.get("userType");
 
+        // If userId and userType are provided, return user chats (for sidebar)
+        if (userId && userType) {
+            return await getUserChats(userId, userType);
+        }
+
+        // Otherwise, get specific chat
         if (!applicantId || !companyId || !jobId) {
             return NextResponse.json(
                 { success: false, error: "Missing required parameters" },
@@ -23,13 +31,13 @@ export async function GET(req) {
         const users = db.collection("rej_users");
 
         // Find chat in either company or applicant's chats array
-        const company = await users.findOne({ 
+        const company = await users.findOne({
             _id: new ObjectId(companyId),
             "chats.applicantId": new ObjectId(applicantId),
             "chats.jobId": jobId
         });
 
-        const applicant = await users.findOne({ 
+        const applicant = await users.findOne({
             _id: new ObjectId(applicantId),
             "chats.companyId": new ObjectId(companyId),
             "chats.jobId": jobId
@@ -39,13 +47,13 @@ export async function GET(req) {
 
         // Try to get chat from company data first, then applicant
         if (company && company.chats) {
-            chat = company.chats.find(c => 
-                c.applicantId.toString() === applicantId && 
+            chat = company.chats.find(c =>
+                c.applicantId.toString() === applicantId &&
                 c.jobId === jobId
             );
         } else if (applicant && applicant.chats) {
-            chat = applicant.chats.find(c => 
-                c.companyId.toString() === companyId && 
+            chat = applicant.chats.find(c =>
+                c.companyId.toString() === companyId &&
                 c.jobId === jobId
             );
         }
@@ -61,21 +69,23 @@ export async function GET(req) {
                 messages: [],
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                lastMessage: null
+                lastMessage: null,
+                unreadCount: 0,
+                deletedBy: [] // Track who deleted the chat
             };
 
             // Add to both company and applicant
             await Promise.all([
                 users.updateOne(
                     { _id: new ObjectId(companyId) },
-                    { 
+                    {
                         $push: { chats: newChat },
                         $set: { updatedAt: new Date() }
                     }
                 ),
                 users.updateOne(
                     { _id: new ObjectId(applicantId) },
-                    { 
+                    {
                         $push: { chats: newChat },
                         $set: { updatedAt: new Date() }
                     }
@@ -92,7 +102,8 @@ export async function GET(req) {
                 messages: chat.messages || [],
                 applicantId: chat.applicantId,
                 companyId: chat.companyId,
-                jobId: chat.jobId
+                jobId: chat.jobId,
+                deletedBy: chat.deletedBy || []
             }
         });
 
@@ -150,22 +161,8 @@ export async function POST(req) {
             read: false
         };
 
-        // Create chat reference update object
-        const chatUpdate = {
-            jobTitle: jobTitle,
-            lastMessage: messageObj,
-            updatedAt: new Date(),
-            // Increment unread count for the recipient
-            $inc: {
-                "chats.$[chat].unreadCount": 1
-            }
-        };
-
-        // Remove unread count increment if not needed
-        delete chatUpdate.$inc;
-
         // Find existing chat to get chatId
-        const companyUser = await users.findOne({ 
+        const companyUser = await users.findOne({
             _id: new ObjectId(companyId),
             "chats.applicantId": new ObjectId(applicantId),
             "chats.jobId": jobId
@@ -173,7 +170,7 @@ export async function POST(req) {
 
         let chatId;
         if (companyUser && companyUser.chats) {
-            const existingChat = companyUser.chats.find(c => 
+            const existingChat = companyUser.chats.find(c =>
                 c.applicantId.toString() === applicantId && c.jobId === jobId
             );
             chatId = existingChat?.chatId || new ObjectId();
@@ -184,13 +181,14 @@ export async function POST(req) {
         // Update both company and applicant users
         const updatePromises = [];
 
-        // For COMPANY user
+        // For COMPANY user - only update if not deleted by company
         updatePromises.push(
             users.updateOne(
-                { 
+                {
                     _id: new ObjectId(companyId),
                     "chats.applicantId": new ObjectId(applicantId),
-                    "chats.jobId": jobId
+                    "chats.jobId": jobId,
+                    "chats.deletedBy": { $ne: 'company' } // Only update if not deleted by company
                 },
                 {
                     $push: { "chats.$.messages": messageObj },
@@ -199,18 +197,20 @@ export async function POST(req) {
                         "chats.$.updatedAt": new Date(),
                         "chats.$.jobTitle": jobTitle,
                         "chats.$.unreadCount": senderType === 'applicant' ? 1 : 0
-                    }
+                    },
+                    $pull: { "chats.$.deletedBy": 'company' } // Restore chat if it was deleted
                 }
             )
         );
 
-        // For APPLICANT user
+        // For APPLICANT user - only update if not deleted by applicant
         updatePromises.push(
             users.updateOne(
-                { 
+                {
                     _id: new ObjectId(applicantId),
                     "chats.companyId": new ObjectId(companyId),
-                    "chats.jobId": jobId
+                    "chats.jobId": jobId,
+                    "chats.deletedBy": { $ne: 'applicant' } // Only update if not deleted by applicant
                 },
                 {
                     $push: { "chats.$.messages": messageObj },
@@ -219,7 +219,8 @@ export async function POST(req) {
                         "chats.$.updatedAt": new Date(),
                         "chats.$.jobTitle": jobTitle,
                         "chats.$.unreadCount": senderType === 'company' ? 1 : 0
-                    }
+                    },
+                    $pull: { "chats.$.deletedBy": 'applicant' } // Restore chat if it was deleted
                 }
             )
         );
@@ -227,7 +228,7 @@ export async function POST(req) {
         // Execute updates
         const results = await Promise.all(updatePromises);
 
-        // Check if any updates failed (no existing chat found)
+        // Check if any updates failed (no existing chat found or chat was deleted)
         const needsNewChat = results.some(result => result.modifiedCount === 0);
 
         if (needsNewChat) {
@@ -242,20 +243,21 @@ export async function POST(req) {
                 lastMessage: messageObj,
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                unreadCount: senderType === 'company' ? 0 : 1 // Recipient gets unread count
+                unreadCount: senderType === 'company' ? 0 : 1,
+                deletedBy: [] // Initialize empty deletedBy array
             };
 
             await Promise.all([
                 users.updateOne(
                     { _id: new ObjectId(companyId) },
-                    { 
+                    {
                         $push: { chats: newChat },
                         $set: { updatedAt: new Date() }
                     }
                 ),
                 users.updateOne(
                     { _id: new ObjectId(applicantId) },
-                    { 
+                    {
                         $push: { chats: { ...newChat, unreadCount: senderType === 'applicant' ? 0 : 1 } },
                         $set: { updatedAt: new Date() }
                     }
@@ -284,7 +286,7 @@ export async function POST(req) {
 export async function PUT(req) {
     try {
         const body = await req.json();
-        const { chatId, messageId, readerType, applicantId, companyId, jobId } = body;
+        const { chatId, readerType, applicantId, companyId, jobId } = body;
 
         if (!chatId || !readerType) {
             return NextResponse.json(
@@ -307,25 +309,18 @@ export async function PUT(req) {
             );
         }
 
-        // Mark specific message as read and reset unread count
+        // Mark all messages as read and reset unread count for the specific user
         const updateResult = await users.updateOne(
-            { 
+            {
                 _id: new ObjectId(userId),
                 "chats.chatId": new ObjectId(chatId)
             },
             {
                 $set: {
                     "chats.$.unreadCount": 0,
-                    "chats.$.lastMessage.read": true,
-                    "chats.$.messages.$[msg].read": true
+                    "chats.$.lastMessage.read": readerType === 'company' ? true : false,
+                    "chats.$.messages.$[].read": readerType === 'company' ? true : false
                 }
-            },
-            {
-                arrayFilters: [
-                    {
-                        "msg._id": messageId ? new ObjectId(messageId) : { $exists: true }
-                    }
-                ]
             }
         );
 
@@ -344,7 +339,7 @@ export async function PUT(req) {
     }
 }
 
-// DELETE - Delete chat or specific messages
+// DELETE - Delete chat or specific messages (individual deletion)
 export async function DELETE(req) {
     try {
         const { searchParams } = new URL(req.url);
@@ -354,19 +349,27 @@ export async function DELETE(req) {
         const jobId = searchParams.get("jobId");
         const messageId = searchParams.get("messageId");
         const deleteType = searchParams.get("type"); // 'chat' or 'message'
+        const deletedBy = searchParams.get("deletedBy"); // 'company' or 'applicant'
 
         const client = await clientPromise;
         const db = client.db(process.env.MONGODB_DBNAME);
         const users = db.collection("rej_users");
 
-        if (deleteType === 'message' && messageId && chatId) {
-            // Delete specific message from chat
-            const updateResult = await users.updateMany(
+        if (deleteType === 'message' && messageId && chatId && deletedBy) {
+            // Delete specific message from chat - only for the user who deleted it
+            const userId = deletedBy === 'company' ? companyId : applicantId;
+
+            if (!userId) {
+                return NextResponse.json(
+                    { success: false, error: "Missing user ID for message deletion" },
+                    { status: 400 }
+                );
+            }
+
+            // Remove message only from the user's chat
+            const updateResult = await users.updateOne(
                 {
-                    $or: [
-                        { _id: new ObjectId(companyId) },
-                        { _id: new ObjectId(applicantId) }
-                    ],
+                    _id: new ObjectId(userId),
                     "chats.chatId": new ObjectId(chatId)
                 },
                 {
@@ -374,10 +377,11 @@ export async function DELETE(req) {
                 }
             );
 
-            // Update last message if needed
+            // Update last message if needed (only for this user)
             if (updateResult.modifiedCount > 0) {
                 // Get updated chat to find new last message
                 const userWithChat = await users.findOne({
+                    _id: new ObjectId(userId),
                     "chats.chatId": new ObjectId(chatId)
                 });
 
@@ -385,13 +389,10 @@ export async function DELETE(req) {
                     const chat = userWithChat.chats.find(c => c.chatId.toString() === chatId);
                     if (chat && chat.messages.length > 0) {
                         const lastMessage = chat.messages[chat.messages.length - 1];
-                        
-                        await users.updateMany(
+
+                        await users.updateOne(
                             {
-                                $or: [
-                                    { _id: new ObjectId(companyId) },
-                                    { _id: new ObjectId(applicantId) }
-                                ],
+                                _id: new ObjectId(userId),
                                 "chats.chatId": new ObjectId(chatId)
                             },
                             {
@@ -399,13 +400,10 @@ export async function DELETE(req) {
                             }
                         );
                     } else {
-                        // No messages left, clear lastMessage
-                        await users.updateMany(
+                        // No messages left, clear lastMessage for this user
+                        await users.updateOne(
                             {
-                                $or: [
-                                    { _id: new ObjectId(companyId) },
-                                    { _id: new ObjectId(applicantId) }
-                                ],
+                                _id: new ObjectId(userId),
                                 "chats.chatId": new ObjectId(chatId)
                             },
                             {
@@ -421,52 +419,53 @@ export async function DELETE(req) {
                 message: "Message deleted successfully"
             });
 
-        } else if (deleteType === 'chat' && chatId) {
-            // Delete entire chat from both users
-            await users.updateMany(
+        } else if (deleteType === 'chat' && chatId && deletedBy) {
+            // Individual chat deletion - mark as deleted only for the specific user
+            const userId = deletedBy === 'company' ? companyId : applicantId;
+
+            if (!userId) {
+                return NextResponse.json(
+                    { success: false, error: "Missing user ID for chat deletion" },
+                    { status: 400 }
+                );
+            }
+
+            // Instead of removing the chat, mark it as deleted by this user
+            const updateResult = await users.updateOne(
                 {
-                    $or: [
-                        { _id: new ObjectId(companyId) },
-                        { _id: new ObjectId(applicantId) }
-                    ]
+                    _id: new ObjectId(userId),
+                    "chats.chatId": new ObjectId(chatId)
                 },
                 {
-                    $pull: { 
-                        chats: { 
-                            chatId: new ObjectId(chatId) 
-                        } 
-                    }
+                    $addToSet: { "chats.$.deletedBy": deletedBy }
                 }
             );
 
             return NextResponse.json({
                 success: true,
-                message: "Chat deleted successfully"
+                message: "Chat deleted successfully for user",
+                modifiedCount: updateResult.modifiedCount
             });
 
-        } else if (applicantId && companyId && jobId) {
-            // Delete chat by applicantId, companyId, and jobId
-            await users.updateMany(
+        } else if (applicantId && companyId && jobId && deletedBy) {
+            // Delete chat by applicantId, companyId, and jobId - individual deletion
+            const userId = deletedBy === 'company' ? companyId : applicantId;
+
+            await users.updateOne(
                 {
-                    $or: [
-                        { _id: new ObjectId(companyId) },
-                        { _id: new ObjectId(applicantId) }
-                    ]
+                    _id: new ObjectId(userId),
+                    "chats.applicantId": new ObjectId(applicantId),
+                    "chats.companyId": new ObjectId(companyId),
+                    "chats.jobId": jobId
                 },
                 {
-                    $pull: { 
-                        chats: { 
-                            applicantId: new ObjectId(applicantId),
-                            companyId: new ObjectId(companyId),
-                            jobId: jobId
-                        } 
-                    }
+                    $addToSet: { "chats.$.deletedBy": deletedBy }
                 }
             );
 
             return NextResponse.json({
                 success: true,
-                message: "Chat deleted successfully"
+                message: "Chat deleted successfully for user"
             });
 
         } else {
@@ -485,20 +484,9 @@ export async function DELETE(req) {
     }
 }
 
-// GET - Get user chats (for sidebar/list view)
-export async function GET_USER_CHATS(req) {
+// Helper function to get user chats (filter out deleted chats)
+async function getUserChats(userId, userType) {
     try {
-        const { searchParams } = new URL(req.url);
-        const userId = searchParams.get("userId");
-        const userType = searchParams.get("userType"); // 'company' or 'applicant'
-
-        if (!userId || !userType) {
-            return NextResponse.json(
-                { success: false, error: "Missing required parameters" },
-                { status: 400 }
-            );
-        }
-
         const client = await clientPromise;
         const db = client.db(process.env.MONGODB_DBNAME);
         const users = db.collection("rej_users");
@@ -512,7 +500,13 @@ export async function GET_USER_CHATS(req) {
             );
         }
 
-        const chats = user.chats || [];
+        let chats = user.chats || [];
+
+        // Filter out chats that were deleted by this user
+        chats = chats.filter(chat => {
+            const deletedBy = chat.deletedBy || [];
+            return !deletedBy.includes(userType);
+        });
 
         // Populate with additional user info
         const populatedChats = await Promise.all(
@@ -547,6 +541,63 @@ export async function GET_USER_CHATS(req) {
 
     } catch (err) {
         console.error("❌ Get User Chats Error:", err);
+        return NextResponse.json(
+            { success: false, error: err.message },
+            { status: 500 }
+        );
+    }
+}
+
+// New endpoint to mark entire chat as read
+export async function PATCH(req) {
+    try {
+        const body = await req.json();
+        const { chatId, readerType, applicantId, companyId, jobId } = body;
+
+        if (!chatId || !readerType) {
+            return NextResponse.json(
+                { success: false, error: "Missing required fields" },
+                { status: 400 }
+            );
+        }
+
+        const client = await clientPromise;
+        const db = client.db(process.env.MONGODB_DBNAME);
+        const users = db.collection("rej_users");
+
+        // Determine which user to update based on readerType
+        const userId = readerType === 'company' ? companyId : applicantId;
+
+        if (!userId) {
+            return NextResponse.json(
+                { success: false, error: "Missing user ID" },
+                { status: 400 }
+            );
+        }
+
+        // Mark all messages as read and reset unread count
+        const updateResult = await users.updateOne(
+            {
+                _id: new ObjectId(userId),
+                "chats.chatId": new ObjectId(chatId)
+            },
+            {
+                $set: {
+                    "chats.$.unreadCount": 0,
+                    "chats.$.lastMessage.read": true,
+                    "chats.$.messages.$[].read": true
+                }
+            }
+        );
+
+        return NextResponse.json({
+            success: true,
+            message: "Chat marked as read",
+            modifiedCount: updateResult.modifiedCount
+        });
+
+    } catch (err) {
+        console.error("❌ Mark chat as read Error:", err);
         return NextResponse.json(
             { success: false, error: err.message },
             { status: 500 }

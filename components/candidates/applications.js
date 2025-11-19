@@ -269,37 +269,9 @@ export default function Applications({ profile, setRootContext, mutated }) {
           senderName: profile.name || profile.email
         })
       });
-
       const result = await response.json();
-
-      if (result.success) {
-        setRootContext(prevContext => ({
-          ...prevContext,
-          toast: {
-            show: true,
-            dismiss: true,
-            type: "success",
-            position: "Success",
-            message: "Message sent successfully"
-          }
-        }));
-        return true;
-      } else {
-        throw new Error(result.error || 'Failed to send message');
-      }
     } catch (error) {
-      console.error('Chat message error:', error);
-      setRootContext(prevContext => ({
-        ...prevContext,
-        toast: {
-          show: true,
-          dismiss: true,
-          type: "error",
-          position: "Failed",
-          message: "Failed to send message"
-        }
-      }));
-      return false;
+      console.error('Chat message error:', error);      
     }
   };
 

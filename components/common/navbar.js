@@ -1,23 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useContext, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, BellIcon } from "@heroicons/react/24/outline";
 import { usePathname, useRouter } from "next/navigation";
-import { FaBell } from "react-icons/fa";
 import { Menu, Transition } from "@headlessui/react";
 import AnimatedBorderLoader from "./animatedbutton";
 import JobPostingModal from "../createjob";
+import RootContext from "@/components/config/rootcontext";
+import NotificationDropdown from "./notificationdropdown";
 
 export const Navbar = ({ rootContext, showLoader, logOut }) => {
+    const { setRootContext } = useContext(RootContext);
     const [menuOpen, setMenuOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
     const role = rootContext?.user?.role;
-    const authenticated = rootContext.authenticated;
+    const authenticated = rootContext?.authenticated || false;
+    const pollingRef = useRef(null);
 
     // Sidebar items based on roles
     const getSidebarItems = () => {
@@ -68,16 +71,275 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
             }`;
     };
 
-    const NotificationBell = ({ count }) => (
-        <div className="relative w-4 h-6">
-            <FaBell className="text-gray-700 w-full h-full" />
-            {count > 0 && (
-                <span className="absolute -top-[2px] -right-[2px] min-w-[12px] h-[12px] px-[2px] text-[8px] leading-[12px] text-white bg-red-500 rounded-full text-center ring-1 ring-white dark:ring-gray-800">
-                    {count > 99 ? "99+" : count}
-                </span>
-            )}
-        </div>
-    );
+    // Helper function to get candidate name (for companies)
+    const getCandidateName = (applicantId) => {
+        // This would typically come from your API or context
+        // For now, return a placeholder
+        return 'Candidate';
+    };
+
+    // Helper function to get company name (for applicants)
+    const getCompanyName = (companyId) => {
+        // This would typically come from your API or context
+        // For now, return a placeholder
+        return 'Company';
+    };
+
+    // Check for new messages and update notifications
+    const checkForNewMessages = useCallback(async () => {
+        if (!authenticated || !rootContext?.user?.id) return;
+
+        try {
+            const userType = rootContext?.user?.role;
+            const userId = rootContext?.user?.id;
+
+            console.log('🔔 Checking for new messages for user:', userId, 'type:', userType);
+
+            const response = await fetch(`/api/chat/read?userId=${userId}&userType=${userType}`);
+            const result = await response.json();
+
+            console.log('🔔 Chat API Response:', result);
+
+            if (result.success) {
+                const unreadChats = result.unreadChats || [];
+                const totalUnreadCount = result.unreadCount || 0;
+                const newNotifications = [];
+
+                // Process unread chats and create notifications
+                unreadChats.forEach((chat) => {
+                    if (chat.unreadCount > 0) {
+                        // Safely access existing notifications
+                        const existingNotifications = rootContext?.notifications?.items || [];
+                        const existingNotification = existingNotifications.find(
+                            n => n.chatId === chat.chatId
+                        );
+
+                        // Only create notification if we don't have one for this chat
+                        // or if there are new unread messages
+                        if (!existingNotification || chat.unreadCount > 0) {
+                            const otherUserName = userType === 'company'
+                                ? getCandidateName(chat.applicantId)
+                                : getCompanyName(chat.companyId);
+
+                            // Use the last unread message for notification
+                            const latestUnreadMessage = chat.messages && chat.messages.length > 0
+                                ? chat.messages[chat.messages.length - 1]
+                                : chat.lastMessage;
+
+                            const newNotification = {
+                                id: `${chat.chatId}-${Date.now()}`,
+                                type: 'chat',
+                                title: otherUserName || 'User',
+                                message: latestUnreadMessage?.content || 'New message',
+                                timestamp: latestUnreadMessage?.timestamp || new Date().toISOString(),
+                                read: false,
+                                meta: chat.jobTitle,
+                                chatId: chat.chatId,
+                                applicantId: chat.applicantId,
+                                companyId: chat.companyId,
+                                jobId: chat.jobId,
+                                unreadCount: chat.unreadCount,
+                                onClick: () => {
+                                    handleNotificationClick(chat);
+                                }
+                            };
+
+                            newNotifications.push(newNotification);
+                        }
+                    }
+                });
+
+                // Safely update context
+                const currentUnreadCount = rootContext?.notifications?.unreadCount || 0;
+
+                if (newNotifications.length > 0 || totalUnreadCount !== currentUnreadCount) {
+                    console.log('🔔 Updating notifications:', {
+                        newNotifications: newNotifications.length,
+                        totalUnreadCount,
+                        currentUnreadCount
+                    });
+
+                    setRootContext(prev => {
+                        // Remove old notifications for the same chats to avoid duplicates
+                        const existingItems = prev.notifications?.items || [];
+                        const filteredExistingItems = existingItems.filter(existingNotif =>
+                            !newNotifications.some(newNotif => newNotif.chatId === existingNotif.chatId)
+                        );
+
+                        return {
+                            ...prev,
+                            notifications: {
+                                items: [...newNotifications, ...filteredExistingItems].slice(0, 20),
+                                unreadCount: totalUnreadCount,
+                                lastChecked: new Date().toISOString(),
+                                isDropdownOpen: prev.notifications?.isDropdownOpen || false
+                            }
+                        };
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error checking for new messages:', error);
+        }
+    }, [authenticated, rootContext?.user?.id, rootContext?.user?.role, rootContext?.notifications, setRootContext]);
+
+    // Handle notification click
+    const handleNotificationClick = (chatData) => {
+        const userType = rootContext?.user?.role;
+
+        console.log('🔔 Notification clicked:', chatData);
+
+        if (userType === 'company') {
+            // Navigate to applications page
+            router.push(`/applications`);
+        } else if (userType === 'applicant') {
+            // Navigate to jobs page
+            router.push(`/jobs`);
+        }
+
+        // Close notification dropdown
+        setRootContext(prev => ({
+            ...prev,
+            notifications: {
+                ...prev.notifications,
+                isDropdownOpen: false
+            }
+        }));
+    };
+
+    // Set up polling for new messages
+    useEffect(() => {
+        if (!authenticated) return;
+
+        // Check immediately on mount
+        checkForNewMessages();
+
+        // Set up interval for polling
+        pollingRef.current = setInterval(() => {
+            checkForNewMessages();
+        }, 5000); // Check every 5 seconds for better responsiveness
+
+        return () => {
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+            }
+        };
+    }, [authenticated, checkForNewMessages]);
+
+    const NotificationBell = () => {
+        // Safe access with default value
+        const unreadCount = rootContext?.notifications?.unreadCount || 0;
+
+        const handleBellClick = () => {
+            setRootContext(prev => ({
+                ...prev,
+                notifications: {
+                    ...prev.notifications,
+                    isDropdownOpen: !(prev.notifications?.isDropdownOpen || false)
+                }
+            }));
+        };
+
+        return (
+            <div className="relative">
+                <button
+                    onClick={handleBellClick}
+                    className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                    <BellIcon className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-4 bg-red-500 text-white text-[11px] rounded-full w-4 h-4 flex items-center justify-center">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                    )}
+                </button>
+            </div>
+        );
+    };
+
+    // Notification functions
+    const removeNotification = (notificationId) => {
+        setRootContext(prev => {
+            const currentItems = prev.notifications?.items || [];
+            const notification = currentItems.find(n => n.id === notificationId);
+            const newItems = currentItems.filter(n => n.id !== notificationId);
+            const currentUnreadCount = prev.notifications?.unreadCount || 0;
+            const newUnreadCount = notification && !notification.read
+                ? Math.max(0, currentUnreadCount - (notification.unreadCount || 1))
+                : currentUnreadCount;
+
+            return {
+                ...prev,
+                notifications: {
+                    items: newItems,
+                    unreadCount: newUnreadCount,
+                    isDropdownOpen: prev.notifications?.isDropdownOpen || false,
+                    lastChecked: prev.notifications?.lastChecked || null
+                }
+            };
+        });
+    };
+
+    const markNotificationAsRead = (notificationId) => {
+        setRootContext(prev => {
+            const currentItems = prev.notifications?.items || [];
+            const newItems = currentItems.map(notification =>
+                notification.id === notificationId
+                    ? { ...notification, read: true }
+                    : notification
+            );
+            const currentUnreadCount = prev.notifications?.unreadCount || 0;
+            const notification = currentItems.find(n => n.id === notificationId);
+            const unreadCountToRemove = notification && !notification.read ? (notification.unreadCount || 1) : 0;
+
+            return {
+                ...prev,
+                notifications: {
+                    items: newItems,
+                    unreadCount: Math.max(0, currentUnreadCount - unreadCountToRemove),
+                    isDropdownOpen: prev.notifications?.isDropdownOpen || false,
+                    lastChecked: prev.notifications?.lastChecked || null
+                }
+            };
+        });
+    };
+
+    const markAllNotificationsAsRead = () => {
+        setRootContext(prev => ({
+            ...prev,
+            notifications: {
+                items: (prev.notifications?.items || []).map(notification => ({
+                    ...notification,
+                    read: true
+                })),
+                unreadCount: 0,
+                isDropdownOpen: prev.notifications?.isDropdownOpen || false,
+                lastChecked: prev.notifications?.lastChecked || null
+            }
+        }));
+    };
+
+    const clearAllNotifications = () => {
+        setRootContext(prev => ({
+            ...prev,
+            notifications: {
+                items: [],
+                unreadCount: 0,
+                isDropdownOpen: prev.notifications?.isDropdownOpen || false,
+                lastChecked: prev.notifications?.lastChecked || null
+            }
+        }));
+    };
+
+    const setNotificationsDropdownOpen = (isOpen) => {
+        setRootContext(prev => ({
+            ...prev,
+            notifications: {
+                ...prev.notifications,
+                isDropdownOpen: isOpen
+            }
+        }));
+    };
 
     // Check if user can post jobs
     const canPostJobs = ["superadmin", "company", "recruiter"].includes(role);
@@ -162,7 +424,22 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                                 </div>
                             )}
 
-                            <NotificationBell count={3} />
+                            {/* Notification Bell */}
+                            <NotificationBell />
+
+                            {/* Notification Dropdown */}
+                            {rootContext?.notifications?.isDropdownOpen && (
+                                <NotificationDropdown
+                                    notifications={rootContext.notifications.items || []}
+                                    unreadCount={rootContext.notifications.unreadCount || 0}
+                                    onCloseNotification={removeNotification}
+                                    onMarkAsRead={markNotificationAsRead}
+                                    onMarkAllAsRead={markAllNotificationsAsRead}
+                                    onClearAll={clearAllNotifications}
+                                    onCloseDropdown={() => setNotificationsDropdownOpen(false)}
+                                    onNotificationClick={handleNotificationClick}
+                                />
+                            )}
 
                             {/* User Dropdown */}
                             <Menu as="div" className="relative no-focus-outline z-[99999]">
@@ -234,8 +511,6 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                                                 )}
                                             </Menu.Item>
                                         )}
-
-                                        {/* REMOVED: Add Projects and Add Recruiters from dropdown */}
 
                                         <Menu.Item>
                                             {({ active }) => (
@@ -394,11 +669,9 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                 <JobPostingModal
                     isOpen={isOpen}
                     setIsOpen={setIsOpen}
-                    // Add other required props based on your needs:
-                    title="Post New Job"  // or dynamic title
-                    mode="create"         // since this is for creating new jobs
-                    userProfile={rootContext?.user} // pass user data if needed                  
-                // editData={null} // Only pass if editing existing job
+                    title="Post New Job"
+                    mode="create"
+                    userProfile={rootContext?.user}
                 />
             )}
         </nav>
