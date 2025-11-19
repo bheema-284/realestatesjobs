@@ -114,8 +114,6 @@ export async function POST(req) {
             }
         );
 
-        console.log(`Marked ${unreadCountBefore} messages as read, remaining unread: ${newUnreadCount}`);
-
         return NextResponse.json({
             success: true,
             message: "Messages marked as read",
@@ -125,7 +123,6 @@ export async function POST(req) {
         });
 
     } catch (err) {
-        console.error("❌ Mark as read Error:", err);
         return NextResponse.json(
             { success: false, error: err.message },
             { status: 500 }
@@ -211,8 +208,6 @@ export async function GET(req) {
                 });
             }
         });
-
-        console.log(`Found ${totalUnreadCount} unread messages across ${unreadChats.length} chats for user ${userId}`);
 
         return NextResponse.json({
             success: true,

@@ -45,6 +45,64 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     };
   }, []);
 
+  // Mark messages as read when chat is opened
+  const markMessagesAsRead = async () => {
+    try {
+      let applicantId, companyId, jobId;
+
+      if (isCompany) {
+        applicantId = candidate?.applicantId || candidate?._id;
+        companyId = company?._id;
+        jobId = candidate?.jobId;
+      } else {
+        applicantId = candidate?.applicantId || candidate?._id;
+        companyId = company?._id || company?.companyId;
+        jobId = candidate?.jobId || company?.jobId;
+      }
+
+      if (!applicantId || !companyId || !jobId) {
+        console.error('Missing required data for marking messages as read');
+        return;
+      }
+
+      const readerType = isCompany ? 'company' : 'applicant';
+
+      console.log('📖 Marking messages as read for:', { readerType, applicantId, companyId, jobId });
+
+      // Use the PATCH endpoint to mark entire chat as read
+      const markReadResponse = await fetch('/api/chat', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatId: chatId,
+          readerType: readerType,
+          applicantId: applicantId,
+          companyId: companyId,
+          jobId: jobId
+        })
+      });
+
+      const markReadResult = await markReadResponse.json();
+
+      if (markReadResult.success) {
+        console.log('✅ All messages marked as read successfully');
+
+        // Update local state to mark messages as read
+        setMessages(prev => prev.map(msg => ({
+          ...msg,
+          read: true,
+          status: 'read'
+        })));
+      } else {
+        console.error('❌ Failed to mark messages as read:', markReadResult.error);
+      }
+    } catch (error) {
+      console.error('❌ Error marking messages as read:', error);
+    }
+  };
+
   // Load chat history from API
   const loadChatHistory = async () => {
     try {
@@ -79,18 +137,25 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       if (result.success) {
         setChatId(result.chat.id); // Store chatId for deletion
 
-        const transformedMessages = result.chat.messages.map(msg => ({
-          id: msg._id,
-          role: msg.senderType === 'company' ? 'company' : 'candidate',
-          content: msg.content,
-          timestamp: new Date(msg.timestamp),
-          senderId: msg.senderId,
-          senderName: msg.senderName,
-          read: msg.read,
-          isSelected: false,
-          // Add status for messages from server
-          status: msg.read ? 'read' : 'delivered'
-        }));
+        const transformedMessages = result.chat.messages.map(msg => {
+          // Determine if message should be marked as read based on user role
+          const shouldBeRead = isCompany ?
+            (msg.senderType === 'applicant' ? true : msg.read) : // Company reads applicant messages
+            (msg.senderType === 'company' ? true : msg.read);   // Applicant reads company messages
+
+          return {
+            id: msg._id,
+            role: msg.senderType === 'company' ? 'company' : 'candidate',
+            content: msg.content,
+            timestamp: new Date(msg.timestamp),
+            senderId: msg.senderId,
+            senderName: msg.senderName,
+            read: shouldBeRead,
+            isSelected: false,
+            // Add status for messages from server
+            status: shouldBeRead ? 'read' : 'delivered'
+          };
+        });
 
         if (transformedMessages.length === 0) {
           const systemMessage = isCompany
@@ -102,11 +167,15 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
             role: 'system',
             content: systemMessage,
             timestamp: new Date(),
-            isSelected: false
+            isSelected: false,
+            read: true
           });
         }
 
         setMessages(transformedMessages);
+
+        // Mark messages as read in the database when chat is loaded
+        markMessagesAsRead();
       } else {
         throw new Error(result.error || 'Failed to load chat history');
       }
@@ -122,7 +191,8 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
           role: 'system',
           content: systemMessage,
           timestamp: new Date(),
-          isSelected: false
+          isSelected: false,
+          read: true
         },
       ]);
     } finally {
@@ -140,6 +210,23 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Mark messages as read when chat becomes visible or is focused
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && messages.length > 0) {
+        markMessagesAsRead();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', markMessagesAsRead);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', markMessagesAsRead);
+    };
+  }, [messages.length, chatId]);
+
   // Delete individual message (no confirmation for single messages)
   const deleteMessage = async (messageId) => {
     try {
@@ -148,7 +235,9 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
         return false;
       }
 
-      const response = await fetch(`/api/chat?chatId=${chatId}&messageId=${messageId}&type=message`, {
+      const deletedBy = isCompany ? 'company' : 'applicant';
+
+      const response = await fetch(`/api/chat?chatId=${chatId}&messageId=${messageId}&type=message&deletedBy=${deletedBy}`, {
         method: 'DELETE'
       });
 
@@ -196,7 +285,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Delete entire chat (WITH confirmation)
+  // Delete entire chat (WITH confirmation) - FIXED VERSION
   const deleteChat = async () => {
     const confirmDelete = window.confirm('Are you sure you want to delete this entire chat? This action cannot be undone.');
     if (!confirmDelete) return false;
@@ -216,10 +305,16 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
 
       if (!applicantId || !companyId || !jobId) {
         console.error('Missing required data for chat deletion');
+        alert('Error: Missing required data to delete chat');
         return false;
       }
 
-      const response = await fetch(`/api/chat?applicantId=${applicantId}&companyId=${companyId}&jobId=${jobId}`, {
+      console.log('Deleting chat with:', { applicantId, companyId, jobId });
+
+      const deletedBy = isCompany ? 'company' : 'applicant';
+
+      // Use the correct DELETE endpoint with all required parameters
+      const response = await fetch(`/api/chat?applicantId=${applicantId}&companyId=${companyId}&jobId=${jobId}&deletedBy=${deletedBy}`, {
         method: 'DELETE'
       });
 
@@ -229,12 +324,64 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
         setMessages([]);
         setChatId(null);
         console.log('Chat deleted successfully');
+
+        // Show success message
+        alert('Chat deleted successfully');
+
+        // Close the chat window after deletion
+        if (onClose) {
+          onClose();
+        }
+
         return true;
       } else {
         throw new Error(result.error || 'Failed to delete chat');
       }
     } catch (error) {
       console.error('Delete chat error:', error);
+      alert(`Error deleting chat: ${error.message}`);
+      return false;
+    }
+  };
+
+  // Alternative delete chat using chatId (if available)
+  const deleteChatById = async () => {
+    const confirmDelete = window.confirm('Are you sure you want to delete this entire chat? This action cannot be undone.');
+    if (!confirmDelete) return false;
+
+    try {
+      if (!chatId) {
+        console.error('Chat ID not available');
+        return false;
+      }
+
+      const deletedBy = isCompany ? 'company' : 'applicant';
+
+      // Delete using chatId
+      const response = await fetch(`/api/chat?chatId=${chatId}&type=chat&deletedBy=${deletedBy}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessages([]);
+        setChatId(null);
+        console.log('Chat deleted successfully');
+
+        alert('Chat deleted successfully');
+
+        if (onClose) {
+          onClose();
+        }
+
+        return true;
+      } else {
+        throw new Error(result.error || 'Failed to delete chat');
+      }
+    } catch (error) {
+      console.error('Delete chat error:', error);
+      alert(`Error deleting chat: ${error.message}`);
       return false;
     }
   };
@@ -303,9 +450,13 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
 
     // Delete without confirmation for single messages
-    await deleteMessage(selectedMessage.id);
-    setShowMessageMenu(false);
-    setSelectedMessage(null);
+    const success = await deleteMessage(selectedMessage.id);
+    if (success) {
+      setShowMessageMenu(false);
+      setSelectedMessage(null);
+    } else {
+      alert('Failed to delete message');
+    }
   };
 
   // Handle delete selected messages (no confirmation)
@@ -315,16 +466,24 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     const messageIds = Array.from(selectedMessages);
 
     // Delete without confirmation for multiple messages
-    await deleteMultipleMessages(messageIds);
-
-    // Clear selection after deletion
-    setSelectedMessages(new Set());
-    setIsSelectionMode(false);
+    const success = await deleteMultipleMessages(messageIds);
+    if (success) {
+      // Clear selection after deletion
+      setSelectedMessages(new Set());
+      setIsSelectionMode(false);
+    } else {
+      alert('Failed to delete some messages');
+    }
   };
 
   // Handle delete entire chat (WITH confirmation)
   const handleDeleteChat = async () => {
-    await deleteChat();
+    // Try using chatId first, fallback to applicantId/companyId/jobId
+    if (chatId) {
+      await deleteChatById();
+    } else {
+      await deleteChat();
+    }
     setShowMessageMenu(false);
     setSelectedMessage(null);
   };
@@ -374,7 +533,8 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       senderId: currentUser?._id,
       senderName: isCompany ? company?.name : candidate?.applicantName,
       status: 'sending', // Start with sending status
-      isSelected: false
+      isSelected: false,
+      read: false // New messages start as unread
     };
 
     // Add message immediately to show below the spinner
@@ -433,14 +593,25 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Poll for new messages to update read status
+  // Poll for new messages and update read status
   useEffect(() => {
     const pollInterval = setInterval(() => {
       loadChatHistory();
+
+      // Also mark any new messages as read
+      const hasUnreadMessages = messages.some(msg =>
+        isCompany ?
+          (msg.role === 'candidate' && !msg.read) :
+          (msg.role === 'company' && !msg.read)
+      );
+
+      if (hasUnreadMessages) {
+        markMessagesAsRead();
+      }
     }, 3000);
 
     return () => clearInterval(pollInterval);
-  }, []);
+  }, [messages]);
 
   const formatTime = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString('en-US', {

@@ -14,17 +14,41 @@ const NotificationDropdown = ({
     onNotificationClick
 }) => {
     const handleNotificationClick = (notification) => {
+        console.log('📱 Notification clicked in dropdown:', notification);
+
+        // Call the click handler first (for navigation)
         if (onNotificationClick) {
             onNotificationClick(notification);
         }
-        if (!notification.read) {
+
+        // Then mark as read if it's unread
+        if (!notification.read && onMarkAsRead) {
             onMarkAsRead(notification.id);
         }
     };
 
     const handleCloseNotification = (e, notificationId) => {
         e.stopPropagation();
-        onCloseNotification(notificationId);
+        console.log('🗑️ Closing notification:', notificationId);
+        if (onCloseNotification) {
+            onCloseNotification(notificationId);
+        }
+    };
+
+    const handleMarkAllAsRead = (e) => {
+        e.stopPropagation();
+        console.log('✅ Marking all as read');
+        if (onMarkAllAsRead) {
+            onMarkAllAsRead();
+        }
+    };
+
+    const handleClearAll = (e) => {
+        e.stopPropagation();
+        console.log('🧹 Clearing all notifications');
+        if (onClearAll) {
+            onClearAll();
+        }
     };
 
     return (
@@ -46,7 +70,7 @@ const NotificationDropdown = ({
                     <div className="flex items-center gap-2">
                         {unreadCount > 0 && (
                             <button
-                                onClick={onMarkAllAsRead}
+                                onClick={handleMarkAllAsRead}
                                 className="p-1 text-gray-500 hover:text-green-600 transition-colors"
                                 title="Mark all as read"
                             >
@@ -55,7 +79,7 @@ const NotificationDropdown = ({
                         )}
                         {notifications.length > 0 && (
                             <button
-                                onClick={onClearAll}
+                                onClick={handleClearAll}
                                 className="p-1 text-gray-500 hover:text-red-600 transition-colors"
                                 title="Clear all"
                             >
@@ -142,6 +166,7 @@ const NotificationDropdown = ({
                     <div className="p-3 border-t border-gray-200 bg-gray-50">
                         <p className="text-xs text-gray-500 text-center">
                             {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+                            {unreadCount > 0 && ` • ${unreadCount} unread`}
                         </p>
                     </div>
                 )}

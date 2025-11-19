@@ -21,6 +21,15 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
     const role = rootContext?.user?.role;
     const authenticated = rootContext?.authenticated || false;
     const pollingRef = useRef(null);
+    const lastPollTimeRef = useRef(0);
+    const POLLING_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+    // Memoize stable values
+    const userId = rootContext?.user?.id;
+    const userRole = rootContext?.user?.role;
+
+    // Track read chats to avoid duplicate notifications
+    const readChatsRef = useRef(new Set());
 
     // Sidebar items based on roles
     const getSidebarItems = () => {
@@ -34,7 +43,6 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
             { label: "Settings", link: "/settings", roles: ["superadmin", "company", "recruiter", "applicant"] },
         ];
 
-        // Add role-specific items
         const roleSpecificItems = [
             {
                 label: "Profile",
@@ -73,29 +81,100 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
 
     // Helper function to get candidate name (for companies)
     const getCandidateName = (applicantId) => {
-        // This would typically come from your API or context
-        // For now, return a placeholder
         return 'Candidate';
     };
 
     // Helper function to get company name (for applicants)
     const getCompanyName = (companyId) => {
-        // This would typically come from your API or context
-        // For now, return a placeholder
         return 'Company';
     };
 
-    // Check for new messages and update notifications
-    const checkForNewMessages = useCallback(async () => {
-        if (!authenticated || !rootContext?.user?.id) return;
+    // Mark chat as read when notification is clicked or cleared
+    const markChatAsRead = useCallback(async (chatId, applicantId, companyId, jobId) => {
+        if (!authenticated || !userId) return;
 
         try {
-            const userType = rootContext?.user?.role;
-            const userId = rootContext?.user?.id;
+            const userType = userRole;
+
+            console.log('📝 Marking chat as read:', { chatId, applicantId, companyId, jobId });
+
+            const response = await fetch('/api/chat/mark-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    chatId,
+                    applicantId,
+                    companyId,
+                    jobId,
+                    userId,
+                    userType
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                console.log('✅ Chat marked as read successfully');
+                // Add to read chats set to prevent future notifications
+                readChatsRef.current.add(chatId);
+            } else {
+                console.error('❌ Failed to mark chat as read:', result.error);
+            }
+        } catch (error) {
+            console.error('❌ Error marking chat as read:', error);
+        }
+    }, [authenticated, userId, userRole]);
+
+    // Stable notification click handler
+    const handleNotificationClick = useCallback((chatData) => {
+        const currentUserRole = userRole;
+
+        console.log('🔔 Notification clicked:', chatData);
+
+        // Mark chat as read when notification is clicked
+        if (chatData.chatId) {
+            markChatAsRead(
+                chatData.chatId,
+                chatData.applicantId,
+                chatData.companyId,
+                chatData.jobId
+            );
+        }
+
+        if (currentUserRole === 'company') {
+            router.push(`/applications`);
+        } else if (currentUserRole === 'applicant') {
+            router.push(`/jobs`);
+        }
+
+        setRootContext(prev => ({
+            ...prev,
+            notifications: {
+                ...prev.notifications,
+                isDropdownOpen: false
+            }
+        }));
+    }, [userRole, router, setRootContext, markChatAsRead]);
+
+    // Check for new messages and update notifications
+    const checkForNewMessages = useCallback(async () => {
+        // Throttle polling - only check if enough time has passed
+        const now = Date.now();
+        if (now - lastPollTimeRef.current < 30000) { // 30 second minimum between polls
+            return;
+        }
+
+        if (!authenticated || !userId) return;
+
+        try {
+            lastPollTimeRef.current = now;
+            const userType = userRole;
 
             console.log('🔔 Checking for new messages for user:', userId, 'type:', userType);
 
-            const response = await fetch(`/api/chat/read?userId=${userId}&userType=${userType}`);
+            const response = await fetch(`/api/chat/read?userId=${userId}&userType=${userType}&timestamp=${now}`);
             const result = await response.json();
 
             console.log('🔔 Chat API Response:', result);
@@ -107,49 +186,43 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
 
                 // Process unread chats and create notifications
                 unreadChats.forEach((chat) => {
+                    // Skip if chat is already marked as read locally
+                    if (readChatsRef.current.has(chat.chatId)) {
+                        return;
+                    }
+
                     if (chat.unreadCount > 0) {
-                        // Safely access existing notifications
-                        const existingNotifications = rootContext?.notifications?.items || [];
-                        const existingNotification = existingNotifications.find(
-                            n => n.chatId === chat.chatId
-                        );
+                        const otherUserName = userType === 'company'
+                            ? getCandidateName(chat.applicantId)
+                            : getCompanyName(chat.companyId);
 
-                        // Only create notification if we don't have one for this chat
-                        // or if there are new unread messages
-                        if (!existingNotification || chat.unreadCount > 0) {
-                            const otherUserName = userType === 'company'
-                                ? getCandidateName(chat.applicantId)
-                                : getCompanyName(chat.companyId);
+                        const latestUnreadMessage = chat.messages && chat.messages.length > 0
+                            ? chat.messages[chat.messages.length - 1]
+                            : chat.lastMessage;
 
-                            // Use the last unread message for notification
-                            const latestUnreadMessage = chat.messages && chat.messages.length > 0
-                                ? chat.messages[chat.messages.length - 1]
-                                : chat.lastMessage;
+                        const newNotification = {
+                            id: `${chat.chatId}-${Date.now()}`,
+                            type: 'chat',
+                            title: otherUserName || 'User',
+                            message: latestUnreadMessage?.content || 'New message',
+                            timestamp: latestUnreadMessage?.timestamp || new Date().toISOString(),
+                            read: false,
+                            meta: chat.jobTitle,
+                            chatId: chat.chatId,
+                            applicantId: chat.applicantId,
+                            companyId: chat.companyId,
+                            jobId: chat.jobId,
+                            unreadCount: chat.unreadCount,
+                            onClick: () => {
+                                handleNotificationClick(chat);
+                            }
+                        };
 
-                            const newNotification = {
-                                id: `${chat.chatId}-${Date.now()}`,
-                                type: 'chat',
-                                title: otherUserName || 'User',
-                                message: latestUnreadMessage?.content || 'New message',
-                                timestamp: latestUnreadMessage?.timestamp || new Date().toISOString(),
-                                read: false,
-                                meta: chat.jobTitle,
-                                chatId: chat.chatId,
-                                applicantId: chat.applicantId,
-                                companyId: chat.companyId,
-                                jobId: chat.jobId,
-                                unreadCount: chat.unreadCount,
-                                onClick: () => {
-                                    handleNotificationClick(chat);
-                                }
-                            };
-
-                            newNotifications.push(newNotification);
-                        }
+                        newNotifications.push(newNotification);
                     }
                 });
 
-                // Safely update context
+                // Only update if there are new notifications
                 const currentUnreadCount = rootContext?.notifications?.unreadCount || 0;
 
                 if (newNotifications.length > 0 || totalUnreadCount !== currentUnreadCount) {
@@ -160,16 +233,25 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                     });
 
                     setRootContext(prev => {
-                        // Remove old notifications for the same chats to avoid duplicates
                         const existingItems = prev.notifications?.items || [];
-                        const filteredExistingItems = existingItems.filter(existingNotif =>
-                            !newNotifications.some(newNotif => newNotif.chatId === existingNotif.chatId)
+
+                        // Filter out duplicates and already read chats
+                        const filteredNewNotifications = newNotifications.filter(newNotif =>
+                            !existingItems.some(existingNotif =>
+                                existingNotif.chatId === newNotif.chatId &&
+                                existingNotif.message === newNotif.message
+                            ) &&
+                            !readChatsRef.current.has(newNotif.chatId)
                         );
+
+                        const updatedItems = [...filteredNewNotifications, ...existingItems]
+                            .slice(0, 20) // Keep only latest 20
+                            .filter(item => !readChatsRef.current.has(item.chatId)); // Remove any that are marked read
 
                         return {
                             ...prev,
                             notifications: {
-                                items: [...newNotifications, ...filteredExistingItems].slice(0, 20),
+                                items: updatedItems,
                                 unreadCount: totalUnreadCount,
                                 lastChecked: new Date().toISOString(),
                                 isDropdownOpen: prev.notifications?.isDropdownOpen || false
@@ -181,53 +263,42 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
         } catch (error) {
             console.error('❌ Error checking for new messages:', error);
         }
-    }, [authenticated, rootContext?.user?.id, rootContext?.user?.role, rootContext?.notifications, setRootContext]);
+    }, [authenticated, userId, userRole, handleNotificationClick, rootContext?.notifications?.unreadCount, setRootContext]);
 
-    // Handle notification click
-    const handleNotificationClick = (chatData) => {
-        const userType = rootContext?.user?.role;
-
-        console.log('🔔 Notification clicked:', chatData);
-
-        if (userType === 'company') {
-            // Navigate to applications page
-            router.push(`/applications`);
-        } else if (userType === 'applicant') {
-            // Navigate to jobs page
-            router.push(`/jobs`);
-        }
-
-        // Close notification dropdown
-        setRootContext(prev => ({
-            ...prev,
-            notifications: {
-                ...prev.notifications,
-                isDropdownOpen: false
-            }
-        }));
-    };
-
-    // Set up polling for new messages
+    // Set up optimized polling for new messages
     useEffect(() => {
-        if (!authenticated) return;
+        if (!authenticated) {
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+                pollingRef.current = null;
+            }
+            return;
+        }
 
         // Check immediately on mount
         checkForNewMessages();
 
-        // Set up interval for polling
+        // Set up interval for polling (every 5 minutes)
         pollingRef.current = setInterval(() => {
             checkForNewMessages();
-        }, 5000); // Check every 5 seconds for better responsiveness
+        }, POLLING_INTERVAL);
 
         return () => {
             if (pollingRef.current) {
                 clearInterval(pollingRef.current);
+                pollingRef.current = null;
             }
         };
-    }, [authenticated, checkForNewMessages]);
+    }, [authenticated, checkForNewMessages, POLLING_INTERVAL]);
+
+    // Clear read chats when user logs out
+    useEffect(() => {
+        if (!authenticated) {
+            readChatsRef.current.clear();
+        }
+    }, [authenticated]);
 
     const NotificationBell = () => {
-        // Safe access with default value
         const unreadCount = rootContext?.notifications?.unreadCount || 0;
 
         const handleBellClick = () => {
@@ -257,13 +328,24 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
         );
     };
 
-    // Notification functions
+    // Enhanced notification functions
     const removeNotification = (notificationId) => {
         setRootContext(prev => {
             const currentItems = prev.notifications?.items || [];
             const notification = currentItems.find(n => n.id === notificationId);
             const newItems = currentItems.filter(n => n.id !== notificationId);
             const currentUnreadCount = prev.notifications?.unreadCount || 0;
+
+            // Mark chat as read when notification is manually closed
+            if (notification && !notification.read && notification.chatId) {
+                markChatAsRead(
+                    notification.chatId,
+                    notification.applicantId,
+                    notification.companyId,
+                    notification.jobId
+                );
+            }
+
             const newUnreadCount = notification && !notification.read
                 ? Math.max(0, currentUnreadCount - (notification.unreadCount || 1))
                 : currentUnreadCount;
@@ -283,11 +365,22 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
     const markNotificationAsRead = (notificationId) => {
         setRootContext(prev => {
             const currentItems = prev.notifications?.items || [];
-            const newItems = currentItems.map(notification =>
-                notification.id === notificationId
-                    ? { ...notification, read: true }
-                    : notification
-            );
+            const newItems = currentItems.map(notification => {
+                if (notification.id === notificationId && !notification.read) {
+                    // Mark chat as read when notification is marked as read
+                    if (notification.chatId) {
+                        markChatAsRead(
+                            notification.chatId,
+                            notification.applicantId,
+                            notification.companyId,
+                            notification.jobId
+                        );
+                    }
+                    return { ...notification, read: true };
+                }
+                return notification;
+            });
+
             const currentUnreadCount = prev.notifications?.unreadCount || 0;
             const notification = currentItems.find(n => n.id === notificationId);
             const unreadCountToRemove = notification && !notification.read ? (notification.unreadCount || 1) : 0;
@@ -305,30 +398,62 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
     };
 
     const markAllNotificationsAsRead = () => {
-        setRootContext(prev => ({
-            ...prev,
-            notifications: {
-                items: (prev.notifications?.items || []).map(notification => ({
-                    ...notification,
-                    read: true
-                })),
-                unreadCount: 0,
-                isDropdownOpen: prev.notifications?.isDropdownOpen || false,
-                lastChecked: prev.notifications?.lastChecked || null
-            }
-        }));
+        setRootContext(prev => {
+            const currentItems = prev.notifications?.items || [];
+
+            // Mark all chat notifications as read
+            currentItems.forEach(notification => {
+                if (!notification.read && notification.chatId) {
+                    markChatAsRead(
+                        notification.chatId,
+                        notification.applicantId,
+                        notification.companyId,
+                        notification.jobId
+                    );
+                }
+            });
+
+            return {
+                ...prev,
+                notifications: {
+                    items: currentItems.map(notification => ({
+                        ...notification,
+                        read: true
+                    })),
+                    unreadCount: 0,
+                    isDropdownOpen: prev.notifications?.isDropdownOpen || false,
+                    lastChecked: prev.notifications?.lastChecked || null
+                }
+            };
+        });
     };
 
     const clearAllNotifications = () => {
-        setRootContext(prev => ({
-            ...prev,
-            notifications: {
-                items: [],
-                unreadCount: 0,
-                isDropdownOpen: prev.notifications?.isDropdownOpen || false,
-                lastChecked: prev.notifications?.lastChecked || null
-            }
-        }));
+        setRootContext(prev => {
+            const currentItems = prev.notifications?.items || [];
+
+            // Mark all chat notifications as read before clearing
+            currentItems.forEach(notification => {
+                if (notification.chatId) {
+                    markChatAsRead(
+                        notification.chatId,
+                        notification.applicantId,
+                        notification.companyId,
+                        notification.jobId
+                    );
+                }
+            });
+
+            return {
+                ...prev,
+                notifications: {
+                    items: [],
+                    unreadCount: 0,
+                    isDropdownOpen: prev.notifications?.isDropdownOpen || false,
+                    lastChecked: prev.notifications?.lastChecked || null
+                }
+            };
+        });
     };
 
     const setNotificationsDropdownOpen = (isOpen) => {

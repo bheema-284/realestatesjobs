@@ -31,7 +31,7 @@ export default function AboutPage() {
 
                 {/* Top-right content */}
                 <div className="relative text-center sm:text-right z-10">
-                    <div className="w-auto h-24 mb-2">
+                    <div className="w-auto h-24 sm:h-24 md:h-30 lg:h-34 mb-2">
                         <Image
                             src="/about/aboutus.png"
                             width={200}
@@ -40,7 +40,7 @@ export default function AboutPage() {
                             className="sm:ml-auto text-center"
                         />
                     </div>
-                    <p className="text-xl leading-snug text-black">
+                    <p className="text-xl sm:2xl md:5xl leading-snug text-black">
                         Welcome to <span className="font-semibold">realestatejobs.co.in</span> —
                         Your Gateway to a Thriving Real Estate Career!
                     </p>
@@ -153,7 +153,7 @@ export default function AboutPage() {
                             <Image
                                 src="/about/mission.webp"
                                 width={600}
-                                height={500}
+                                height={600}
                                 alt="mission"
                                 className="rounded-lg shadow-lg w-full h-auto object-cover"
                             />
@@ -171,10 +171,7 @@ export default function AboutPage() {
                                 />
                             </div>
                             <p className="text-base sm:text-lg leading-relaxed text-left">
-                                To revolutionize recruitment in the real estate sector by providing a seamless and
-                                efficient platform that connects skilled professionals with the right employers.
-                                We aim to support the growth of real estate businesses by helping them build
-                                high-performing teams while empowering job seekers to advance their careers.
+                                To revolutionize real estate recruitment by building a seamless, intelligent, and highly efficient platform that bridges the gap between top talent and leading real estate companies. We strive to simplify the hiring process, eliminate inefficiencies, and ensure the right professionals are matched with the right opportunities at the right time. Our mission is to empower real estate businesses to scale with confidence by helping them build strong, high-performing teams, while simultaneously enabling job seekers to grow their careers through access to better roles, meaningful guidance, and a transparent recruitment experience.
                             </p>
                         </div>
                     </div>
@@ -186,7 +183,7 @@ export default function AboutPage() {
                             <Image
                                 src="/about/vision.webp"
                                 width={600}
-                                height={500}
+                                height={600}
                                 alt="vision"
                                 className="rounded-lg shadow-lg w-full h-auto object-cover"
                             />
@@ -204,8 +201,7 @@ export default function AboutPage() {
                                 />
                             </div>
                             <p className="text-base sm:text-lg leading-relaxed text-start sm:text-right">
-                                To be the go-to hub for real estate employment across India, driving innovation,
-                                trust, and collaboration in the hiring process.
+                                To become India’s most trusted and innovative hub for real estate employment—an ecosystem where employers and job seekers connect with confidence, clarity, and ease. We envision a unified platform that transforms the hiring experience through technology, transparency, and strong industry collaboration. By setting new benchmarks in efficiency and reliability, we aim to shape the future of real estate recruitment and empower the industry to grow with skilled, motivated, and well-matched talent.
                             </p>
                         </div>
                     </div>
