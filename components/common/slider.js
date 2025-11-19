@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 
 function Slider({ data, imageSize = "400px", rounded }) {
-    const [imagesData, setImagesData] = useState([]);
-    const [currentSlide, setCurrentSlide] = useState(1);
+    const [imagesData, setImagesData] = useState(data || []);
+    const [currentSlide, setCurrentSlide] = useState(0); // Start from 0 for simpler logic
     const [isTransitioning, setIsTransitioning] = useState(true);
     const [loadedImages, setLoadedImages] = useState(new Set());
 
@@ -12,62 +12,98 @@ function Slider({ data, imageSize = "400px", rounded }) {
     const [dragStartX, setDragStartX] = useState(0);
     const [dragDistance, setDragDistance] = useState(0);
 
-    // Clone first and last slides for infinite loop - memoize this calculation
-    const slides = imagesData.length > 0
-        ? [imagesData[imagesData.length - 1], ...imagesData, imagesData[0]]
-        : [];
+    // Refs for auto-scroll and cleanup
+    const autoScrollRef = useRef(null);
+    const isMountedRef = useRef(true);
+    const sliderContainerRef = useRef(null);
 
     const slideWidth = 100;
     const swipeThreshold = 50;
+    const AUTO_SCROLL_INTERVAL = 3000; // 3 seconds
 
     // --- Sync data prop with state ---
     useEffect(() => {
         if (data && data.length > 0) {
+            console.log("🔄 Slider received data:", data.length, "images");
             setImagesData(data);
-            // Reset current slide when data changes
-            setCurrentSlide(1);
-            // Clear loaded images cache when data changes
+            setCurrentSlide(0);
             setLoadedImages(new Set());
         }
     }, [data]);
 
     // --- Navigation Functions ---
     const nextSlide = useCallback(() => {
-        if (slides.length <= 1) return;
-        setCurrentSlide((prev) => prev + 1);
+        if (imagesData.length <= 1 || !isMountedRef.current) return;
+
+        setCurrentSlide((prev) => {
+            const next = prev + 1;
+            return next >= imagesData.length ? 0 : next;
+        });
         setIsTransitioning(true);
-    }, [slides.length]);
+
+        console.log("➡️ Next slide:", currentSlide + 1, "of", imagesData.length);
+    }, [imagesData.length, currentSlide]);
 
     const prevSlide = useCallback(() => {
-        if (slides.length <= 1) return;
-        setCurrentSlide((prev) => prev - 1);
+        if (imagesData.length <= 1 || !isMountedRef.current) return;
+
+        setCurrentSlide((prev) => {
+            const next = prev - 1;
+            return next < 0 ? imagesData.length - 1 : next;
+        });
         setIsTransitioning(true);
-    }, [slides.length]);
 
-    // --- Auto-scroll Effect ---
+        console.log("⬅️ Previous slide:", currentSlide - 1, "of", imagesData.length);
+    }, [imagesData.length, currentSlide]);
+
+    // --- FIXED Auto-scroll Effect ---
     useEffect(() => {
-        if (isDragging || slides.length <= 1) return;
+        if (imagesData.length <= 1) {
+            // Clear interval if only one image
+            if (autoScrollRef.current) {
+                clearInterval(autoScrollRef.current);
+                autoScrollRef.current = null;
+            }
+            return;
+        }
 
-        const autoScrollInterval = setInterval(nextSlide, 3000);
-        return () => clearInterval(autoScrollInterval);
-    }, [nextSlide, isDragging, slides.length]);
+        // Clear any existing interval first
+        if (autoScrollRef.current) {
+            clearInterval(autoScrollRef.current);
+        }
+
+        console.log("🔄 Starting auto-scroll with", imagesData.length, "images");
+
+        // Start new interval
+        autoScrollRef.current = setInterval(() => {
+            if (isMountedRef.current && !isDragging) {
+                nextSlide();
+            }
+        }, AUTO_SCROLL_INTERVAL);
+
+        // Cleanup on unmount or dependency change
+        return () => {
+            if (autoScrollRef.current) {
+                clearInterval(autoScrollRef.current);
+                autoScrollRef.current = null;
+            }
+        };
+    }, [imagesData.length, isDragging, nextSlide]);
 
     // --- Infinite Loop Logic ---
-    const handleTransitionEnd = () => {
-        setDragDistance(0);
-        setIsTransitioning(true);
+    const handleTransitionEnd = useCallback(() => {
+        if (!isMountedRef.current) return;
 
-        if (currentSlide === slides.length - 1) {
-            setIsTransitioning(false);
-            setCurrentSlide(1);
-        } else if (currentSlide === 0) {
-            setIsTransitioning(false);
-            setCurrentSlide(slides.length - 2);
-        }
-    };
+        setDragDistance(0);
+        setIsTransitioning(false);
+
+        console.log("🔄 Transition ended at slide:", currentSlide);
+    }, [currentSlide]);
 
     // --- Image Loading Handlers ---
     const handleImageLoad = useCallback((imageUrl) => {
+        if (!isMountedRef.current) return;
+        console.log("✅ Image loaded:", imageUrl);
         setLoadedImages(prev => {
             const newSet = new Set(prev);
             newSet.add(imageUrl);
@@ -76,7 +112,10 @@ function Slider({ data, imageSize = "400px", rounded }) {
     }, []);
 
     const handleImageError = useCallback((e, imageUrl) => {
-        e.target.src = "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg";
+        if (!isMountedRef.current) return;
+        console.warn("❌ Failed to load image:", imageUrl);
+        e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='12' fill='%239ca3af'%3EImage%3C/text%3E%3C/svg%3E";
+
         setLoadedImages(prev => {
             const newSet = new Set(prev);
             newSet.add(imageUrl);
@@ -84,46 +123,49 @@ function Slider({ data, imageSize = "400px", rounded }) {
         });
     }, []);
 
-    // Preload adjacent images for smoother transitions
+    // --- Preload images ---
     useEffect(() => {
-        if (slides.length <= 1) return;
+        if (imagesData.length <= 1) return;
 
-        const preloadImages = () => {
-            const currentIndex = currentSlide;
-            const prevIndex = currentSlide - 1 >= 0 ? currentSlide - 1 : slides.length - 1;
-            const nextIndex = (currentSlide + 1) % slides.length;
+        console.log("📥 Preloading images...");
 
-            [currentIndex, prevIndex, nextIndex].forEach(index => {
-                const imageUrl = slides[index]?.image;
-                if (imageUrl && !loadedImages.has(imageUrl)) {
-                    const img = new Image();
-                    img.src = imageUrl;
-                    img.onload = () => handleImageLoad(imageUrl);
-                    img.onerror = () => handleImageLoad(imageUrl);
-                }
-            });
-        };
-
-        preloadImages();
-    }, [currentSlide, slides, loadedImages, handleImageLoad]);
+        imagesData.forEach((item, index) => {
+            const imageUrl = item?.image;
+            if (imageUrl && !loadedImages.has(imageUrl)) {
+                const img = new Image();
+                img.src = imageUrl;
+                img.onload = () => handleImageLoad(imageUrl);
+                img.onerror = () => handleImageLoad(imageUrl);
+                console.log(`📥 Preloading image ${index + 1}:`, imageUrl);
+            }
+        });
+    }, [imagesData, loadedImages, handleImageLoad]);
 
     // --- SWIPE HANDLERS ---
-    const handleDragStart = (clientX) => {
-        if (slides.length <= 1) return;
+    const handleDragStart = useCallback((clientX) => {
+        if (imagesData.length <= 1) return;
+        console.log("🖱️ Drag started");
         setIsTransitioning(false);
         setIsDragging(true);
         setDragStartX(clientX);
-    };
 
-    const handleDragMove = (clientX) => {
-        if (!isDragging || slides.length <= 1) return;
+        // Pause auto-scroll during interaction
+        if (autoScrollRef.current) {
+            clearInterval(autoScrollRef.current);
+            autoScrollRef.current = null;
+        }
+    }, [imagesData.length]);
+
+    const handleDragMove = useCallback((clientX) => {
+        if (!isDragging || imagesData.length <= 1) return;
         const newDragDistance = clientX - dragStartX;
         setDragDistance(newDragDistance);
-    };
+    }, [isDragging, dragStartX, imagesData.length]);
 
-    const handleDragEnd = () => {
-        if (!isDragging || slides.length <= 1) return;
+    const handleDragEnd = useCallback(() => {
+        if (!isDragging || imagesData.length <= 1) return;
 
+        console.log("🖱️ Drag ended");
         setIsDragging(false);
         setIsTransitioning(true);
 
@@ -134,48 +176,114 @@ function Slider({ data, imageSize = "400px", rounded }) {
         } else {
             setDragDistance(0);
         }
+
+        // Restart auto-scroll after interaction
+        if (!autoScrollRef.current && imagesData.length > 1) {
+            autoScrollRef.current = setInterval(nextSlide, AUTO_SCROLL_INTERVAL);
+        }
+    }, [isDragging, dragDistance, imagesData.length, prevSlide, nextSlide]);
+
+    // Event Handlers
+    const onMouseDown = (e) => {
+        e.preventDefault();
+        handleDragStart(e.clientX);
     };
 
-    // MOUSE handlers
-    const onMouseDown = (e) => handleDragStart(e.clientX);
-    const onMouseMove = (e) => handleDragMove(e.clientX);
-    const onMouseUp = handleDragEnd;
-    const onMouseLeave = (e) => isDragging && handleDragEnd();
+    const onMouseMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        handleDragMove(e.clientX);
+    };
 
-    // TOUCH handlers
-    const onTouchStart = (e) => handleDragStart(e.touches[0].clientX);
-    const onTouchMove = (e) => handleDragMove(e.touches[0].clientX);
-    const onTouchEnd = handleDragEnd;
+    const onMouseUp = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        handleDragEnd();
+    };
 
-    // Calculate the total translation including the swipe offset
-    const totalTranslateX = slides.length > 0
-        ? `calc(-${currentSlide * slideWidth}% + ${dragDistance}px)`
+    const onMouseLeave = (e) => {
+        if (isDragging) {
+            e.preventDefault();
+            handleDragEnd();
+        }
+    };
+
+    const onTouchStart = (e) => {
+        e.preventDefault();
+        handleDragStart(e.touches[0].clientX);
+    };
+
+    const onTouchMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        handleDragMove(e.touches[0].clientX);
+    };
+
+    const onTouchEnd = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        handleDragEnd();
+    };
+
+    // Calculate transform
+    const totalTranslateX = imagesData.length > 0
+        ? `translateX(calc(-${currentSlide * slideWidth}% + ${dragDistance}px))`
         : 'translateX(0)';
 
-    // Get current slide data (adjusting for cloned slides)
-    const getCurrentSlideData = () => {
-        if (imagesData.length === 0) return null;
+    // Get current slide data
+    const currentSlideData = imagesData[currentSlide];
 
-        let actualIndex = currentSlide - 1;
-        if (currentSlide === 0) {
-            actualIndex = imagesData.length - 1;
-        } else if (currentSlide === slides.length - 1) {
-            actualIndex = 0;
-        }
-        return imagesData[actualIndex];
-    };
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            isMountedRef.current = false;
+            if (autoScrollRef.current) {
+                clearInterval(autoScrollRef.current);
+                autoScrollRef.current = null;
+            }
+        };
+    }, []);
 
-    const currentSlideData = getCurrentSlideData();
+    // Debug current state
+    useEffect(() => {
+        console.log("🎠 Slider State:", {
+            totalImages: imagesData.length,
+            currentSlide,
+            isTransitioning,
+            isDragging,
+            loadedImages: loadedImages.size
+        });
+    }, [imagesData.length, currentSlide, isTransitioning, isDragging, loadedImages.size]);
 
     // Early return if no data
     if (!data || data.length === 0) {
         return (
             <div className={`relative w-full bg-white overflow-hidden ${rounded}`} style={{ height: imageSize }}>
                 <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                    <div className="text-gray-500">No images available</div>
+                </div>
+            </div>
+        );
+    }
+
+    // Single image case
+    if (data.length === 1) {
+        const singleImage = data[0];
+        return (
+            <div className={`relative w-full bg-white overflow-hidden ${rounded}`} style={{ height: imageSize }}>
+                {singleImage?.status && (
+                    <span className="absolute top-3 left-3 bg-orange-300 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30">
+                        {singleImage.status}
+                    </span>
+                )}
+                <div className="w-full h-full">
                     <img
-                        src="https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
-                        alt="No images available"
-                        className="object-contain w-1/2 h-1/2"
+                        src={singleImage.image}
+                        alt="carousel"
+                        className="object-cover w-full h-full"
+                        loading="eager"
+                        onLoad={() => handleImageLoad(singleImage.image)}
+                        onError={(e) => handleImageError(e, singleImage.image)}
                     />
                 </div>
             </div>
@@ -184,12 +292,12 @@ function Slider({ data, imageSize = "400px", rounded }) {
 
     return (
         <div
+            ref={sliderContainerRef}
             className={`relative w-full bg-white overflow-hidden ${rounded}`}
-            onMouseUp={onMouseUp}
-            onMouseLeave={onMouseLeave}
+            style={{ height: imageSize }}
         >
-            <div className="relative w-full" style={{ height: imageSize }}>
-                {/* Fixed label (always top-left, doesn't move with images) */}
+            <div className="relative w-full h-full">
+                {/* Fixed label */}
                 {currentSlideData?.status && (
                     <span className="absolute top-3 left-3 bg-orange-300 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30">
                         {currentSlideData.status}
@@ -197,46 +305,50 @@ function Slider({ data, imageSize = "400px", rounded }) {
                 )}
 
                 {/* Loading indicator */}
-                {!loadedImages.has(slides[currentSlide]?.image) && slides[currentSlide]?.image && (
+                {!loadedImages.has(currentSlideData?.image) && currentSlideData?.image && (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                        <span className="ml-2 text-gray-600">Loading image {currentSlide + 1} of {imagesData.length}</span>
                     </div>
                 )}
 
-                {/* Slides wrapper - Swiping enabled here */}
+                {/* Slides wrapper */}
                 <div
-                    className={`flex cursor-grab ${isTransitioning ? "transition-transform duration-700 ease-in-out" : ""}`}
-                    style={{ transform: totalTranslateX }}
+                    className={`flex h-full cursor-grab active:cursor-grabbing ${isTransitioning && !isDragging ? "transition-transform duration-500 ease-in-out" : ""
+                        }`}
+                    style={{
+                        transform: totalTranslateX,
+                        width: `${imagesData.length * 100}%`
+                    }}
                     onTransitionEnd={handleTransitionEnd}
-
-                    // Mouse and Touch Event Handlers
                     onMouseDown={onMouseDown}
                     onMouseMove={onMouseMove}
+                    onMouseUp={onMouseUp}
+                    onMouseLeave={onMouseLeave}
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
                 >
-                    {slides.map((item, index) => (
-                        <div key={`${item?.image || 'empty'}-${index}`} className="relative flex-none w-full h-full">
-                            <div className="w-full" style={{ height: imageSize }}>
+                    {imagesData.map((item, index) => (
+                        <div
+                            key={`${item?.image || 'empty'}-${index}`}
+                            className="flex-none w-full h-full"
+                            style={{ width: `${100 / imagesData.length}%` }}
+                        >
+                            <div className="w-full h-full">
                                 {item?.image ? (
                                     <img
                                         src={item.image}
                                         alt={`carousel-${index}`}
                                         className="object-cover w-full h-full select-none"
                                         draggable="false"
+                                        loading={index === currentSlide ? "eager" : "lazy"}
                                         onLoad={() => handleImageLoad(item.image)}
                                         onError={(e) => handleImageError(e, item.image)}
-                                        loading="lazy"
                                     />
                                 ) : (
                                     <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                        <img
-                                            src="https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"
-                                            alt="error"
-                                            className="object-contain w-1/2 h-1/2 select-none"
-                                            draggable="false"
-                                        />
+                                        <div className="text-gray-400 text-sm">No image</div>
                                     </div>
                                 )}
                             </div>
@@ -245,30 +357,44 @@ function Slider({ data, imageSize = "400px", rounded }) {
                 </div>
             </div>
 
-            {/* Prev / Next buttons - Only show if there are multiple images */}
+            {/* Navigation buttons */}
             {imagesData.length > 1 && (
                 <>
                     <button
                         type="button"
-                        className="absolute top-0 left-0 z-20 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none"
+                        className="absolute top-1/2 left-2 z-20 flex items-center justify-center w-10 h-10 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
                         onClick={prevSlide}
                         aria-label="Previous slide"
                     >
-                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50 transition-colors">
-                            <ChevronLeftIcon className="w-6 h-6 text-white" />
-                        </span>
+                        <ChevronLeftIcon className="w-6 h-6 text-gray-700" />
                     </button>
 
                     <button
                         type="button"
-                        className="absolute top-0 right-0 z-20 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none"
+                        className="absolute top-1/2 right-2 z-20 flex items-center justify-center w-10 h-10 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
                         onClick={nextSlide}
                         aria-label="Next slide"
                     >
-                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50 transition-colors">
-                            <ChevronRightIcon className="w-6 h-6 text-white" />
-                        </span>
+                        <ChevronRightIcon className="w-6 h-6 text-gray-700" />
                     </button>
+
+                    {/* Slide indicators */}
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2">
+                        {imagesData.map((_, index) => (
+                            <button
+                                key={index}
+                                className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentSlide
+                                        ? 'bg-white scale-125'
+                                        : 'bg-white/50'
+                                    }`}
+                                onClick={() => {
+                                    setCurrentSlide(index);
+                                    setIsTransitioning(true);
+                                }}
+                                aria-label={`Go to slide ${index + 1}`}
+                            />
+                        ))}
+                    </div>
                 </>
             )}
         </div>

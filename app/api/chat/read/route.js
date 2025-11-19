@@ -30,99 +30,40 @@ export async function POST(req) {
             );
         }
 
-        // Mark all messages as read for the specific user type
-        const user = await users.findOne({ _id: new ObjectId(userId) });
-
-        if (!user || !user.chats) {
-            return NextResponse.json({
-                success: true,
-                message: "No chats found",
-                modifiedCount: 0
-            });
-        }
-
-        // Find the specific chat
-        const chatIndex = user.chats.findIndex(chat => chat.chatId.toString() === chatId);
-
-        if (chatIndex === -1) {
-            return NextResponse.json({
-                success: true,
-                message: "Chat not found",
-                modifiedCount: 0
-            });
-        }
-
-        const chat = user.chats[chatIndex];
-
-        // Count unread messages before marking as read (for logging)
-        let unreadCountBefore = 0;
-        if (readerType === 'company') {
-            unreadCountBefore = chat.messages.filter(msg =>
-                msg.senderType === 'applicant' && !msg.read
-            ).length;
-        } else {
-            unreadCountBefore = chat.messages.filter(msg =>
-                msg.senderType === 'company' && !msg.read
-            ).length;
-        }
-
-        // Update messages to mark as read
-        const updatedMessages = chat.messages.map(msg => {
-            if (readerType === 'company' && msg.senderType === 'applicant') {
-                return { ...msg, read: true };
-            } else if (readerType === 'applicant' && msg.senderType === 'company') {
-                return { ...msg, read: true };
-            }
-            return msg;
-        });
-
-        // Calculate new unread count
-        let newUnreadCount = 0;
-        if (readerType === 'company') {
-            newUnreadCount = updatedMessages.filter(msg =>
-                msg.senderType === 'applicant' && !msg.read
-            ).length;
-        } else {
-            newUnreadCount = updatedMessages.filter(msg =>
-                msg.senderType === 'company' && !msg.read
-            ).length;
-        }
-
-        // Update lastMessage read status if needed
-        const lastMessage = chat.lastMessage;
-        let updatedLastMessage = lastMessage;
-        if (lastMessage) {
-            if (readerType === 'company' && lastMessage.senderType === 'applicant') {
-                updatedLastMessage = { ...lastMessage, read: true };
-            } else if (readerType === 'applicant' && lastMessage.senderType === 'company') {
-                updatedLastMessage = { ...lastMessage, read: true };
-            }
-        }
-
-        // Update the chat in database
-        const updateResult = await users.updateOne(
-            {
-                _id: new ObjectId(userId),
-                "chats.chatId": new ObjectId(chatId)
+        // Call the mark-read service instead of handling it here
+        const markReadResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/chat/mark-read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
             },
-            {
-                $set: {
-                    "chats.$.messages": updatedMessages,
-                    "chats.$.unreadCount": newUnreadCount,
-                    "chats.$.lastMessage": updatedLastMessage
-                }
-            }
-        );
-
-        return NextResponse.json({
-            success: true,
-            message: "Messages marked as read",
-            modifiedCount: updateResult.modifiedCount,
-            unreadCountBefore,
-            unreadCountAfter: newUnreadCount
+            body: JSON.stringify({
+                chatId,
+                applicantId,
+                companyId,
+                jobId,
+                userId,
+                userType: readerType
+            })
         });
+
+        const markReadResult = await markReadResponse.json();
+
+        if (markReadResult.success) {
+            return NextResponse.json({
+                success: true,
+                message: "Messages marked as read via mark-read service",
+                modifiedCount: markReadResult.modifiedCount,
+                data: markReadResult
+            });
+        } else {
+            return NextResponse.json(
+                { success: false, error: markReadResult.error || "Failed to mark messages as read" },
+                { status: 500 }
+            );
+        }
 
     } catch (err) {
+        console.error("❌ Chat Read POST Error:", err);
         return NextResponse.json(
             { success: false, error: err.message },
             { status: 500 }
@@ -136,6 +77,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const userId = searchParams.get("userId");
         const userType = searchParams.get("userType");
+        const excludeChatId = searchParams.get("excludeChatId");
 
         if (!userId || !userType) {
             return NextResponse.json(
@@ -164,6 +106,11 @@ export async function GET(req) {
         // Process each chat to count unread messages
         user.chats.forEach(chat => {
             if (!chat.messages || !Array.isArray(chat.messages)) {
+                return;
+            }
+
+            // Skip excluded chat (currently open chat)
+            if (excludeChatId && chat.chatId?.toString() === excludeChatId) {
                 return;
             }
 
@@ -197,14 +144,14 @@ export async function GET(req) {
                 totalUnreadCount += chatUnreadCount;
 
                 unreadChats.push({
-                    chatId: chat.chatId,
-                    applicantId: chat.applicantId,
-                    companyId: chat.companyId,
+                    chatId: chat.chatId?.toString(),
+                    applicantId: chat.applicantId?.toString(),
+                    companyId: chat.companyId?.toString(),
                     jobId: chat.jobId,
                     jobTitle: chat.jobTitle,
                     lastMessage: chat.lastMessage,
                     unreadCount: chatUnreadCount,
-                    messages: unreadMessages // Include unread messages for notification creation
+                    messages: unreadMessages.slice(-3) // Last 3 unread messages for notifications
                 });
             }
         });
@@ -212,7 +159,8 @@ export async function GET(req) {
         return NextResponse.json({
             success: true,
             unreadCount: totalUnreadCount,
-            unreadChats
+            unreadChats,
+            totalChats: user.chats.length
         });
 
     } catch (err) {

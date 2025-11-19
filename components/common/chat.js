@@ -1,6 +1,23 @@
 'use client';
 import { PaperAirplaneIcon, XMarkIcon, CheckIcon, TrashIcon, EllipsisHorizontalIcon } from '@heroicons/react/24/solid';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+
+// Debounce hook
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 export default function Chat({ candidate, company, onClose, onSendMessage, userRole = 'company' }) {
   const [messages, setMessages] = useState([]);
@@ -8,6 +25,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
   const [loading, setLoading] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [isCandidateOnline, setIsCandidateOnline] = useState(true);
+  const [isConnected, setIsConnected] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [selectedMessages, setSelectedMessages] = useState(new Set());
   const [showMessageMenu, setShowMessageMenu] = useState(false);
@@ -22,6 +40,9 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
   const isCompany = userRole === 'company';
   const currentUser = isCompany ? company : candidate;
   const otherUser = isCompany ? candidate : company;
+
+  // Debounced chatId for polling
+  const debouncedChatId = useDebounce(chatId, 1000);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -45,8 +66,22 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     };
   }, []);
 
-  // Mark messages as read when chat is opened
-  const markMessagesAsRead = async () => {
+  // Connection monitoring
+  useEffect(() => {
+    const handleOnline = () => setIsConnected(true);
+    const handleOffline = () => setIsConnected(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Mark messages as read when chat is opened - FIXED VERSION
+  const markMessagesAsRead = useCallback(async (currentChatId = null) => {
     try {
       let applicantId, companyId, jobId;
 
@@ -60,27 +95,31 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
         jobId = candidate?.jobId || company?.jobId;
       }
 
-      if (!applicantId || !companyId || !jobId) {
-        console.error('Missing required data for marking messages as read');
+      const targetChatId = currentChatId || chatId;
+
+      if (!applicantId || !companyId || !jobId || !targetChatId) {
+        console.error('Missing required data for marking messages as read:', {
+          applicantId, companyId, jobId, targetChatId
+        });
         return;
       }
 
       const readerType = isCompany ? 'company' : 'applicant';
 
-      console.log('📖 Marking messages as read for:', { readerType, applicantId, companyId, jobId });
+      console.log('📖 Marking messages as read for:', { readerType, applicantId, companyId, jobId, targetChatId });
 
-      // Use the PATCH endpoint to mark entire chat as read
-      const markReadResponse = await fetch('/api/chat', {
-        method: 'PATCH',
+      const markReadResponse = await fetch('/api/chat/mark-read', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          chatId: chatId,
-          readerType: readerType,
+          chatId: targetChatId,
           applicantId: applicantId,
           companyId: companyId,
-          jobId: jobId
+          jobId: jobId,
+          userId: currentUser?._id,
+          userType: readerType
         })
       });
 
@@ -89,24 +128,33 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       if (markReadResult.success) {
         console.log('✅ All messages marked as read successfully');
 
-        // Update local state to mark messages as read
-        setMessages(prev => prev.map(msg => ({
-          ...msg,
-          read: true,
-          status: 'read'
-        })));
+        // Update local state to mark messages as read based on role
+        setMessages(prev => prev.map(msg => {
+          // Only mark messages from the other user as read
+          const shouldBeRead = isCompany ?
+            (msg.role === 'candidate') : // Company reads all candidate messages
+            (msg.role === 'company');    // Applicant reads all company messages
+
+          if (shouldBeRead) {
+            return {
+              ...msg,
+              read: true,
+              status: 'read'
+            };
+          }
+          return msg;
+        }));
       } else {
         console.error('❌ Failed to mark messages as read:', markReadResult.error);
       }
     } catch (error) {
       console.error('❌ Error marking messages as read:', error);
     }
-  };
+  }, [isCompany, candidate, company, chatId, currentUser?._id]);
 
-  // Load chat history from API
-  const loadChatHistory = async () => {
+  // Load chat history from API - FIXED VERSION
+  const loadChatHistory = useCallback(async () => {
     try {
-      // Get the required IDs based on user role
       let applicantId, companyId, jobId;
 
       if (isCompany) {
@@ -135,13 +183,31 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       const result = await response.json();
 
       if (result.success) {
-        setChatId(result.chat.id); // Store chatId for deletion
+        const loadedChatId = result.chat.id;
+        setChatId(loadedChatId);
 
         const transformedMessages = result.chat.messages.map(msg => {
-          // Determine if message should be marked as read based on user role
-          const shouldBeRead = isCompany ?
-            (msg.senderType === 'applicant' ? true : msg.read) : // Company reads applicant messages
-            (msg.senderType === 'company' ? true : msg.read);   // Applicant reads company messages
+          const isFromOtherUser = isCompany ?
+            (msg.senderType === 'applicant') :
+            (msg.senderType === 'company');
+
+          const isOwnMessage = isCompany ?
+            (msg.senderType === 'company') :
+            (msg.senderType === 'applicant');
+
+          // Determine status based on read status and message ownership
+          let status = 'sent';
+
+          if (msg.read && isFromOtherUser) {
+            // Message is read by current user (it's from other user and marked read)
+            status = 'read';
+          } else if (isOwnMessage && !msg.read) {
+            // Own message that hasn't been read by recipient
+            status = 'delivered';
+          } else if (isOwnMessage && msg.read) {
+            // Own message that has been read by recipient
+            status = 'read';
+          }
 
           return {
             id: msg._id,
@@ -150,10 +216,10 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
             timestamp: new Date(msg.timestamp),
             senderId: msg.senderId,
             senderName: msg.senderName,
-            read: shouldBeRead,
+            read: msg.read || false,
             isSelected: false,
-            // Add status for messages from server
-            status: shouldBeRead ? 'read' : 'delivered'
+            status: status,
+            isOwnMessage: isOwnMessage
           };
         });
 
@@ -168,14 +234,16 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
             content: systemMessage,
             timestamp: new Date(),
             isSelected: false,
-            read: true
+            read: true,
+            status: 'read',
+            isOwnMessage: false
           });
         }
 
         setMessages(transformedMessages);
 
-        // Mark messages as read in the database when chat is loaded
-        markMessagesAsRead();
+        // Mark messages as read when loading chat history
+        markMessagesAsRead(loadedChatId);
       } else {
         throw new Error(result.error || 'Failed to load chat history');
       }
@@ -192,18 +260,20 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
           content: systemMessage,
           timestamp: new Date(),
           isSelected: false,
-          read: true
+          read: true,
+          status: 'read',
+          isOwnMessage: false
         },
       ]);
     } finally {
       setIsLoadingMessages(false);
     }
-  };
+  }, [isCompany, candidate, company, markMessagesAsRead]);
 
   // Load chat history only on initial mount
   useEffect(() => {
     loadChatHistory();
-  }, []);
+  }, [loadChatHistory]);
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
@@ -213,21 +283,61 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
   // Mark messages as read when chat becomes visible or is focused
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && messages.length > 0) {
+      if (!document.hidden && messages.length > 0 && chatId) {
         markMessagesAsRead();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', markMessagesAsRead);
+    window.addEventListener('focus', handleVisibilityChange);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', markMessagesAsRead);
+      window.removeEventListener('focus', handleVisibilityChange);
     };
-  }, [messages.length, chatId]);
+  }, [messages.length, chatId, markMessagesAsRead]);
 
-  // Delete individual message (no confirmation for single messages)
+  // Optimized polling with connection check
+  useEffect(() => {
+    let isMounted = true;
+    let pollInterval;
+
+    const pollForUpdates = async () => {
+      if (!isMounted || !debouncedChatId || !isConnected) return;
+
+      try {
+        await loadChatHistory();
+
+        // Check if there are unread messages from the other user
+        const hasUnreadMessages = messages.some(msg => {
+          if (isCompany) {
+            return msg.role === 'candidate' && !msg.read;
+          } else {
+            return msg.role === 'company' && !msg.read;
+          }
+        });
+
+        if (hasUnreadMessages) {
+          await markMessagesAsRead();
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    };
+
+    if (debouncedChatId) {
+      pollInterval = setInterval(pollForUpdates, 5000);
+    }
+
+    return () => {
+      isMounted = false;
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [debouncedChatId, messages, isConnected, loadChatHistory, markMessagesAsRead, isCompany]);
+
+  // Delete individual message - UPDATED WITH USER ID
   const deleteMessage = async (messageId) => {
     try {
       if (!chatId) {
@@ -236,15 +346,29 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       }
 
       const deletedBy = isCompany ? 'company' : 'applicant';
+      const userId = currentUser?._id;
 
-      const response = await fetch(`/api/chat?chatId=${chatId}&messageId=${messageId}&type=message&deletedBy=${deletedBy}`, {
+      if (!userId) {
+        console.error('User ID not available');
+        return false;
+      }
+
+      // Include both chatId and userId in the request
+      const queryParams = new URLSearchParams({
+        chatId: chatId,
+        messageId: messageId,
+        type: 'message',
+        deletedBy: deletedBy,
+        [deletedBy === 'company' ? 'companyId' : 'applicantId']: userId
+      });
+
+      const response = await fetch(`/api/chat?${queryParams}`, {
         method: 'DELETE'
       });
 
       const result = await response.json();
 
       if (result.success) {
-        // Remove message from local state
         setMessages(prev => prev.filter(msg => msg.id !== messageId));
         console.log('Message deleted successfully');
         return true;
@@ -257,27 +381,44 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Delete multiple messages (no confirmation for multiple messages)
+  // Delete multiple messages - UPDATED WITH USER ID
   const deleteMultipleMessages = async (messageIds) => {
     try {
-      if (!chatId) {
-        console.error('Chat ID not available');
+      if (!chatId || messageIds.size === 0) {
+        console.error('Chat ID not available or no messages selected');
         return false;
       }
 
-      // Delete messages one by one
-      const deletePromises = messageIds.map(messageId =>
-        deleteMessage(messageId)
-      );
+      const deletedBy = isCompany ? 'company' : 'applicant';
+      const userId = currentUser?._id;
+      const messageIdsString = Array.from(messageIds).join(',');
 
-      const results = await Promise.all(deletePromises);
-      const allSuccess = results.every(result => result === true);
+      if (!userId) {
+        console.error('User ID not available');
+        return false;
+      }
 
-      if (allSuccess) {
-        console.log('All selected messages deleted successfully');
+      // Include both chatId and userId in the request
+      const queryParams = new URLSearchParams({
+        chatId: chatId,
+        messageIds: messageIdsString,
+        type: 'message',
+        deletedBy: deletedBy,
+        [deletedBy === 'company' ? 'companyId' : 'applicantId']: userId
+      });
+
+      const response = await fetch(`/api/chat?${queryParams}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessages(prev => prev.filter(msg => !messageIds.has(msg.id)));
+        console.log(`${messageIds.size} messages deleted successfully`);
         return true;
       } else {
-        throw new Error('Some messages failed to delete');
+        throw new Error(result.error || 'Failed to delete messages');
       }
     } catch (error) {
       console.error('Delete multiple messages error:', error);
@@ -285,7 +426,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Delete entire chat (WITH confirmation) - FIXED VERSION
+  // Delete entire chat - FIXED VERSION
   const deleteChat = async () => {
     const confirmDelete = window.confirm('Are you sure you want to delete this entire chat? This action cannot be undone.');
     if (!confirmDelete) return false;
@@ -309,11 +450,8 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
         return false;
       }
 
-      console.log('Deleting chat with:', { applicantId, companyId, jobId });
-
       const deletedBy = isCompany ? 'company' : 'applicant';
 
-      // Use the correct DELETE endpoint with all required parameters
       const response = await fetch(`/api/chat?applicantId=${applicantId}&companyId=${companyId}&jobId=${jobId}&deletedBy=${deletedBy}`, {
         method: 'DELETE'
       });
@@ -323,12 +461,8 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       if (result.success) {
         setMessages([]);
         setChatId(null);
-        console.log('Chat deleted successfully');
-
-        // Show success message
         alert('Chat deleted successfully');
 
-        // Close the chat window after deletion
         if (onClose) {
           onClose();
         }
@@ -344,7 +478,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Alternative delete chat using chatId (if available)
+  // Alternative delete chat using chatId - FIXED VERSION
   const deleteChatById = async () => {
     const confirmDelete = window.confirm('Are you sure you want to delete this entire chat? This action cannot be undone.');
     if (!confirmDelete) return false;
@@ -356,9 +490,22 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       }
 
       const deletedBy = isCompany ? 'company' : 'applicant';
+      const userId = currentUser?._id;
 
-      // Delete using chatId
-      const response = await fetch(`/api/chat?chatId=${chatId}&type=chat&deletedBy=${deletedBy}`, {
+      if (!userId) {
+        console.error('User ID not available');
+        return false;
+      }
+
+      // Include both chatId and userId in the request
+      const queryParams = new URLSearchParams({
+        chatId: chatId,
+        type: 'chat',
+        deletedBy: deletedBy,
+        [deletedBy === 'company' ? 'companyId' : 'applicantId']: userId
+      });
+
+      const response = await fetch(`/api/chat?${queryParams}`, {
         method: 'DELETE'
       });
 
@@ -367,8 +514,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       if (result.success) {
         setMessages([]);
         setChatId(null);
-        console.log('Chat deleted successfully');
-
         alert('Chat deleted successfully');
 
         if (onClose) {
@@ -386,28 +531,25 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // FIXED: Handle message selection with proper state synchronization
+  // Handle message selection
   const handleMessageSelect = (messageId) => {
     setSelectedMessages(prev => {
       const newSelectedMessages = new Set(prev);
-
       if (newSelectedMessages.has(messageId)) {
         newSelectedMessages.delete(messageId);
       } else {
         newSelectedMessages.add(messageId);
       }
-
       return newSelectedMessages;
     });
 
-    // Update message selection state
     setMessages(prevMessages => prevMessages.map(msg => ({
       ...msg,
       isSelected: msg.id === messageId ? !msg.isSelected : msg.isSelected
     })));
   };
 
-  // FIXED: Update selection mode based on selectedMessages count
+  // Update selection mode based on selectedMessages count
   useEffect(() => {
     if (selectedMessages.size > 0) {
       setIsSelectionMode(true);
@@ -437,11 +579,10 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     setShowMessageMenu(true);
   };
 
-  // Handle delete single message (no confirmation)
+  // Handle delete single message
   const handleDeleteMessage = async () => {
     if (!selectedMessage) return;
 
-    // For temporary messages (sending), just remove from local state
     if (selectedMessage.id.startsWith('temp-') || selectedMessage.id.startsWith('error-')) {
       setMessages(prev => prev.filter(msg => msg.id !== selectedMessage.id));
       setShowMessageMenu(false);
@@ -449,7 +590,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       return;
     }
 
-    // Delete without confirmation for single messages
     const success = await deleteMessage(selectedMessage.id);
     if (success) {
       setShowMessageMenu(false);
@@ -459,16 +599,12 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Handle delete selected messages (no confirmation)
+  // Handle delete selected messages
   const handleDeleteSelectedMessages = async () => {
     if (selectedMessages.size === 0) return;
 
-    const messageIds = Array.from(selectedMessages);
-
-    // Delete without confirmation for multiple messages
-    const success = await deleteMultipleMessages(messageIds);
+    const success = await deleteMultipleMessages(selectedMessages);
     if (success) {
-      // Clear selection after deletion
       setSelectedMessages(new Set());
       setIsSelectionMode(false);
     } else {
@@ -476,11 +612,15 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Handle delete entire chat (WITH confirmation)
+  // Handle delete entire chat - FIXED VERSION
   const handleDeleteChat = async () => {
-    // Try using chatId first, fallback to applicantId/companyId/jobId
+    // Try using chatId first, fallback to the other method
     if (chatId) {
-      await deleteChatById();
+      const success = await deleteChatById();
+      if (!success) {
+        // If chatId method fails, try the alternative method
+        await deleteChat();
+      }
     } else {
       await deleteChat();
     }
@@ -497,14 +637,14 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
 
   // Improved long press handler
   const handleMouseDown = (message, event) => {
-    if (event.button !== 0) return; // Left click only
+    if (event.button !== 0) return;
 
     longPressTimerRef.current = setTimeout(() => {
       if (!isSelectionMode) {
         setIsSelectionMode(true);
       }
       handleMessageSelect(message.id);
-    }, 500); // 500ms for long press
+    }, 500);
   };
 
   const handleMouseUp = () => {
@@ -520,6 +660,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     return () => document.removeEventListener('mouseup', handleMouseUp);
   }, []);
 
+  // Improved send message with better error handling
   const sendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -532,12 +673,12 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       timestamp: new Date(),
       senderId: currentUser?._id,
       senderName: isCompany ? company?.name : candidate?.applicantName,
-      status: 'sending', // Start with sending status
+      status: 'sending',
       isSelected: false,
-      read: false // New messages start as unread
+      read: false,
+      isOwnMessage: true
     };
 
-    // Add message immediately to show below the spinner
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
@@ -546,7 +687,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       const success = await onSendMessage(input);
 
       if (success) {
-        // Update status to sent immediately
+        // Update to sent immediately
         setMessages(prev =>
           prev.map(msg =>
             msg.id === tempMessageId
@@ -555,35 +696,25 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
           )
         );
 
-        // Reload chat history after a short delay to get the actual message with proper status
+        // Reload after delay to get actual message with proper status
         setTimeout(() => {
-          loadChatHistory();
-        }, 500);
+          loadChatHistory().catch(err =>
+            console.error('Failed to reload chat:', err)
+          );
+        }, 1000);
 
       } else {
-        // If onSendMessage returns false, mark as failed
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === tempMessageId
-              ? {
-                ...msg,
-                status: 'failed',
-                id: `error-${Date.now()}` // Change ID to prevent conflicts
-              }
-              : msg
-          )
-        );
+        throw new Error('Failed to send message');
       }
     } catch (err) {
       console.error('Send message error:', err);
-      // If there's an error, mark as failed
       setMessages(prev =>
         prev.map(msg =>
           msg.id === tempMessageId
             ? {
               ...msg,
               status: 'failed',
-              id: `error-${Date.now()}` // Change ID to prevent conflicts
+              id: `error-${Date.now()}`
             }
             : msg
         )
@@ -593,62 +724,29 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Poll for new messages and update read status
-  useEffect(() => {
-    const pollInterval = setInterval(() => {
-      loadChatHistory();
-
-      // Also mark any new messages as read
-      const hasUnreadMessages = messages.some(msg =>
-        isCompany ?
-          (msg.role === 'candidate' && !msg.read) :
-          (msg.role === 'company' && !msg.read)
-      );
-
-      if (hasUnreadMessages) {
-        markMessagesAsRead();
+  // Memoized message status icon - FIXED VERSION
+  const getStatusIcon = useCallback((status, message) => {
+    // For messages from server without explicit status
+    if (!status && message) {
+      if (message.read && message.isOwnMessage) {
+        return (
+          <div className="flex items-center">
+            <CheckIcon className="w-3 h-3 text-blue-500" />
+            <CheckIcon className="w-3 h-3 text-blue-500 -ml-2" />
+          </div>
+        );
+      } else if (message.isOwnMessage && !message.id.startsWith('temp-') && !message.id.startsWith('error-')) {
+        // For own messages that are sent but not read yet
+        return (
+          <div className="flex items-center">
+            <CheckIcon className="w-3 h-3 text-gray-500" />
+            <CheckIcon className="w-3 h-3 text-gray-500 -ml-2" />
+          </div>
+        );
       }
-    }, 3000);
-
-    return () => clearInterval(pollInterval);
-  }, [messages]);
-
-  const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatDate = (timestamp) => {
-    const today = new Date();
-    const messageDate = new Date(timestamp);
-
-    if (today.toDateString() === messageDate.toDateString()) {
-      return 'Today';
+      return null;
     }
 
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (yesterday.toDateString() === messageDate.toDateString()) {
-      return 'Yesterday';
-    }
-
-    return messageDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: messageDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-    });
-  };
-
-  const shouldShowDate = (currentMsg, previousMsg) => {
-    if (!previousMsg) return true;
-    const currentDate = new Date(currentMsg.timestamp).toDateString();
-    const previousDate = new Date(previousMsg.timestamp).toDateString();
-    return currentDate !== previousDate;
-  };
-
-  const getStatusIcon = (status, message) => {
     switch (status) {
       case 'sending':
         return (
@@ -686,26 +784,59 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
           </div>
         );
       default:
-        // For messages loaded from server without explicit status
-        if (message?.read) {
-          return (
-            <div className="flex items-center">
-              <CheckIcon className="w-3 h-3 text-blue-500" />
-              <CheckIcon className="w-3 h-3 text-blue-500 -ml-2" />
-            </div>
-          );
-        } else if (message && !message.id.startsWith('temp-') && !message.id.startsWith('error-')) {
-          // Assume delivered if it's not a temp message and not read
-          return (
-            <div className="flex items-center">
-              <CheckIcon className="w-3 h-3 text-gray-500" />
-              <CheckIcon className="w-3 h-3 text-gray-500 -ml-2" />
-            </div>
-          );
-        }
         return null;
     }
+  }, []);
+
+  const formatTime = (timestamp) => {
+    return new Date(timestamp).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
+
+  const formatDate = (timestamp) => {
+    const today = new Date();
+    const messageDate = new Date(timestamp);
+
+    if (today.toDateString() === messageDate.toDateString()) {
+      return 'Today';
+    }
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (yesterday.toDateString() === messageDate.toDateString()) {
+      return 'Yesterday';
+    }
+
+    return messageDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: messageDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+    });
+  };
+
+  const shouldShowDate = (currentMsg, previousMsg) => {
+    if (!previousMsg) return true;
+    const currentDate = new Date(currentMsg.timestamp).toDateString();
+    const previousDate = new Date(previousMsg.timestamp).toDateString();
+    return currentDate !== previousDate;
+  };
+
+  // Memoized message grouping
+  const groupedMessages = useMemo(() => {
+    return messages.reduce((groups, message, index) => {
+      const previousMessage = messages[index - 1];
+      const showDate = shouldShowDate(message, previousMessage);
+
+      if (showDate) {
+        groups.push({ type: 'date', date: formatDate(message.timestamp) });
+      }
+
+      groups.push({ type: 'message', message });
+      return groups;
+    }, []);
+  }, [messages]);
 
   const getProfileImage = (user, type) => {
     let profileImage = null;
@@ -767,7 +898,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
   // Updated function to handle header display based on user role
   const getHeaderInfo = () => {
     if (isCompany) {
-      // Company is viewing chat - show applicant's profile and position
       return {
         name: candidate?.applicantName || candidate?.name || 'Candidate',
         title: candidate?.position || candidate?.jobTitle || 'Job Applicant',
@@ -777,7 +907,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
         position: candidate?.position
       };
     } else {
-      // Applicant is viewing chat - show company's profile and job title
       return {
         name: company?.name || 'Company',
         title: candidate?.jobTitle || company?.position || 'Job Opportunity',
@@ -804,16 +933,15 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     return null;
   };
 
-  const headerInfo = getHeaderInfo();
+  const headerInfo = useMemo(() => getHeaderInfo(), [isCompany, candidate, company]);
   const onlineStatus = getOnlineStatus();
 
   return (
     <div className="fixed bottom-0 right-0 z-50 h-[80vh] w-full max-w-md m-4 rounded-lg shadow-xl flex flex-col bg-white border border-gray-200">
-      {/* Header - Changes based on selection mode */}
+      {/* Header */}
       <div className="p-4 border-b flex justify-between items-center bg-green-600 text-white rounded-t-lg">
         <div className="flex items-center gap-3">
           {isSelectionMode ? (
-            // Selection mode header
             <>
               <button
                 onClick={clearSelection}
@@ -832,7 +960,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
               </div>
             </>
           ) : (
-            // Normal header - Updated to show correct profile and position
             <>
               <div className="relative">
                 {getProfileImage(headerInfo.user, headerInfo.type)}
@@ -844,6 +971,9 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
                 </h2>
                 <p className="text-green-100 text-xs flex items-center gap-1 truncate">
                   <span className="truncate">{userRole === "company" ? headerInfo?.user?.applicantProfile?.position : headerInfo?.title}</span>
+                  {!isConnected && (
+                    <span className="text-yellow-300 text-xs">• Offline</span>
+                  )}
                 </p>
               </div>
             </>
@@ -852,7 +982,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
 
         <div className="flex items-center gap-2">
           {isSelectionMode ? (
-            // Selection mode actions
             <>
               <button
                 onClick={handleDeleteSelectedMessages}
@@ -864,7 +993,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
               </button>
             </>
           ) : (
-            // Normal mode actions
             <>
               <button
                 onClick={handleDeleteChat}
@@ -898,97 +1026,92 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
             <p>Start a conversation with {headerInfo.name}</p>
           </div>
         ) : (
-          messages.map((message, index) => {
-            const previousMessage = messages[index - 1];
-            const showDate = shouldShowDate(message, previousMessage);
+          groupedMessages.map((item, index) => {
+            if (item.type === 'date') {
+              return (
+                <div key={`date-${index}`} className="flex justify-center my-4">
+                  <span className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">
+                    {item.date}
+                  </span>
+                </div>
+              );
+            }
+
+            const message = item.message;
             const isOwnMessage = isCompany ? message.role === 'company' : message.role === 'candidate';
             const messageProfile = getMessageProfile(message.role);
             const isSelected = selectedMessages.has(message.id);
 
             return (
-              <div key={message.id}>
-                {showDate && (
-                  <div className="flex justify-center my-4">
-                    <span className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">
-                      {formatDate(message.timestamp)}
-                    </span>
+              <div key={message.id} className={`flex gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+                {!isOwnMessage && message.role !== 'system' && messageProfile && (
+                  <div className="flex-shrink-0">
+                    {getProfileImage(messageProfile.user, messageProfile.type)}
                   </div>
                 )}
 
-                <div className={`flex gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-                  {!isOwnMessage && message.role !== 'system' && messageProfile && (
-                    <div className="flex-shrink-0">
-                      {getProfileImage(messageProfile.user, messageProfile.type)}
-                    </div>
-                  )}
+                <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[70%]`}>
+                  <div className="group relative">
+                    <div
+                      className={`p-3 rounded-2xl text-sm break-words cursor-pointer transition-all duration-200 ${isOwnMessage
+                        ? `bg-green-500 text-white rounded-br-md ${isSelected ? 'ring-2 ring-green-300 ring-offset-2' : ''}`
+                        : message.role === 'system'
+                          ? 'bg-yellow-100 text-yellow-800 text-center border border-yellow-200 rounded-lg'
+                          : `bg-white text-gray-800 rounded-bl-md shadow-sm ${isSelected ? 'ring-2 ring-blue-300 ring-offset-2' : ''}`
+                        }`}
+                      onClick={() => {
+                        if (isSelectionMode) {
+                          handleMessageSelect(message.id);
+                        } else if (message.status === 'failed') {
+                          setInput(message.content);
+                          setMessages(prev => prev.filter(msg => msg.id !== message.id));
+                        }
+                      }}
+                      onContextMenu={(e) => handleMessageLongPress(message, e)}
+                      onMouseDown={(e) => handleMouseDown(message, e)}
+                    >
+                      {message.content}
 
-                  <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[70%]`}>
-                    {/* Message Bubble with Selection */}
-                    <div className="group relative">
-                      <div
-                        className={`p-3 rounded-2xl text-sm break-words cursor-pointer transition-all duration-200 ${isOwnMessage
-                          ? `bg-green-500 text-white rounded-br-md ${isSelected ? 'ring-2 ring-green-300 ring-offset-2' : ''}`
-                          : message.role === 'system'
-                            ? 'bg-yellow-100 text-yellow-800 text-center border border-yellow-200 rounded-lg'
-                            : `bg-white text-gray-800 rounded-bl-md shadow-sm ${isSelected ? 'ring-2 ring-blue-300 ring-offset-2' : ''}`
-                          }`}
-                        onClick={() => {
-                          if (isSelectionMode) {
-                            handleMessageSelect(message.id);
-                          } else if (message.status === 'failed') {
-                            // Retry sending failed message
-                            setInput(message.content);
-                            setMessages(prev => prev.filter(msg => msg.id !== message.id));
-                          }
-                        }}
-                        onContextMenu={(e) => handleMessageLongPress(message, e)}
-                        onMouseDown={(e) => handleMouseDown(message, e)}
+                      {isSelectionMode && (
+                        <div className={`absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 ${isSelected
+                          ? 'bg-green-500 border-green-500'
+                          : 'bg-white border-gray-400'
+                          } flex items-center justify-center`}>
+                          {isSelected && (
+                            <CheckIcon className="w-3 h-3 text-white" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {isOwnMessage && message.role !== 'system' && !isSelectionMode && (
+                      <button
+                        onClick={(e) => handleMessageMenuClick(message, e)}
+                        className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200 rounded-full p-1 hover:bg-gray-300"
                       >
-                        {message.content}
-
-                        {/* Selection checkbox */}
-                        {isSelectionMode && (
-                          <div className={`absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 ${isSelected
-                            ? 'bg-green-500 border-green-500'
-                            : 'bg-white border-gray-400'
-                            } flex items-center justify-center`}>
-                            {isSelected && (
-                              <CheckIcon className="w-3 h-3 text-white" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Three dots menu for own messages (only show when not in selection mode) */}
-                      {isOwnMessage && message.role !== 'system' && !isSelectionMode && (
-                        <button
-                          onClick={(e) => handleMessageMenuClick(message, e)}
-                          className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200 rounded-full p-1 hover:bg-gray-300"
-                        >
-                          <EllipsisHorizontalIcon className="w-4 h-4 text-gray-600" />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className={`flex items-center gap-1 mt-1 text-xs ${isOwnMessage ? 'text-gray-500' : 'text-gray-400'}`}>
-                      <span>{formatTime(message.timestamp)}</span>
-                      {isOwnMessage && message.role !== 'system' && (
-                        <>
-                          <span>•</span>
-                          <div className="flex items-center gap-1">
-                            {getStatusIcon(message.status, message)}
-                          </div>
-                        </>
-                      )}
-                    </div>
+                        <EllipsisHorizontalIcon className="w-4 h-4 text-gray-600" />
+                      </button>
+                    )}
                   </div>
 
-                  {isOwnMessage && message.role !== 'system' && messageProfile && (
-                    <div className="flex-shrink-0">
-                      {getProfileImage(messageProfile.user, messageProfile.type, true)}
-                    </div>
-                  )}
+                  <div className={`flex items-center gap-1 mt-1 text-xs ${isOwnMessage ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <span>{formatTime(message.timestamp)}</span>
+                    {isOwnMessage && message.role !== 'system' && (
+                      <>
+                        <span>•</span>
+                        <div className="flex items-center gap-1">
+                          {getStatusIcon(message.status, message)}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
+
+                {isOwnMessage && message.role !== 'system' && messageProfile && (
+                  <div className="flex-shrink-0">
+                    {getProfileImage(messageProfile.user, messageProfile.type, true)}
+                  </div>
+                )}
               </div>
             );
           })

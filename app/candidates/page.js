@@ -279,138 +279,21 @@ const ApplicationList = () => {
             return {
                 _id: data[0]._id,
                 name: data[0].name,
-                profileImage: data[0].profileImage || data[0].logo
+                profileImage: data[0].profileImage || data[0].logo,
+                companyName: data[0].name,
+                companyId: data[0]._id
             };
         }
         return {
             _id: 'unknown-company',
             name: 'Company',
-            profileImage: null
+            profileImage: null,
+            companyName: 'Company',
+            companyId: 'unknown-company'
         };
     };
 
     const company = getCompanyData();
-
-    // // Mark messages as read for a specific chat
-    // const markMessagesAsRead = async (chatId, candidateId) => {
-    //     try {
-    //         const response = await fetch('/api/chat/read', {
-    //             method: 'POST',
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //             },
-    //             body: JSON.stringify({
-    //                 chatId: chatId,
-    //                 readerType: 'company',
-    //                 companyId: company._id,
-    //                 applicantId: candidateId
-    //             })
-    //         });
-
-    //         const result = await response.json();
-
-    //         if (result.success) {
-    //             setUnreadChats(prev => {
-    //                 const updated = { ...prev };
-    //                 delete updated[chatId];
-    //                 return updated;
-    //             });
-    //             mutated();
-    //         }
-    //     } catch (error) {
-    //         console.error('Error marking messages as read:', error);
-    //     }
-    // };
-
-    // // Check for new unread messages and update notifications in rootContext
-    // const checkForNewMessages = useCallback(async () => {
-    //     if (!company._id) return;
-
-    //     try {
-    //         const response = await fetch(`/api/chat/read?userId=${company._id}&userType=company&excludeChatId=${currentlyOpenChatId || ''}`);
-    //         const result = await response.json();
-
-    //         if (result.success) {
-    //             const newUnreadChats = result.unreadMessagesByChat || {};
-    //             let totalUnreadCount = 0;
-    //             const newNotifications = [];
-
-    //             // Process unread messages and create notifications
-    //             Object.entries(newUnreadChats).forEach(([chatId, chatData]) => {
-    //                 if (chatData.messages && chatData.messages.length > 0) {
-    //                     totalUnreadCount += chatData.count || 0;
-
-    //                     // Check if we need to create new notifications
-    //                     const existingNotifications = rootContext?.notifications?.items || [];
-    //                     const existingNotification = existingNotifications.find(
-    //                         n => n.chatId === chatId
-    //                     );
-
-    //                     if (!existingNotification) {
-    //                         const latestMessage = chatData.messages[chatData.messages.length - 1];
-    //                         const candidateName = getCandidateName(chatData.applicantId) || 'Candidate';
-
-    //                         const newNotification = {
-    //                             id: `${chatId}-${latestMessage.id}-${Date.now()}`,
-    //                             type: 'chat',
-    //                             title: candidateName,
-    //                             message: latestMessage.content,
-    //                             timestamp: latestMessage.timestamp,
-    //                             read: false,
-    //                             meta: chatData.jobTitle,
-    //                             chatId: chatId,
-    //                             applicantId: chatData.applicantId,
-    //                             companyId: chatData.companyId,
-    //                             jobId: chatData.jobId,
-    //                             onClick: () => {
-    //                                 // Navigate to applications when notification is clicked
-    //                                 // The actual chat opening will be handled in the applications page
-    //                             }
-    //                         };
-
-    //                         newNotifications.push(newNotification);
-    //                     }
-    //                 }
-    //             });
-
-    //             // Update rootContext with new notifications
-    //             const currentUnreadCount = rootContext?.notifications?.unreadCount || 0;
-    //             if (newNotifications.length > 0 || totalUnreadCount !== currentUnreadCount) {
-    //                 setRootContext(prev => ({
-    //                     ...prev,
-    //                     notifications: {
-    //                         items: [...(newNotifications || []), ...(prev.notifications?.items || [])].slice(0, 20),
-    //                         unreadCount: totalUnreadCount,
-    //                         lastChecked: new Date().toISOString(),
-    //                         isDropdownOpen: prev.notifications?.isDropdownOpen || false
-    //                     }
-    //                 }));
-    //             }
-
-    //             setUnreadChats(newUnreadChats);
-    //         }
-    //     } catch (error) {
-    //         console.error('Error checking for new messages:', error);
-    //     }
-    // }, [company._id, currentlyOpenChatId, rootContext?.notifications]);
-
-    // Set up polling
-    useEffect(() => {
-        if (!company._id) return;
-
-        // Check immediately on mount
-    //    checkForNewMessages();
-
-        pollingRef.current = setInterval(() => {
-        //    checkForNewMessages();
-        }, 3000);
-
-        return () => {
-            if (pollingRef.current) {
-                clearInterval(pollingRef.current);
-            }
-        };
-    }, [company._id]);
 
     const handleOpenChatWithCandidate = async (candidate, chatId = null) => {
         let targetChatId = chatId;
@@ -425,10 +308,25 @@ const ApplicationList = () => {
 
         if (targetChatId) {
             setCurrentlyOpenChatId(targetChatId.toString());
-            //await markMessagesAsRead(targetChatId, candidate.applicantId);
         }
 
-        setSelectedCandidate(candidate);
+        // Prepare candidate data for chat
+        const candidateData = {
+            applicantId: candidate.applicantId,
+            _id: candidate.applicantId,
+            applicantName: candidate.applicantName || candidate.name || 'Candidate',
+            profileImage: candidate.profileImage,
+            jobTitle: candidate.jobTitle,
+            jobId: candidate.jobId,
+            applicantProfile: {
+                name: candidate.applicantName || candidate.name || 'Candidate',
+                position: candidate.position || 'Real Estate Professional',
+                profileImage: candidate.profileImage
+            }
+        };
+
+        console.log('Opening chat with candidate:', candidateData);
+        setSelectedCandidate(candidateData);
         setIsChatOpen(true);
     };
 
@@ -505,7 +403,23 @@ const ApplicationList = () => {
     };
 
     const handleSendMessage = async (message) => {
+        if (!selectedCandidate) {
+            console.error('No candidate selected for chat');
+            return false;
+        }
+
         try {
+            console.log('Sending message with data:', {
+                applicantId: selectedCandidate.applicantId,
+                companyId: company._id,
+                jobId: selectedCandidate.jobId,
+                jobTitle: selectedCandidate.jobTitle,
+                message: message,
+                senderType: 'company',
+                senderId: company._id,
+                senderName: company.name
+            });
+
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
@@ -527,24 +441,20 @@ const ApplicationList = () => {
 
             if (result.success) {
                 mutated();
+                console.log('Message sent successfully:', result);
+                return true;
             } else {
                 console.error('Chat API Error:', result.error);
+                return false;
             }
         } catch (error) {
             console.error('Chat message error:', error);
+            return false;
         }
     };
 
     const toggleCategory = (category) => {
         setOpenCategory(openCategory === category ? '' : category);
-    };
-
-    // Helper function to get candidate name from appliedJobs
-    const getCandidateName = (applicantId) => {
-        if (!data || !data.length) return null;
-        const appliedJobs = data[0].appliedJobs || [];
-        const candidate = appliedJobs.find(job => job.applicantId === applicantId);
-        return candidate?.applicantName || null;
     };
 
     // Get unread count for a specific candidate
@@ -565,7 +475,19 @@ const ApplicationList = () => {
     };
 
     const getTotalUnreadCount = () => {
-        return Object.values(unreadChats).reduce((total, chatData) => total + chatData.count, 0);
+        if (!data || !data.length || !data[0].chats) return 0;
+
+        let totalUnread = 0;
+        data[0].chats.forEach(chat => {
+            if (chat.messages) {
+                const unreadMessages = chat.messages.filter(message =>
+                    message.senderType === 'applicant' && !message.read
+                );
+                totalUnread += unreadMessages.length;
+            }
+        });
+
+        return totalUnread;
     };
 
     if (!isMounted) return null;
@@ -674,15 +596,7 @@ const ApplicationList = () => {
                     company={company}
                     onClose={handleCloseChat}
                     onSendMessage={handleSendMessage}
-                    onMarkAsRead={() => {
-                        const chat = data[0].chats?.find(chat =>
-                            chat.applicantId?.toString() === selectedCandidate.applicantId &&
-                            chat.jobId === selectedCandidate.jobId
-                        );
-                        // if (chat?.chatId) {
-                        //     markMessagesAsRead(chat.chatId, selectedCandidate.applicantId);
-                        // }
-                    }}
+                    userRole="company"
                 />
             )}
         </div>

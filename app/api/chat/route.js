@@ -95,11 +95,29 @@ export async function GET(req) {
             chat = newChat;
         }
 
+        // Transform messages with proper status
+        const transformedMessages = (chat.messages || []).map(msg => {
+            const isFromApplicant = msg.senderType === 'applicant';
+
+            // Determine status based on read status and sender
+            let status = 'sent';
+            if (msg.read) {
+                status = 'read';
+            } else if (isFromApplicant) {
+                status = 'delivered';
+            }
+
+            return {
+                ...msg,
+                status: status
+            };
+        });
+
         return NextResponse.json({
             success: true,
             chat: {
                 id: chat.chatId || chat._id,
-                messages: chat.messages || [],
+                messages: transformedMessages,
                 applicantId: chat.applicantId,
                 companyId: chat.companyId,
                 jobId: chat.jobId,
@@ -116,6 +134,7 @@ export async function GET(req) {
     }
 }
 
+// POST - Send message
 // POST - Send message
 export async function POST(req) {
     try {
@@ -150,7 +169,7 @@ export async function POST(req) {
         const db = client.db(process.env.MONGODB_DBNAME);
         const users = db.collection("rej_users");
 
-        // Create message object
+        // Create message object with proper read status
         const messageObj = {
             _id: new ObjectId(),
             content: message,
@@ -158,7 +177,8 @@ export async function POST(req) {
             senderId: new ObjectId(senderId),
             senderName: senderName || (senderType === 'company' ? 'Company' : 'Applicant'),
             timestamp: new Date(),
-            read: false
+            read: false, // Always false when sending - only recipient can mark as read
+            status: 'sent' // Initial status
         };
 
         // Find existing chat to get chatId
@@ -181,14 +201,14 @@ export async function POST(req) {
         // Update both company and applicant users
         const updatePromises = [];
 
-        // For COMPANY user - only update if not deleted by company
+        // For COMPANY user
         updatePromises.push(
             users.updateOne(
                 {
                     _id: new ObjectId(companyId),
                     "chats.applicantId": new ObjectId(applicantId),
                     "chats.jobId": jobId,
-                    "chats.deletedBy": { $ne: 'company' } // Only update if not deleted by company
+                    "chats.deletedBy": { $ne: 'company' }
                 },
                 {
                     $push: { "chats.$.messages": messageObj },
@@ -196,21 +216,22 @@ export async function POST(req) {
                         "chats.$.lastMessage": messageObj,
                         "chats.$.updatedAt": new Date(),
                         "chats.$.jobTitle": jobTitle,
+                        // Only increment unread count if message is from applicant
                         "chats.$.unreadCount": senderType === 'applicant' ? 1 : 0
                     },
-                    $pull: { "chats.$.deletedBy": 'company' } // Restore chat if it was deleted
+                    $pull: { "chats.$.deletedBy": 'company' }
                 }
             )
         );
 
-        // For APPLICANT user - only update if not deleted by applicant
+        // For APPLICANT user
         updatePromises.push(
             users.updateOne(
                 {
                     _id: new ObjectId(applicantId),
                     "chats.companyId": new ObjectId(companyId),
                     "chats.jobId": jobId,
-                    "chats.deletedBy": { $ne: 'applicant' } // Only update if not deleted by applicant
+                    "chats.deletedBy": { $ne: 'applicant' }
                 },
                 {
                     $push: { "chats.$.messages": messageObj },
@@ -218,9 +239,10 @@ export async function POST(req) {
                         "chats.$.lastMessage": messageObj,
                         "chats.$.updatedAt": new Date(),
                         "chats.$.jobTitle": jobTitle,
+                        // Only increment unread count if message is from company
                         "chats.$.unreadCount": senderType === 'company' ? 1 : 0
                     },
-                    $pull: { "chats.$.deletedBy": 'applicant' } // Restore chat if it was deleted
+                    $pull: { "chats.$.deletedBy": 'applicant' }
                 }
             )
         );
@@ -228,11 +250,11 @@ export async function POST(req) {
         // Execute updates
         const results = await Promise.all(updatePromises);
 
-        // Check if any updates failed (no existing chat found or chat was deleted)
+        // Check if any updates failed
         const needsNewChat = results.some(result => result.modifiedCount === 0);
 
         if (needsNewChat) {
-            // Create new chat in both users
+            // Create new chat in both users with proper unread counts
             const newChat = {
                 chatId: chatId,
                 applicantId: new ObjectId(applicantId),
@@ -243,22 +265,35 @@ export async function POST(req) {
                 lastMessage: messageObj,
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                unreadCount: senderType === 'company' ? 0 : 1,
-                deletedBy: [] // Initialize empty deletedBy array
+                // Set unread count based on who sent the message
+                unreadCount: senderType === 'company' ? 1 : 0, // For applicant
+                deletedBy: []
             };
 
             await Promise.all([
+                // Company chat - unread if message from applicant
                 users.updateOne(
                     { _id: new ObjectId(companyId) },
                     {
-                        $push: { chats: newChat },
+                        $push: {
+                            chats: {
+                                ...newChat,
+                                unreadCount: senderType === 'applicant' ? 1 : 0
+                            }
+                        },
                         $set: { updatedAt: new Date() }
                     }
                 ),
+                // Applicant chat - unread if message from company
                 users.updateOne(
                     { _id: new ObjectId(applicantId) },
                     {
-                        $push: { chats: { ...newChat, unreadCount: senderType === 'applicant' ? 0 : 1 } },
+                        $push: {
+                            chats: {
+                                ...newChat,
+                                unreadCount: senderType === 'company' ? 1 : 0
+                            }
+                        },
                         $set: { updatedAt: new Date() }
                     }
                 )
@@ -270,7 +305,8 @@ export async function POST(req) {
             message: "Message sent successfully",
             messageId: messageObj._id,
             timestamp: messageObj.timestamp,
-            chatId: chatId
+            chatId: chatId,
+            status: 'sent'
         });
 
     } catch (err) {
@@ -318,8 +354,9 @@ export async function PUT(req) {
             {
                 $set: {
                     "chats.$.unreadCount": 0,
-                    "chats.$.lastMessage.read": readerType === 'company' ? true : false,
-                    "chats.$.messages.$[].read": readerType === 'company' ? true : false
+                    "chats.$.lastMessage.read": true,
+                    "chats.$.messages.$[].read": true,
+                    "chats.$.messages.$[].status": "read"
                 }
             }
         );
@@ -339,7 +376,7 @@ export async function PUT(req) {
     }
 }
 
-// DELETE - Delete chat or specific messages (individual deletion)
+// DELETE - Delete chat or specific messages
 export async function DELETE(req) {
     try {
         const { searchParams } = new URL(req.url);
@@ -347,26 +384,149 @@ export async function DELETE(req) {
         const applicantId = searchParams.get("applicantId");
         const companyId = searchParams.get("companyId");
         const jobId = searchParams.get("jobId");
+        const messageIds = searchParams.get("messageIds");
         const messageId = searchParams.get("messageId");
-        const deleteType = searchParams.get("type"); // 'chat' or 'message'
-        const deletedBy = searchParams.get("deletedBy"); // 'company' or 'applicant'
+        const deleteType = searchParams.get("type");
+        const deletedBy = searchParams.get("deletedBy");
+
+        console.log('🗑️ Delete request:', {
+            chatId, applicantId, companyId, jobId, messageIds, messageId, deleteType, deletedBy
+        });
 
         const client = await clientPromise;
         const db = client.db(process.env.MONGODB_DBNAME);
         const users = db.collection("rej_users");
 
-        if (deleteType === 'message' && messageId && chatId && deletedBy) {
-            // Delete specific message from chat - only for the user who deleted it
-            const userId = deletedBy === 'company' ? companyId : applicantId;
+        // Helper function to find user by chatId
+        async function findUserByChatId(chatId, deletedBy) {
+            try {
+                console.log('🔍 Looking for user with chatId:', chatId, 'deletedBy:', deletedBy);
+
+                // Find any user who has this chatId in their chats
+                const user = await users.findOne({
+                    "chats.chatId": new ObjectId(chatId)
+                });
+
+                console.log('🔍 Found user:', user?._id ? user._id.toString() : 'No user found');
+
+                if (user) {
+                    // Find the specific chat to get the actual user IDs
+                    const chat = user.chats.find(c => c.chatId.toString() === chatId);
+                    if (chat) {
+                        console.log('🔍 Chat found:', {
+                            applicantId: chat.applicantId?.toString(),
+                            companyId: chat.companyId?.toString(),
+                            jobId: chat.jobId
+                        });
+
+                        // Return the appropriate user ID based on who is deleting
+                        if (deletedBy === 'company' && chat.companyId) {
+                            return chat.companyId.toString();
+                        } else if (deletedBy === 'applicant' && chat.applicantId) {
+                            return chat.applicantId.toString();
+                        }
+                    }
+                }
+
+                return null;
+            } catch (error) {
+                console.error('Error finding user by chatId:', error);
+                return null;
+            }
+        }
+
+        // Helper function to update last message
+        async function updateLastMessage(userId, chatId) {
+            try {
+                const user = await users.findOne(
+                    { _id: new ObjectId(userId), "chats.chatId": new ObjectId(chatId) },
+                    { projection: { "chats.$": 1 } }
+                );
+
+                if (user && user.chats && user.chats[0] && user.chats[0].messages) {
+                    const messages = user.chats[0].messages;
+                    if (messages.length > 0) {
+                        const lastMessage = messages[messages.length - 1];
+                        await users.updateOne(
+                            { _id: new ObjectId(userId), "chats.chatId": new ObjectId(chatId) },
+                            { $set: { "chats.$.lastMessage": lastMessage.content } }
+                        );
+                    } else {
+                        await users.updateOne(
+                            { _id: new ObjectId(userId), "chats.chatId": new ObjectId(chatId) },
+                            { $set: { "chats.$.lastMessage": "No messages yet" } }
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating last message:', error);
+            }
+        }
+
+        // Handle multiple message deletion
+        if (deleteType === 'message' && messageIds && chatId && deletedBy) {
+            console.log('🗑️ Deleting multiple messages with chatId:', chatId);
+
+            // Find user by chatId and deletedBy
+            const userId = await findUserByChatId(chatId, deletedBy);
 
             if (!userId) {
                 return NextResponse.json(
-                    { success: false, error: "Missing user ID for message deletion" },
-                    { status: 400 }
+                    { success: false, error: "User not found for this chat. Please provide applicantId or companyId." },
+                    { status: 404 }
                 );
             }
 
-            // Remove message only from the user's chat
+            const messageIdArray = messageIds.split(',').map(id => new ObjectId(id.trim()));
+
+            console.log('🗑️ Deleting multiple messages for user:', userId, 'messages:', messageIdArray);
+
+            const updateResult = await users.updateOne(
+                {
+                    _id: new ObjectId(userId),
+                    "chats.chatId": new ObjectId(chatId)
+                },
+                {
+                    $pull: {
+                        "chats.$.messages": {
+                            _id: { $in: messageIdArray }
+                        }
+                    }
+                }
+            );
+
+            if (updateResult.modifiedCount === 0) {
+                return NextResponse.json(
+                    { success: false, error: "No messages found to delete or chat not found" },
+                    { status: 404 }
+                );
+            }
+
+            await updateLastMessage(userId, chatId);
+
+            return NextResponse.json({
+                success: true,
+                message: `${messageIdArray.length} messages deleted successfully`,
+                deletedCount: messageIdArray.length
+            });
+
+        }
+        // Handle single message deletion
+        else if (deleteType === 'message' && messageId && chatId && deletedBy) {
+            console.log('🗑️ Deleting single message with chatId:', chatId);
+
+            // Find user by chatId and deletedBy
+            const userId = await findUserByChatId(chatId, deletedBy);
+
+            if (!userId) {
+                return NextResponse.json(
+                    { success: false, error: "User not found for this chat. Please provide applicantId or companyId." },
+                    { status: 404 }
+                );
+            }
+
+            console.log('🗑️ Deleting single message for user:', userId, 'message:', messageId);
+
             const updateResult = await users.updateOne(
                 {
                     _id: new ObjectId(userId),
@@ -377,60 +537,37 @@ export async function DELETE(req) {
                 }
             );
 
-            // Update last message if needed (only for this user)
-            if (updateResult.modifiedCount > 0) {
-                // Get updated chat to find new last message
-                const userWithChat = await users.findOne({
-                    _id: new ObjectId(userId),
-                    "chats.chatId": new ObjectId(chatId)
-                });
-
-                if (userWithChat && userWithChat.chats) {
-                    const chat = userWithChat.chats.find(c => c.chatId.toString() === chatId);
-                    if (chat && chat.messages.length > 0) {
-                        const lastMessage = chat.messages[chat.messages.length - 1];
-
-                        await users.updateOne(
-                            {
-                                _id: new ObjectId(userId),
-                                "chats.chatId": new ObjectId(chatId)
-                            },
-                            {
-                                $set: { "chats.$.lastMessage": lastMessage }
-                            }
-                        );
-                    } else {
-                        // No messages left, clear lastMessage for this user
-                        await users.updateOne(
-                            {
-                                _id: new ObjectId(userId),
-                                "chats.chatId": new ObjectId(chatId)
-                            },
-                            {
-                                $unset: { "chats.$.lastMessage": "" }
-                            }
-                        );
-                    }
-                }
+            if (updateResult.modifiedCount === 0) {
+                return NextResponse.json(
+                    { success: false, error: "Message not found or chat not found" },
+                    { status: 404 }
+                );
             }
+
+            await updateLastMessage(userId, chatId);
 
             return NextResponse.json({
                 success: true,
                 message: "Message deleted successfully"
             });
 
-        } else if (deleteType === 'chat' && chatId && deletedBy) {
-            // Individual chat deletion - mark as deleted only for the specific user
-            const userId = deletedBy === 'company' ? companyId : applicantId;
+        }
+        // Handle chat deletion by chatId
+        else if (deleteType === 'chat' && chatId && deletedBy) {
+            console.log('🗑️ Deleting chat by chatId:', chatId);
+
+            // Find user by chatId and deletedBy
+            const userId = await findUserByChatId(chatId, deletedBy);
 
             if (!userId) {
                 return NextResponse.json(
-                    { success: false, error: "Missing user ID for chat deletion" },
-                    { status: 400 }
+                    { success: false, error: "User not found for this chat. Please provide applicantId or companyId." },
+                    { status: 404 }
                 );
             }
 
-            // Instead of removing the chat, mark it as deleted by this user
+            console.log('🗑️ Deleting chat for user:', userId);
+
             const updateResult = await users.updateOne(
                 {
                     _id: new ObjectId(userId),
@@ -441,17 +578,27 @@ export async function DELETE(req) {
                 }
             );
 
+            if (updateResult.modifiedCount === 0) {
+                return NextResponse.json(
+                    { success: false, error: "Chat not found" },
+                    { status: 404 }
+                );
+            }
+
             return NextResponse.json({
                 success: true,
                 message: "Chat deleted successfully for user",
                 modifiedCount: updateResult.modifiedCount
             });
 
-        } else if (applicantId && companyId && jobId && deletedBy) {
-            // Delete chat by applicantId, companyId, and jobId - individual deletion
+        }
+        // Handle chat deletion by applicantId, companyId, and jobId (fallback method)
+        else if (applicantId && companyId && jobId && deletedBy) {
             const userId = deletedBy === 'company' ? companyId : applicantId;
 
-            await users.updateOne(
+            console.log('🗑️ Deleting chat by IDs:', { applicantId, companyId, jobId, userId });
+
+            const updateResult = await users.updateOne(
                 {
                     _id: new ObjectId(userId),
                     "chats.applicantId": new ObjectId(applicantId),
@@ -463,14 +610,25 @@ export async function DELETE(req) {
                 }
             );
 
+            if (updateResult.modifiedCount === 0) {
+                return NextResponse.json(
+                    { success: false, error: "Chat not found" },
+                    { status: 404 }
+                );
+            }
+
             return NextResponse.json({
                 success: true,
-                message: "Chat deleted successfully for user"
+                message: "Chat deleted successfully for user",
+                modifiedCount: updateResult.modifiedCount
             });
 
         } else {
             return NextResponse.json(
-                { success: false, error: "Missing required parameters for deletion" },
+                {
+                    success: false,
+                    error: "Missing required parameters for deletion. Required: type, deletedBy, and either chatId or (applicantId, companyId, jobId)"
+                },
                 { status: 400 }
             );
         }
@@ -548,7 +706,7 @@ async function getUserChats(userId, userType) {
     }
 }
 
-// New endpoint to mark entire chat as read
+// PATCH - Mark entire chat as read
 export async function PATCH(req) {
     try {
         const body = await req.json();
@@ -585,7 +743,8 @@ export async function PATCH(req) {
                 $set: {
                     "chats.$.unreadCount": 0,
                     "chats.$.lastMessage.read": true,
-                    "chats.$.messages.$[].read": true
+                    "chats.$.messages.$[].read": true,
+                    "chats.$.messages.$[].status": "read"
                 }
             }
         );
