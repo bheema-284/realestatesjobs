@@ -32,17 +32,27 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [chatId, setChatId] = useState(null);
+  const [isChatActive, setIsChatActive] = useState(true);
   const messagesEndRef = useRef(null);
   const menuRef = useRef(null);
   const longPressTimerRef = useRef(null);
+  const isScrollingProgrammatically = useRef(false);
+
+  // Track if chat was deleted to prevent mark-read calls
+  const chatDeletedRef = useRef(false);
+  const hasUnreadMessagesRef = useRef(false);
+  const lastLoadTimeRef = useRef(0);
+  const pollIntervalRef = useRef(null);
+  const lastActionTimeRef = useRef(0);
+  const visibilityTimeoutRef = useRef(null);
 
   // Determine if current user is company or applicant
   const isCompany = userRole === 'company';
   const currentUser = isCompany ? company : candidate;
-  const otherUser = isCompany ? candidate : company;
 
   // Debounced chatId for polling
   const debouncedChatId = useDebounce(chatId, 1000);
+
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -63,12 +73,25 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
       }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current);
+      }
     };
   }, []);
 
-  // Connection monitoring
+  // Enhanced connection monitoring
   useEffect(() => {
-    const handleOnline = () => setIsConnected(true);
+    const handleOnline = () => {
+      setIsConnected(true);
+      // Reload messages when coming back online
+      if (isChatActive) {
+        loadChatHistory(true);
+      }
+    };
+
     const handleOffline = () => setIsConnected(false);
 
     window.addEventListener('online', handleOnline);
@@ -78,10 +101,57 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  }, [isChatActive]);
+
+  // Chat activity monitoring - track when chat is actively being used
+  useEffect(() => {
+    const handleActivity = () => {
+      setIsChatActive(true);
+      lastActionTimeRef.current = Date.now();
+    };
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => {
+      document.addEventListener(event, handleActivity);
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity);
+      });
+    };
   }, []);
 
-  // Mark messages as read when chat is opened - FIXED VERSION
+  // Check if there are unread messages from the other user
+  const checkUnreadMessages = useCallback((messages) => {
+    const hasUnread = messages.some(msg => {
+      if (isCompany) {
+        return msg.role === 'candidate' && !msg.read;
+      } else {
+        return msg.role === 'company' && !msg.read;
+      }
+    });
+    hasUnreadMessagesRef.current = hasUnread;
+    return hasUnread;
+  }, [isCompany]);
+
+  // Enhanced mark messages as read
   const markMessagesAsRead = useCallback(async (currentChatId = null) => {
+    if (chatDeletedRef.current || !isChatActive) {
+      console.log('🚫 Skipping mark-read: Chat was deleted or inactive');
+      return;
+    }
+
+    if (!currentChatId && !chatId) {
+      console.log('🚫 Skipping mark-read: No chat ID available');
+      return;
+    }
+
+    if (!hasUnreadMessagesRef.current) {
+      console.log('🚫 Skipping mark-read: No unread messages');
+      return;
+    }
+
     try {
       let applicantId, companyId, jobId;
 
@@ -98,62 +168,71 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       const targetChatId = currentChatId || chatId;
 
       if (!applicantId || !companyId || !jobId || !targetChatId) {
-        console.error('Missing required data for marking messages as read:', {
-          applicantId, companyId, jobId, targetChatId
-        });
+        console.error('Missing required data for marking messages as read');
         return;
       }
 
       const readerType = isCompany ? 'company' : 'applicant';
 
-      console.log('📖 Marking messages as read for:', { readerType, applicantId, companyId, jobId, targetChatId });
+      console.log('📖 Marking messages as read for:', { readerType, targetChatId });
 
-      const markReadResponse = await fetch('/api/chat/mark-read', {
-        method: 'POST',
+      const markReadResponse = await fetch('/api/chat', {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           chatId: targetChatId,
+          readerType: readerType,
           applicantId: applicantId,
           companyId: companyId,
-          jobId: jobId,
-          userId: currentUser?._id,
-          userType: readerType
+          jobId: jobId
         })
       });
 
       const markReadResult = await markReadResponse.json();
 
       if (markReadResult.success) {
-        console.log('✅ All messages marked as read successfully');
+        console.log('✅ Mark as read successful:', {
+          modifiedCount: markReadResult.modifiedCount
+        });
 
-        // Update local state to mark messages as read based on role
-        setMessages(prev => prev.map(msg => {
-          // Only mark messages from the other user as read
-          const shouldBeRead = isCompany ?
-            (msg.role === 'candidate') : // Company reads all candidate messages
-            (msg.role === 'company');    // Applicant reads all company messages
+        if (markReadResult.modifiedCount > 0) {
+          setMessages(prev => prev.map(msg => {
+            const shouldBeRead = isCompany ?
+              (msg.role === 'candidate') :
+              (msg.role === 'company');
 
-          if (shouldBeRead) {
-            return {
-              ...msg,
-              read: true,
-              status: 'read'
-            };
-          }
-          return msg;
-        }));
+            if (shouldBeRead && !msg.read) {
+              return {
+                ...msg,
+                read: true,
+                status: 'read'
+              };
+            }
+            return msg;
+          }));
+
+          hasUnreadMessagesRef.current = false;
+        }
       } else {
         console.error('❌ Failed to mark messages as read:', markReadResult.error);
       }
     } catch (error) {
       console.error('❌ Error marking messages as read:', error);
     }
-  }, [isCompany, candidate, company, chatId, currentUser?._id]);
+  }, [isCompany, candidate, company, chatId, isChatActive]);
 
-  // Load chat history from API - FIXED VERSION
-  const loadChatHistory = useCallback(async () => {
+  // Enhanced load chat history
+  const loadChatHistory = useCallback(async (forceReload = false) => {
+    const now = Date.now();
+    const timeSinceLastLoad = now - lastLoadTimeRef.current;
+
+    if (!forceReload && timeSinceLastLoad < 2000) {
+      console.log('🕒 Skipping load: Too frequent requests', { timeSinceLastLoad });
+      return;
+    }
+
     try {
       let applicantId, companyId, jobId;
 
@@ -176,15 +255,18 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       const params = new URLSearchParams({
         applicantId: applicantId,
         companyId: companyId,
-        jobId: jobId
+        jobId: jobId,
+        includeStatus: 'true'
       });
 
+      console.log('📥 Loading chat history...');
       const response = await fetch(`/api/chat?${params}`);
       const result = await response.json();
 
       if (result.success) {
         const loadedChatId = result.chat.id;
         setChatId(loadedChatId);
+        lastLoadTimeRef.current = now;
 
         const transformedMessages = result.chat.messages.map(msg => {
           const isFromOtherUser = isCompany ?
@@ -195,20 +277,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
             (msg.senderType === 'company') :
             (msg.senderType === 'applicant');
 
-          // Determine status based on read status and message ownership
-          let status = 'sent';
-
-          if (msg.read && isFromOtherUser) {
-            // Message is read by current user (it's from other user and marked read)
-            status = 'read';
-          } else if (isOwnMessage && !msg.read) {
-            // Own message that hasn't been read by recipient
-            status = 'delivered';
-          } else if (isOwnMessage && msg.read) {
-            // Own message that has been read by recipient
-            status = 'read';
-          }
-
           return {
             id: msg._id,
             role: msg.senderType === 'company' ? 'company' : 'candidate',
@@ -218,7 +286,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
             senderName: msg.senderName,
             read: msg.read || false,
             isSelected: false,
-            status: status,
+            status: msg.status || 'sent',
             isOwnMessage: isOwnMessage
           };
         });
@@ -242,8 +310,16 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
 
         setMessages(transformedMessages);
 
-        // Mark messages as read when loading chat history
-        markMessagesAsRead(loadedChatId);
+        const hasUnread = checkUnreadMessages(transformedMessages);
+        console.log('📥 Loaded chat history:', {
+          messageCount: transformedMessages.length,
+          hasUnread,
+          currentUser: isCompany ? 'company' : 'applicant'
+        });
+
+        if (hasUnread && loadedChatId && isChatActive) {
+          markMessagesAsRead(loadedChatId);
+        }
       } else {
         throw new Error(result.error || 'Failed to load chat history');
       }
@@ -268,80 +344,135 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     } finally {
       setIsLoadingMessages(false);
     }
-  }, [isCompany, candidate, company, markMessagesAsRead]);
+  }, [isCompany, candidate, company, markMessagesAsRead, checkUnreadMessages, isChatActive]);
 
-  // Load chat history only on initial mount
+  // Load chat history when component mounts and when chat becomes active
   useEffect(() => {
-    loadChatHistory();
-  }, [loadChatHistory]);
+    console.log('🚀 Initial chat load');
+    lastActionTimeRef.current = Date.now();
+    loadChatHistory(true);
+  }, []);
 
-  // Auto-scroll to bottom when new messages are added
+  // Reload chat when it becomes active again
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isChatActive && chatId) {
+      console.log('🔄 Chat became active, reloading messages');
+      loadChatHistory(true);
+    }
+  }, [isChatActive, chatId]);
+
+  // Enhanced auto-scroll with better detection
+  useEffect(() => {
+    if (isScrollingProgrammatically.current) {
+      isScrollingProgrammatically.current = false;
+      return;
+    }
+
+    const messagesContainer = messagesEndRef.current?.parentElement;
+    if (messagesContainer) {
+      const isNearBottom = messagesContainer.scrollHeight - messagesContainer.clientHeight - messagesContainer.scrollTop < 150;
+      if (isNearBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   }, [messages]);
 
-  // Mark messages as read when chat becomes visible or is focused
+  // Enhanced visibility and focus handling
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && messages.length > 0 && chatId) {
-        markMessagesAsRead();
+      if (!document.hidden) {
+        setIsChatActive(true);
+        if (messages.length > 0 && chatId && !chatDeletedRef.current) {
+          const hasUnread = checkUnreadMessages(messages);
+          if (hasUnread) {
+            markMessagesAsRead();
+          }
+        }
+      } else {
+        setIsChatActive(false);
       }
     };
 
+    const handleFocus = () => {
+      setIsChatActive(true);
+      if (messages.length > 0 && chatId && !chatDeletedRef.current) {
+        const hasUnread = checkUnreadMessages(messages);
+        if (hasUnread) {
+          markMessagesAsRead();
+        }
+      }
+    };
+
+    const handleBlur = () => {
+      // Delay setting inactive to prevent immediate deactivation during quick tab switches
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current);
+      }
+      visibilityTimeoutRef.current = setTimeout(() => {
+        setIsChatActive(false);
+      }, 30000); // 30 seconds of inactivity
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current);
+      }
     };
-  }, [messages.length, chatId, markMessagesAsRead]);
+  }, [messages, chatId, markMessagesAsRead, checkUnreadMessages]);
 
-  // Optimized polling with connection check
+  // Optimized polling with activity detection
   useEffect(() => {
     let isMounted = true;
-    let pollInterval;
 
     const pollForUpdates = async () => {
-      if (!isMounted || !debouncedChatId || !isConnected) return;
+      if (!isMounted || !debouncedChatId || !isConnected || chatDeletedRef.current || !isChatActive) {
+        return;
+      }
+
+      const now = Date.now();
+      const timeSinceLastAction = now - lastActionTimeRef.current;
+
+      // Only poll if there's been recent activity (last 2 minutes)
+      if (timeSinceLastAction > 120000) {
+        console.log('⏸️ Skipping poll: No recent user activity');
+        return;
+      }
 
       try {
-        await loadChatHistory();
-
-        // Check if there are unread messages from the other user
-        const hasUnreadMessages = messages.some(msg => {
-          if (isCompany) {
-            return msg.role === 'candidate' && !msg.read;
-          } else {
-            return msg.role === 'company' && !msg.read;
-          }
-        });
-
-        if (hasUnreadMessages) {
-          await markMessagesAsRead();
-        }
+        console.log('🔄 Polling for chat updates...');
+        await loadChatHistory(false);
       } catch (error) {
         console.error('Polling error:', error);
       }
     };
 
-    if (debouncedChatId) {
-      pollInterval = setInterval(pollForUpdates, 5000);
+    if (debouncedChatId && isChatActive) {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+      pollIntervalRef.current = setInterval(pollForUpdates, 5000); // Poll every 5 seconds when active
     }
 
     return () => {
       isMounted = false;
-      if (pollInterval) {
-        clearInterval(pollInterval);
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
       }
     };
-  }, [debouncedChatId, messages, isConnected, loadChatHistory, markMessagesAsRead, isCompany]);
+  }, [debouncedChatId, isConnected, isChatActive]);
 
-  // Delete individual message - UPDATED WITH USER ID
+  // Delete individual message
   const deleteMessage = async (messageId) => {
     try {
-      if (!chatId) {
-        console.error('Chat ID not available');
+      if (!chatId || chatDeletedRef.current) {
+        console.error('Chat ID not available or chat was deleted');
         return false;
       }
 
@@ -353,13 +484,11 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
         return false;
       }
 
-      // Include both chatId and userId in the request
       const queryParams = new URLSearchParams({
         chatId: chatId,
         messageId: messageId,
         type: 'message',
-        deletedBy: deletedBy,
-        [deletedBy === 'company' ? 'companyId' : 'applicantId']: userId
+        deletedBy: deletedBy
       });
 
       const response = await fetch(`/api/chat?${queryParams}`, {
@@ -371,6 +500,14 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       if (result.success) {
         setMessages(prev => prev.filter(msg => msg.id !== messageId));
         console.log('Message deleted successfully');
+
+        lastActionTimeRef.current = Date.now();
+        checkUnreadMessages(messages.filter(msg => msg.id !== messageId));
+
+        setTimeout(() => {
+          loadChatHistory(true);
+        }, 500);
+
         return true;
       } else {
         throw new Error(result.error || 'Failed to delete message');
@@ -381,11 +518,11 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Delete multiple messages - UPDATED WITH USER ID
+  // Delete multiple messages
   const deleteMultipleMessages = async (messageIds) => {
     try {
-      if (!chatId || messageIds.size === 0) {
-        console.error('Chat ID not available or no messages selected');
+      if (!chatId || messageIds.size === 0 || chatDeletedRef.current) {
+        console.error('Chat ID not available, no messages selected, or chat was deleted');
         return false;
       }
 
@@ -398,13 +535,11 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
         return false;
       }
 
-      // Include both chatId and userId in the request
       const queryParams = new URLSearchParams({
         chatId: chatId,
         messageIds: messageIdsString,
         type: 'message',
-        deletedBy: deletedBy,
-        [deletedBy === 'company' ? 'companyId' : 'applicantId']: userId
+        deletedBy: deletedBy
       });
 
       const response = await fetch(`/api/chat?${queryParams}`, {
@@ -416,6 +551,14 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       if (result.success) {
         setMessages(prev => prev.filter(msg => !messageIds.has(msg.id)));
         console.log(`${messageIds.size} messages deleted successfully`);
+
+        lastActionTimeRef.current = Date.now();
+        checkUnreadMessages(messages.filter(msg => !messageIds.has(msg.id)));
+
+        setTimeout(() => {
+          loadChatHistory(true);
+        }, 500);
+
         return true;
       } else {
         throw new Error(result.error || 'Failed to delete messages');
@@ -426,7 +569,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Delete entire chat - FIXED VERSION
+  // Delete entire chat
   const deleteChat = async () => {
     const confirmDelete = window.confirm('Are you sure you want to delete this entire chat? This action cannot be undone.');
     if (!confirmDelete) return false;
@@ -459,6 +602,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       const result = await response.json();
 
       if (result.success) {
+        chatDeletedRef.current = true;
         setMessages([]);
         setChatId(null);
         alert('Chat deleted successfully');
@@ -478,7 +622,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Alternative delete chat using chatId - FIXED VERSION
+  // Alternative delete chat using chatId
   const deleteChatById = async () => {
     const confirmDelete = window.confirm('Are you sure you want to delete this entire chat? This action cannot be undone.');
     if (!confirmDelete) return false;
@@ -490,19 +634,11 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       }
 
       const deletedBy = isCompany ? 'company' : 'applicant';
-      const userId = currentUser?._id;
 
-      if (!userId) {
-        console.error('User ID not available');
-        return false;
-      }
-
-      // Include both chatId and userId in the request
       const queryParams = new URLSearchParams({
         chatId: chatId,
         type: 'chat',
-        deletedBy: deletedBy,
-        [deletedBy === 'company' ? 'companyId' : 'applicantId']: userId
+        deletedBy: deletedBy
       });
 
       const response = await fetch(`/api/chat?${queryParams}`, {
@@ -512,6 +648,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       const result = await response.json();
 
       if (result.success) {
+        chatDeletedRef.current = true;
         setMessages([]);
         setChatId(null);
         alert('Chat deleted successfully');
@@ -533,6 +670,8 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
 
   // Handle message selection
   const handleMessageSelect = (messageId) => {
+    isScrollingProgrammatically.current = true;
+
     setSelectedMessages(prev => {
       const newSelectedMessages = new Set(prev);
       if (newSelectedMessages.has(messageId)) {
@@ -612,13 +751,11 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Handle delete entire chat - FIXED VERSION
+  // Handle delete entire chat
   const handleDeleteChat = async () => {
-    // Try using chatId first, fallback to the other method
     if (chatId) {
       const success = await deleteChatById();
       if (!success) {
-        // If chatId method fails, try the alternative method
         await deleteChat();
       }
     } else {
@@ -630,6 +767,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
 
   // Clear selection mode
   const clearSelection = () => {
+    isScrollingProgrammatically.current = true;
     setSelectedMessages(new Set());
     setIsSelectionMode(false);
     setMessages(prev => prev.map(msg => ({ ...msg, isSelected: false })));
@@ -660,10 +798,10 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     return () => document.removeEventListener('mouseup', handleMouseUp);
   }, []);
 
-  // Improved send message with better error handling
+  // Enhanced send message with better error handling
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || chatDeletedRef.current) return;
 
     const tempMessageId = `temp-${Date.now()}`;
     const userMessage = {
@@ -679,9 +817,14 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       isOwnMessage: true
     };
 
+    // Add message immediately to UI
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
+
+    // Track user action
+    lastActionTimeRef.current = Date.now();
+    setIsChatActive(true);
 
     try {
       const success = await onSendMessage(input);
@@ -698,7 +841,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
 
         // Reload after delay to get actual message with proper status
         setTimeout(() => {
-          loadChatHistory().catch(err =>
+          loadChatHistory(true).catch(err =>
             console.error('Failed to reload chat:', err)
           );
         }, 1000);
@@ -708,13 +851,13 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       }
     } catch (err) {
       console.error('Send message error:', err);
+      // Mark as failed but don't remove from UI
       setMessages(prev =>
         prev.map(msg =>
           msg.id === tempMessageId
             ? {
               ...msg,
-              status: 'failed',
-              id: `error-${Date.now()}`
+              status: 'failed'
             }
             : msg
         )
@@ -724,18 +867,24 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     }
   };
 
-  // Memoized message status icon - FIXED VERSION
+  // Improved message status icon that handles read status correctly
   const getStatusIcon = useCallback((status, message) => {
+    // Only show status icons for own messages
+    if (!message.isOwnMessage) {
+      return null;
+    }
+
     // For messages from server without explicit status
     if (!status && message) {
-      if (message.read && message.isOwnMessage) {
+      // If message is read and it's our own message, show read status
+      if (message.read) {
         return (
           <div className="flex items-center">
             <CheckIcon className="w-3 h-3 text-blue-500" />
             <CheckIcon className="w-3 h-3 text-blue-500 -ml-2" />
           </div>
         );
-      } else if (message.isOwnMessage && !message.id.startsWith('temp-') && !message.id.startsWith('error-')) {
+      } else {
         // For own messages that are sent but not read yet
         return (
           <div className="flex items-center">
@@ -744,7 +893,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
           </div>
         );
       }
-      return null;
     }
 
     switch (status) {
@@ -974,6 +1122,9 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
                   {!isConnected && (
                     <span className="text-yellow-300 text-xs">• Offline</span>
                   )}
+                  {!isChatActive && (
+                    <span className="text-gray-300 text-xs">• Inactive</span>
+                  )}
                 </p>
               </div>
             </>
@@ -993,23 +1144,13 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
               </button>
             </>
           ) : (
-            <>
-              <button
-                onClick={handleDeleteChat}
-                className="text-white hover:text-gray-200 p-2 rounded-full hover:bg-green-700 transition-colors"
-                aria-label="Delete Chat"
-                title="Delete Chat"
-              >
-                <TrashIcon className="w-5 h-5" />
-              </button>
-              <button
-                onClick={onClose}
-                className="text-white hover:text-gray-200 p-2 rounded-full hover:bg-green-700 transition-colors"
-                aria-label="Close Chat"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </>
+            <button
+              onClick={onClose}
+              className="text-white hover:text-gray-200 p-2 rounded-full hover:bg-green-700 transition-colors"
+              aria-label="Close Chat"
+            >
+              <XMarkIcon className="w-5 h-5" />
+            </button>
           )}
         </div>
       </div>

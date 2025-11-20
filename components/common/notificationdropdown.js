@@ -1,4 +1,3 @@
-// components/common/NotificationDropdown.js
 "use client";
 
 import { ChatBubbleOvalLeftEllipsisIcon, XMarkIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -11,17 +10,16 @@ const NotificationDropdown = ({
     onMarkAllAsRead,
     onClearAll,
     onCloseDropdown,
-    onNotificationClick
+    onNotificationClick,
+    isLoading = false
 }) => {
     const handleNotificationClick = (notification) => {
         console.log('📱 Notification clicked in dropdown:', notification);
 
-        // Call the click handler first (for navigation)
         if (onNotificationClick) {
             onNotificationClick(notification);
         }
 
-        // Then mark as read if it's unread
         if (!notification.read && onMarkAsRead) {
             onMarkAsRead(notification.id);
         }
@@ -51,6 +49,29 @@ const NotificationDropdown = ({
         }
     };
 
+    // SAFE key generator with multiple fallbacks
+    const getSafeKey = (notification, index) => {
+        // Try multiple strategies to ensure uniqueness
+        if (notification.id && !notifications.some((n, i) => n.id === notification.id && i !== index)) {
+            return notification.id;
+        }
+
+        // Fallback: combine multiple properties
+        const chatId = notification.chatId || 'no-chat';
+        const timestamp = notification.timestamp || Date.now();
+        return `notification-${chatId}-${timestamp}-${index}`;
+    };
+
+    // Debug: Check for duplicate keys
+    const duplicateKeys = notifications.some((notification, index) => {
+        const key = getSafeKey(notification, index);
+        return notifications.findIndex((n, i) => getSafeKey(n, i) === key) !== index;
+    });
+
+    if (duplicateKeys) {
+        console.warn('⚠️ Duplicate keys detected in notifications');
+    }
+
     return (
         <div className="fixed inset-0 z-40" onClick={onCloseDropdown}>
             <div
@@ -73,6 +94,7 @@ const NotificationDropdown = ({
                                 onClick={handleMarkAllAsRead}
                                 className="p-1 text-gray-500 hover:text-green-600 transition-colors"
                                 title="Mark all as read"
+                                disabled={isLoading}
                             >
                                 <CheckIcon className="w-4 h-4" />
                             </button>
@@ -82,6 +104,7 @@ const NotificationDropdown = ({
                                 onClick={handleClearAll}
                                 className="p-1 text-gray-500 hover:text-red-600 transition-colors"
                                 title="Clear all"
+                                disabled={isLoading}
                             >
                                 <TrashIcon className="w-4 h-4" />
                             </button>
@@ -89,6 +112,7 @@ const NotificationDropdown = ({
                         <button
                             onClick={onCloseDropdown}
                             className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                            disabled={isLoading}
                         >
                             <XMarkIcon className="w-5 h-5" />
                         </button>
@@ -97,16 +121,21 @@ const NotificationDropdown = ({
 
                 {/* Notifications List */}
                 <div className="max-h-96 overflow-y-auto">
-                    {notifications.length === 0 ? (
+                    {isLoading ? (
+                        <div className="p-8 text-center text-gray-500">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                            <p>Loading notifications...</p>
+                        </div>
+                    ) : notifications.length === 0 ? (
                         <div className="p-8 text-center text-gray-500">
                             <ChatBubbleOvalLeftEllipsisIcon className="w-12 h-12 mx-auto text-gray-300 mb-2" />
                             <p>No notifications</p>
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
-                            {notifications.map((notification) => (
+                            {notifications.map((notification, index) => (
                                 <div
-                                    key={notification.id}
+                                    key={getSafeKey(notification, index)}
                                     className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors relative group ${!notification.read ? 'bg-blue-50' : ''
                                         }`}
                                     onClick={() => handleNotificationClick(notification)}
@@ -115,6 +144,7 @@ const NotificationDropdown = ({
                                     <button
                                         onClick={(e) => handleCloseNotification(e, notification.id)}
                                         className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        disabled={isLoading}
                                     >
                                         <XMarkIcon className="w-4 h-4" />
                                     </button>
@@ -162,7 +192,7 @@ const NotificationDropdown = ({
                 </div>
 
                 {/* Footer */}
-                {notifications.length > 0 && (
+                {notifications.length > 0 && !isLoading && (
                     <div className="p-3 border-t border-gray-200 bg-gray-50">
                         <p className="text-xs text-gray-500 text-center">
                             {notifications.length} notification{notifications.length !== 1 ? 's' : ''}

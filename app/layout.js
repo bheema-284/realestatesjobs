@@ -1,6 +1,7 @@
 import RootLayoutClient from "@/components/common/rootlayoutclient";
 
 export const metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   title: "Job Portal | Find Your Next Opportunity",
   description: "Explore jobs, companies, and services for recruiters and candidates. Built with Next.js and Tailwind CSS.",
   keywords: [

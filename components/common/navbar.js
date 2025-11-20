@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useContext, useEffect, useCallback, useRef } from "react";
+import { useState, useContext, useEffect, useCallback, useRef, memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
@@ -11,51 +11,116 @@ import AnimatedBorderLoader from "./animatedbutton";
 import JobPostingModal from "../createjob";
 import RootContext from "@/components/config/rootcontext";
 import NotificationDropdown from "./notificationdropdown";
+import { useNotificationService } from "./usenotificationservice";
 
-// Separate notification state management - COMPLETELY ISOLATED
-const useNotificationSystem = () => {
-    const [notifications, setNotifications] = useState({
-        items: [],
-        unreadCount: 0,
-        lastChecked: null
-    });
+// Memoized Notification Bell to prevent unnecessary re-renders
+const NotificationBell = memo(({
+    unreadCount,
+    isLoading,
+    error,
+    onBellClick
+}) => {
+    return (
+        <div className="relative">
+            <button
+                onClick={onBellClick}
+                disabled={isLoading}
+                className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+            >
+                <BellIcon className="w-6 h-6" />
+                {unreadCount > 0 && (
+                    <span className="absolute -top-0 -right-1 bg-red-500 text-white text-[11px] rounded-full w-4 h-4 flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                )}
+                {/* Show loader only when actually loading */}
+                {isLoading && (
+                    <div className="absolute -top-0 -right-1 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                )}
+            </button>
 
-    return { notifications, setNotifications };
-};
+            {/* Show error briefly then auto-clear */}
+            {error && (
+                <div className="absolute top-full right-0 mt-1 bg-red-100 border border-red-300 rounded px-2 py-1 text-xs text-red-700 whitespace-nowrap">
+                    Error: {error}
+                </div>
+            )}
+        </div>
+    );
+});
 
-export const Navbar = ({ rootContext, showLoader, logOut }) => {
-    const { setRootContext } = useContext(RootContext);
+NotificationBell.displayName = 'NotificationBell';
+
+export const Navbar = ({ rootContext: propRootContext, showLoader, logOut }) => {
+    const {
+        rootContext: contextRootContext,
+        toggleNotificationDropdown,
+        markNotificationAsRead,
+        markAllNotificationsAsRead,
+        removeNotification,
+        clearAllNotifications
+    } = useContext(RootContext);
+
+    // Use prop rootContext or context rootContext
+    const rootContext = propRootContext || contextRootContext;
+
     const [menuOpen, setMenuOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
-    const [notificationsOpen, setNotificationsOpen] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
     const role = rootContext?.user?.role;
     const authenticated = rootContext?.authenticated || false;
 
-    // Use isolated notification state - NO GLOBAL STATE UPDATES
-    const { notifications: localNotifications, setNotifications: setLocalNotifications } = useNotificationSystem();
+    // Initialize notification service
+    const { isLoading, error, refreshNotifications } = useNotificationService();
 
-    // Refs for polling - COMPLETELY ISOLATED FROM OTHER COMPONENTS
-    const pollingRef = useRef(null);
-    const lastPollTimeRef = useRef(0);
-    const readChatsRef = useRef(new Set());
-    const isProcessingRef = useRef(false);
-    const POLLING_INTERVAL = 5 * 60 * 1000; // 5 minutes - much longer interval
+    // Notification state from context
+    const notifications = rootContext?.notifications || { items: [], unreadCount: 0 };
+    const isNotificationDropdownOpen = notifications.isDropdownOpen || false;
 
-    // Stable user data stored in refs to prevent re-renders
-    const stableUserId = useRef(rootContext?.user?.id);
-    const stableUserRole = useRef(rootContext?.user?.role);
-    const stableAuthenticated = useRef(authenticated);
+    // Use ref to track if we've already logged debug info
+    const hasLoggedRef = useRef(false);
 
+    // Debug: Log notification state (only once per mount)
     useEffect(() => {
-        stableUserId.current = rootContext?.user?.id;
-        stableUserRole.current = rootContext?.user?.role;
-        stableAuthenticated.current = authenticated;
-    }, [rootContext?.user?.id, rootContext?.user?.role, authenticated]);
+        if (!hasLoggedRef.current) {
+            console.log('🔔 Navbar Mounted - Notification State:', {
+                authenticated,
+                userId: rootContext?.user?.id,
+                unreadCount: notifications.unreadCount,
+                notificationItems: notifications.items?.length || 0,
+                isLoading,
+                error
+            });
+            hasLoggedRef.current = true;
+        }
+    }, [notifications, authenticated, rootContext?.user?.id, isLoading, error]);
+
+    // Handle bell click with refresh and debounce
+    const handleBellClick = useCallback(() => {
+        refreshNotifications();
+        toggleNotificationDropdown(!isNotificationDropdownOpen);
+    }, [refreshNotifications, toggleNotificationDropdown, isNotificationDropdownOpen]);
+
+    // Handle notification click
+    const handleNotificationClick = useCallback((notification) => {
+
+        // Mark as read
+        markNotificationAsRead(notification.id);
+
+        // Navigate based on user role and notification type
+        if (role === 'company' || role === 'recruiter' || role === 'superadmin') {
+            router.push('/applications');
+        } else if (role === 'applicant') {
+            router.push('/jobs');
+        }
+
+        // Close dropdown
+        toggleNotificationDropdown(false);
+    }, [markNotificationAsRead, role, router, toggleNotificationDropdown]);
 
     // Sidebar items based on roles
-    const getSidebarItems = () => {
+    const getSidebarItems = useCallback(() => {
         const baseItems = [
             { label: "Dashboard", link: "/dashboard", roles: ["superadmin", "company", "recruiter"] },
             { label: "Applications", link: "/applications", roles: ["superadmin", "company", "recruiter"] },
@@ -70,7 +135,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
             {
                 label: "Profile",
                 link: `/details/${rootContext?.user?.id || 1}/${rootContext?.user?.name || ""}`,
-                roles: ["superadmin", "company"]
+                roles: ["superadmin", "company", "recruiter", "applicant"]
             },
             {
                 label: "Add Projects",
@@ -87,12 +152,12 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
         return [...baseItems, ...roleSpecificItems].filter(item =>
             item.roles.includes(role)
         );
-    };
+    }, [role, rootContext?.user?.id, rootContext?.user?.name]);
 
     const sidebarItems = getSidebarItems();
     const jobSeekerProfileLink = `/details/${rootContext?.user?.id || 1}/${rootContext?.user?.name || ""}`;
 
-    const linkClasses = (href) => {
+    const linkClasses = useCallback((href) => {
         const isActive =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
 
@@ -100,374 +165,7 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
             ? "text-purple-600 after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-full after:h-[3px] after:bg-purple-600"
             : "text-gray-700 hover:text-purple-600"
             }`;
-    };
-
-    // COMPLETELY ISOLATED mark chat as read function - NO GLOBAL STATE UPDATES
-    const markChatAsRead = useCallback(async (chatId, applicantId, companyId, jobId) => {
-        if (!stableAuthenticated.current || !stableUserId.current || !stableUserRole.current) return;
-
-        const chatKey = chatId || `${applicantId}-${companyId}-${jobId}`;
-
-        if (readChatsRef.current.has(chatKey)) {
-            return;
-        }
-
-        try {
-            readChatsRef.current.add(chatKey);
-
-            const response = await fetch('/api/chat/mark-read', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    chatId,
-                    applicantId,
-                    companyId,
-                    jobId,
-                    userId: stableUserId.current,
-                    userType: stableUserRole.current
-                })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                console.log('✅ Chat marked as read successfully');
-
-                // Update LOCAL state only - NO GLOBAL STATE
-                setLocalNotifications(prev => {
-                    const currentItems = prev.items || [];
-                    const updatedItems = currentItems.filter(item =>
-                        !(item.chatId === chatId ||
-                            (item.applicantId === applicantId &&
-                                item.companyId === companyId &&
-                                item.jobId === jobId))
-                    );
-
-                    const removedCount = currentItems.length - updatedItems.length;
-                    const currentUnreadCount = prev.unreadCount || 0;
-                    const newUnreadCount = Math.max(0, currentUnreadCount - removedCount);
-
-                    if (removedCount === 0 && currentUnreadCount === newUnreadCount) {
-                        return prev;
-                    }
-
-                    return {
-                        ...prev,
-                        items: updatedItems,
-                        unreadCount: newUnreadCount
-                    };
-                });
-            } else {
-                console.error('❌ Failed to mark chat as read:', result.error);
-                readChatsRef.current.delete(chatKey);
-            }
-        } catch (error) {
-            console.error('❌ Error marking chat as read:', error);
-            readChatsRef.current.delete(chatKey);
-        }
-    }, []); // Empty dependencies - completely isolated
-
-    // Stable notification click handler
-    const handleNotificationClick = useCallback((notification) => {
-        console.log('🔔 Notification clicked:', notification);
-
-        // Mark chat as read when notification is clicked
-        if (notification.chatId || (notification.applicantId && notification.companyId && notification.jobId)) {
-            markChatAsRead(
-                notification.chatId,
-                notification.applicantId,
-                notification.companyId,
-                notification.jobId
-            );
-        }
-
-        // Navigate based on user role
-        if (stableUserRole.current === 'company') {
-            router.push('/applications');
-        } else if (stableUserRole.current === 'applicant') {
-            router.push('/jobs');
-        }
-
-        setNotificationsOpen(false);
-    }, [router, markChatAsRead]);
-
-    // ULTRA-OPTIMIZED message polling - MINIMAL IMPACT ON OTHER COMPONENTS
-    const checkForNewMessages = useCallback(async () => {
-        // Prevent any concurrent processing
-        if (isProcessingRef.current) {
-            return;
-        }
-
-        // Very aggressive throttling
-        const now = Date.now();
-        if (now - lastPollTimeRef.current < 60000) { // 1 minute minimum between polls
-            return;
-        }
-
-        if (!stableAuthenticated.current || !stableUserId.current || !stableUserRole.current) return;
-
-        try {
-            isProcessingRef.current = true;
-            lastPollTimeRef.current = now;
-
-            const response = await fetch(`/api/chat/read?userId=${stableUserId.current}&userType=${stableUserRole.current}&timestamp=${now}`);
-            const result = await response.json();
-
-            if (result.success) {
-                const unreadChats = result.unreadChats || [];
-                const totalUnreadCount = result.unreadCount || 0;
-
-                // Filter out already read chats
-                const newUnreadChats = unreadChats.filter(chat =>
-                    !readChatsRef.current.has(chat.chatId) &&
-                    !readChatsRef.current.has(`${chat.applicantId}-${chat.companyId}-${chat.jobId}`)
-                );
-
-                if (newUnreadChats.length > 0 || totalUnreadCount !== localNotifications.unreadCount) {
-                    console.log('🔔 New unread chats found:', newUnreadChats.length);
-
-                    // Update LOCAL state only - NO GLOBAL STATE
-                    setLocalNotifications(prev => {
-                        const existingItems = prev.items || [];
-
-                        // Create new notifications
-                        const newNotifications = newUnreadChats.map(chat => {
-                            const otherUserName = stableUserRole.current === 'company' ? 'Candidate' : 'Company';
-                            const latestMessage = chat.messages && chat.messages.length > 0
-                                ? chat.messages[chat.messages.length - 1]
-                                : chat.lastMessage;
-
-                            return {
-                                id: `${chat.chatId}-${Date.now()}-${Math.random()}`,
-                                type: 'chat',
-                                title: otherUserName,
-                                message: latestMessage?.content || 'New message',
-                                timestamp: latestMessage?.timestamp || new Date().toISOString(),
-                                read: false,
-                                meta: chat.jobTitle,
-                                chatId: chat.chatId,
-                                applicantId: chat.applicantId,
-                                companyId: chat.companyId,
-                                jobId: chat.jobId,
-                                unreadCount: chat.unreadCount,
-                                onClick: () => handleNotificationClick({
-                                    chatId: chat.chatId,
-                                    applicantId: chat.applicantId,
-                                    companyId: chat.companyId,
-                                    jobId: chat.jobId
-                                })
-                            };
-                        });
-
-                        // Filter out duplicates
-                        const uniqueNewNotifications = newNotifications.filter(newNotif =>
-                            !existingItems.some(existingNotif =>
-                                existingNotif.chatId === newNotif.chatId &&
-                                existingNotif.message === newNotif.message
-                            )
-                        );
-
-                        const updatedItems = [...uniqueNewNotifications, ...existingItems].slice(0, 20);
-
-                        // Only update if something actually changed
-                        if (updatedItems.length === existingItems.length &&
-                            prev.unreadCount === totalUnreadCount) {
-                            return prev;
-                        }
-
-                        return {
-                            items: updatedItems,
-                            unreadCount: totalUnreadCount,
-                            lastChecked: new Date().toISOString()
-                        };
-                    });
-                }
-            }
-        } catch (error) {
-            console.error('❌ Error checking for new messages:', error);
-        } finally {
-            isProcessingRef.current = false;
-        }
-    }, [localNotifications.unreadCount, handleNotificationClick]);
-
-    // MINIMAL polling setup - ONLY RUNS WHEN ABSOLUTELY NECESSARY
-    useEffect(() => {
-        if (!stableAuthenticated.current) {
-            if (pollingRef.current) {
-                clearInterval(pollingRef.current);
-                pollingRef.current = null;
-            }
-            return;
-        }
-
-        // Only poll when page is visible AND user is active
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                if (pollingRef.current) {
-                    clearInterval(pollingRef.current);
-                    pollingRef.current = null;
-                }
-            } else {
-                // Wait a bit before starting polling on visibility change
-                setTimeout(() => {
-                    if (!pollingRef.current && !document.hidden) {
-                        pollingRef.current = setInterval(() => {
-                            checkForNewMessages();
-                        }, POLLING_INTERVAL);
-                    }
-                }, 5000); // 5 second delay after becoming visible
-            }
-        };
-
-        // Initial check after a long delay
-        const timeoutId = setTimeout(() => {
-            if (!document.hidden) {
-                checkForNewMessages();
-            }
-        }, 10000); // 10 second delay for initial check
-
-        // Only start polling if page is visible
-        if (!document.hidden) {
-            pollingRef.current = setInterval(() => {
-                checkForNewMessages();
-            }, POLLING_INTERVAL);
-        }
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-            clearTimeout(timeoutId);
-            if (pollingRef.current) {
-                clearInterval(pollingRef.current);
-                pollingRef.current = null;
-            }
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }, [stableAuthenticated.current, checkForNewMessages, POLLING_INTERVAL]);
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            if (pollingRef.current) {
-                clearInterval(pollingRef.current);
-                pollingRef.current = null;
-            }
-        };
-    }, []);
-
-    const NotificationBell = () => {
-        const unreadCount = localNotifications.unreadCount || 0;
-
-        const handleBellClick = () => {
-            setNotificationsOpen(!notificationsOpen);
-        };
-
-        return (
-            <div className="relative">
-                <button
-                    onClick={handleBellClick}
-                    className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                >
-                    <BellIcon className="w-5 h-5" />
-                    {unreadCount > 0 && (
-                        <span className="absolute -top-0.5 -right-1 bg-red-500 text-white text-[11px] rounded-full w-4 h-4 flex items-center justify-center">
-                            {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                    )}
-                </button>
-            </div>
-        );
-    };
-
-    // Local notification functions - NO GLOBAL STATE
-    const removeNotification = useCallback((notificationId) => {
-        setLocalNotifications(prev => {
-            const currentItems = prev.items || [];
-            const notification = currentItems.find(n => n.id === notificationId);
-            const newItems = currentItems.filter(n => n.id !== notificationId);
-
-            const currentUnreadCount = prev.unreadCount || 0;
-            const newUnreadCount = notification && !notification.read
-                ? Math.max(0, currentUnreadCount - (notification.unreadCount || 1))
-                : currentUnreadCount;
-
-            if (newItems.length === currentItems.length && currentUnreadCount === newUnreadCount) {
-                return prev;
-            }
-
-            return {
-                ...prev,
-                items: newItems,
-                unreadCount: newUnreadCount
-            };
-        });
-    }, []);
-
-    const markNotificationAsRead = useCallback((notificationId) => {
-        setLocalNotifications(prev => {
-            const currentItems = prev.items || [];
-            const notification = currentItems.find(n => n.id === notificationId);
-
-            if (!notification || notification.read) return prev;
-
-            // Mark chat as read
-            if (notification.chatId || (notification.applicantId && notification.companyId && notification.jobId)) {
-                markChatAsRead(
-                    notification.chatId,
-                    notification.applicantId,
-                    notification.companyId,
-                    notification.jobId
-                );
-            }
-
-            const newItems = currentItems.map(n =>
-                n.id === notificationId ? { ...n, read: true } : n
-            );
-
-            const currentUnreadCount = prev.unreadCount || 0;
-            const newUnreadCount = Math.max(0, currentUnreadCount - (notification.unreadCount || 1));
-
-            return {
-                ...prev,
-                items: newItems,
-                unreadCount: newUnreadCount
-            };
-        });
-    }, [markChatAsRead]);
-
-    const markAllNotificationsAsRead = useCallback(() => {
-        setLocalNotifications(prev => {
-            const currentItems = prev.items || [];
-
-            // Mark all chat notifications as read
-            currentItems.forEach(notification => {
-                if (!notification.read && (notification.chatId || (notification.applicantId && notification.companyId && notification.jobId))) {
-                    markChatAsRead(
-                        notification.chatId,
-                        notification.applicantId,
-                        notification.companyId,
-                        notification.jobId
-                    );
-                }
-            });
-
-            return {
-                ...prev,
-                items: currentItems.map(n => ({ ...n, read: true })),
-                unreadCount: 0
-            };
-        });
-    }, [markChatAsRead]);
-
-    const clearAllNotifications = useCallback(() => {
-        setLocalNotifications({
-            items: [],
-            unreadCount: 0,
-            lastChecked: new Date().toISOString()
-        });
-    }, []);
+    }, [pathname]);
 
     // Check if user can post jobs
     const canPostJobs = ["superadmin", "company", "recruiter"].includes(role);
@@ -543,20 +241,26 @@ export const Navbar = ({ rootContext, showLoader, logOut }) => {
                                 </div>
                             )}
 
-                            {/* Notification Bell - USES LOCAL STATE ONLY */}
-                            <NotificationBell />
+                            {/* Notification Bell */}
+                            <NotificationBell
+                                unreadCount={notifications.unreadCount || 0}
+                                isLoading={isLoading}
+                                error={error}
+                                onBellClick={handleBellClick}
+                            />
 
-                            {/* Notification Dropdown - USES LOCAL STATE ONLY */}
-                            {notificationsOpen && (
+                            {/* Notification Dropdown */}
+                            {isNotificationDropdownOpen && (
                                 <NotificationDropdown
-                                    notifications={localNotifications.items || []}
-                                    unreadCount={localNotifications.unreadCount || 0}
+                                    notifications={notifications.items || []}
+                                    unreadCount={notifications.unreadCount || 0}
                                     onCloseNotification={removeNotification}
                                     onMarkAsRead={markNotificationAsRead}
                                     onMarkAllAsRead={markAllNotificationsAsRead}
                                     onClearAll={clearAllNotifications}
-                                    onCloseDropdown={() => setNotificationsOpen(false)}
+                                    onCloseDropdown={() => toggleNotificationDropdown(false)}
                                     onNotificationClick={handleNotificationClick}
+                                    isLoading={isLoading}
                                 />
                             )}
 

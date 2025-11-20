@@ -297,7 +297,7 @@ const ApplicationList = () => {
 
     const handleOpenChatWithCandidate = async (candidate, chatId = null) => {
         let targetChatId = chatId;
-
+        console.log("candidate", candidate)
         if (!targetChatId) {
             const chat = data[0].chats?.find(chat =>
                 chat.applicantId?.toString() === candidate.applicantId &&
@@ -318,14 +318,12 @@ const ApplicationList = () => {
             profileImage: candidate.profileImage,
             jobTitle: candidate.jobTitle,
             jobId: candidate.jobId,
-            applicantProfile: {
-                name: candidate.applicantName || candidate.name || 'Candidate',
-                position: candidate.position || 'Real Estate Professional',
-                profileImage: candidate.profileImage
+            applicantProfile: candidate.applicantProfile || {
+                applicantName: candidate.applicantName || candidate.name || 'Candidate',
+                profileImage: candidate.profileImage,
+                jobTitle: candidate.jobTitle
             }
         };
-
-        console.log('Opening chat with candidate:', candidateData);
         setSelectedCandidate(candidateData);
         setIsChatOpen(true);
     };

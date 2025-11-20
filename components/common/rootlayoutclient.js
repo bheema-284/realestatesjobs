@@ -1,7 +1,7 @@
 'use client';
 import "../../app/globals.css";
-import React, { useEffect, useState } from "react";
-import RootContext from "@/components/config/rootcontext";
+import React, { useEffect, useState, useContext } from "react";
+import RootContext, { RootContextProvider } from "@/components/config/rootcontext";
 import Loader from "@/components/common/loader";
 import Toast from "@/components/common/toast";
 import { usePathname, useRouter } from "next/navigation";
@@ -12,177 +12,119 @@ import { Navbar } from "@/components/common/navbar";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
-export default function RootLayoutClient({ children }) {
+// Inner component that uses the context
+function LayoutContent({ children }) {
     const pathName = usePathname();
     const router = useRouter();
-    const [ready, setReady] = useState(false);
+    const [showLoader, setShowLoader] = useState(true);
     const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-    const [rootContext, setRootContext] = useState({
-        authenticated: false,
-        loader: true,
-        user: {
-            name: "",
-            email: "",
-            mobile: "",
-            password: "",
-            token: "",
-            isAdmin: "",
-            role: "" // Added role field
-        },
-        accessToken: '',
-        remember: false,
-        toast: {
-            show: false,
-            dismiss: true,
-            type: '',
-            title: '',
-            message: ''
-        },
-        jobs: [],
-        notification: false,
-        tasksColumns: [],
-        schedule: []
-    });
+
+    const {
+        rootContext,
+        logOut,
+        markNotificationAsRead,
+        markAllNotificationsAsRead,
+        removeNotification,
+        clearAllNotifications,
+        toggleNotificationDropdown,
+        setNotificationsLoading,
+        setNotificationsError,
+        updateNotifications,
+        refreshUserData
+    } = useContext(RootContext);
 
     useEffect(() => {
-        const user_details = typeof window !== "undefined" && JSON.parse(localStorage.getItem("user_details"));
-        const updatedContext = { ...rootContext, loader: false };
+        if (!rootContext.loader) {
+            const role = rootContext?.user?.role;
+            const authenticated = rootContext?.authenticated;
 
-        if (user_details) {
-            updatedContext.authenticated = true;
-            updatedContext.user = { ...updatedContext.user, ...user_details };
-        } else {
-            updatedContext.authenticated = false;
-        }
-
-        setRootContext(updatedContext);
-        setReady(true);
-    }, []);
-
-    useEffect(() => {
-        if (!ready) return;
-
-        const role = rootContext?.user?.role;
-        const authenticated = rootContext?.authenticated;
-
-        const publicRoutes = [
-            "/",
-            "/about",
-            "/companies",
-            "/jobs",
-            "/login",
-            "/signup"
-        ];
-
-        // Define role-based allowed routes
-        const getAllowedRoutes = (userRole) => {
-            const baseRoutes = [
+            const publicRoutes = [
                 "/",
                 "/about",
-                "/services",
-                "/details"
+                "/companies",
+                "/jobs",
+                "/login",
+                "/signup"
             ];
 
-            const roleSpecificRoutes = {
-                applicant: [
-                    "/jobs",
-                    "/companies",
-                    `/details/${rootContext?.user?.id || 1}/${rootContext?.user?.name || ""}`,
-                    "/projects"
-                ],
-                recruiter: [
-                    "/dashboard",
-                    "/applications",
-                    "/candidates",
-                    "/tasks",
-                    "/calendar",
-                    "/analytics",
-                    "/settings",
-                    "/projects"
-                ],
-                company: [
-                    "/dashboard",
-                    "/applications",
-                    "/candidates",
-                    "/tasks",
-                    "/calendar",
-                    "/analytics",
-                    "/settings",
-                    "/projects",
-                    "/recruiters"
-                ],
-                superadmin: [
-                    "/dashboard",
-                    "/applications",
-                    "/candidates",
-                    "/tasks",
-                    "/calendar",
-                    "/analytics",
-                    "/settings",
-                    "/projects",
-                    "/recruiters",
-                    "/admin"
-                ]
+            // Define role-based allowed routes
+            const getAllowedRoutes = (userRole) => {
+                const baseRoutes = [
+                    "/",
+                    "/about",
+                    "/services",
+                    "/details"
+                ];
+
+                const roleSpecificRoutes = {
+                    applicant: [
+                        "/jobs",
+                        "/companies",
+                        `/details/${rootContext?.user?.id || 1}/${rootContext?.user?.name || ""}`,
+                        "/projects"
+                    ],
+                    recruiter: [
+                        "/dashboard",
+                        "/applications",
+                        "/candidates",
+                        "/tasks",
+                        "/calendar",
+                        "/analytics",
+                        "/settings",
+                        "/projects"
+                    ],
+                    company: [
+                        "/dashboard",
+                        "/applications",
+                        "/candidates",
+                        "/tasks",
+                        "/calendar",
+                        "/analytics",
+                        "/settings",
+                        "/projects",
+                        "/recruiters"
+                    ],
+                    superadmin: [
+                        "/dashboard",
+                        "/applications",
+                        "/candidates",
+                        "/tasks",
+                        "/calendar",
+                        "/analytics",
+                        "/settings",
+                        "/projects",
+                        "/recruiters",
+                        "/admin"
+                    ]
+                };
+
+                return [...baseRoutes, ...(roleSpecificRoutes[userRole] || [])];
             };
 
-            return [...baseRoutes, ...(roleSpecificRoutes[userRole] || [])];
-        };
+            // Redirect logic
+            if (authenticated) {
+                const allowedRoutes = getAllowedRoutes(role);
+                const isAllowed = allowedRoutes.some(route => pathName.startsWith(route));
 
-        // Redirect logic
-        if (authenticated) {
-            const allowedRoutes = getAllowedRoutes(role);
-            const isAllowed = allowedRoutes.some(route => pathName.startsWith(route));
-
-            if (!isAllowed) {
-                // Redirect to appropriate default page based on role
-                const defaultRoutes = {
-                    applicant: "/",
-                    recruiter: "/dashboard",
-                    company: "/dashboard",
-                    superadmin: "/dashboard"
-                };
-                router.push(defaultRoutes[role] || "/");
-            }
-        } else {
-            // If not authenticated and trying to access protected route, redirect to login
-            const isPublicRoute = publicRoutes.some(route => pathName === route || pathName.startsWith(route));
-            if (!isPublicRoute) {
-                router.push("/login");
+                if (!isAllowed) {
+                    // Redirect to appropriate default page based on role
+                    const defaultRoutes = {
+                        applicant: "/",
+                        recruiter: "/dashboard",
+                        company: "/dashboard",
+                        superadmin: "/dashboard"
+                    };
+                    router.push(defaultRoutes[role] || "/");
+                }
+            } else {
+                // If not authenticated and trying to access protected route, redirect to login
+                const isPublicRoute = publicRoutes.some(route => pathName === route || pathName.startsWith(route));
+                if (!isPublicRoute) {
+                    router.push("/login");
+                }
             }
         }
-    }, [ready, rootContext, pathName, router]);
-
-    const logOut = () => {
-        localStorage.clear();
-        const updatedContext = {
-            ...rootContext,
-            authenticated: false,
-            loader: true,
-            user: {
-                name: "",
-                email: "",
-                mobile: "",
-                role: "",
-                password: "",
-                token: "",
-                isAdmin: "",
-            },
-            accessToken: '',
-            remember: false,
-            toast: {
-                show: false,
-                dismiss: true,
-                type: '',
-                title: '',
-                message: ''
-            }
-        };
-
-        setRootContext(updatedContext);
-        router.push(`/`);
-    };
-
-    const [showLoader, setShowLoader] = useState(true);
+    }, [rootContext, pathName, router]);
 
     useEffect(() => {
         setShowLoader(true);
@@ -192,7 +134,7 @@ export default function RootLayoutClient({ children }) {
         return () => clearTimeout(timer);
     }, [pathName]);
 
-    // Check if sidebar should be shown - FIXED VERSION
+    // Check if sidebar should be shown
     const shouldShowSidebar = () => {
         if (!rootContext.authenticated) {
             return false;
@@ -225,39 +167,56 @@ export default function RootLayoutClient({ children }) {
     };
 
     return (
+        <>
+            {(pathName !== "/login" && pathName !== "/signup") && (
+                <Navbar
+                    rootContext={rootContext}
+                    showLoader={showLoader}
+                    logOut={logOut}
+                    // Pass all notification functions to Navbar
+                    markNotificationAsRead={markNotificationAsRead}
+                    markAllNotificationsAsRead={markAllNotificationsAsRead}
+                    removeNotification={removeNotification}
+                    clearAllNotifications={clearAllNotifications}
+                    toggleNotificationDropdown={toggleNotificationDropdown}
+                    setNotificationsLoading={setNotificationsLoading}
+                    setNotificationsError={setNotificationsError}
+                    updateNotifications={updateNotifications}
+                    refreshUserData={refreshUserData}
+                />
+            )}
+            <div className={`${(pathName === "/login" || pathName === "/signup") ? "pt-0" : "pt-26 sm:pt-20"} flex`}>
+                {rootContext.loader && <Loader />}
+
+                {/* Sidebar */}
+                {shouldShowSidebar() && (
+                    <Sidebar
+                        isMobileOpen={isMobileSidebarOpen}
+                        toggleSidebar={setMobileSidebarOpen}
+                        userRole={rootContext?.user?.role}
+                        authenticated={rootContext.authenticated}
+                    />
+                )}
+
+                {/* Main content */}
+                <main className={`w-full ${shouldShowSidebar() ? 'lg:ml-64' : ''}`}>
+                    {children}
+                </main>
+            </div>
+            {(pathName !== "/login" && pathName !== "/signup") && <Footer />}
+            {rootContext?.toast && <Toast />}
+        </>
+    );
+}
+
+// Main layout component
+export default function RootLayoutClient({ children }) {
+    return (
         <html lang="en" className={inter.variable}>
             <body className="w-full mx-auto">
-                <RootContext.Provider value={{ rootContext, setRootContext }}>
-                    {(pathName !== "/login" && pathName !== "/signup") && (
-                        <Navbar rootContext={rootContext} showLoader={showLoader} logOut={logOut} />
-                    )}
-                    <div className={`${(pathName === "/login" || pathName === "/signup") ? "pt-0" : "pt-26 sm:pt-20"} flex`}>
-                        {!ready && <Loader />}
-
-                        {/* Sidebar for authenticated users with specific roles */}
-                        {(rootContext?.user?.role === "recruiter" || rootContext?.user?.role === "company" || rootContext?.user?.role === "superadmin") &&
-                            rootContext.authenticated &&
-                            pathName !== "/" &&
-                            pathName !== "/services" &&
-                            pathName !== "/about" &&
-                            pathName !== "/login" &&
-                            pathName !== "/signup" && (
-                                <Sidebar
-                                    isMobileOpen={isMobileSidebarOpen}
-                                    toggleSidebar={setMobileSidebarOpen}
-                                    userRole={rootContext?.user?.role}
-                                    authenticated={rootContext.authenticated} // Add this line
-                                />
-                            )}
-
-                        {/* Main content */}
-                        <main className={`w-full ${shouldShowSidebar() ? 'lg:ml-64' : ''}`}>
-                            {children}
-                        </main>
-                    </div>
-                    {(pathName !== "/login" && pathName !== "/signup") && <Footer />}
-                    {rootContext?.toast && <Toast />}
-                </RootContext.Provider>
+                <RootContextProvider>
+                    <LayoutContent children={children} />
+                </RootContextProvider>
             </body>
         </html>
     );
