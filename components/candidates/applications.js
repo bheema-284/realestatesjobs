@@ -159,6 +159,7 @@ const ApplicationItem = React.memo(({
             title={userRole === 'applicant' ? "Chat with Company" : "Chat with Applicant"}
           >
             <ChatBubbleLeftRightIcon className="w-4 h-4" />
+            Chat
           </button>
 
           {/* Withdraw Button - Only for applicants */}
@@ -170,6 +171,7 @@ const ApplicationItem = React.memo(({
               title="Withdraw Application"
             >
               <TrashIcon className="w-4 h-4" />
+              Withdraw
             </button>
           )}
         </div>

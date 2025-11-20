@@ -3,7 +3,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 
 function Slider({ data, imageSize = "400px", rounded }) {
     const [imagesData, setImagesData] = useState(data || []);
-    const [currentSlide, setCurrentSlide] = useState(0); // Start from 0 for simpler logic
+    const [currentSlide, setCurrentSlide] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(true);
     const [loadedImages, setLoadedImages] = useState(new Set());
 
@@ -31,35 +31,37 @@ function Slider({ data, imageSize = "400px", rounded }) {
         }
     }, [data]);
 
-    // --- Navigation Functions ---
+    // --- Navigation Functions (Stabilized) ---
+    // IMPORTANT: Removed 'currentSlide' from dependencies because we use the functional update form of setCurrentSlide.
+    // This makes nextSlide and prevSlide stable, preventing the auto-scroll useEffect from restarting on every slide change.
     const nextSlide = useCallback(() => {
         if (imagesData.length <= 1 || !isMountedRef.current) return;
 
         setCurrentSlide((prev) => {
             const next = prev + 1;
-            return next >= imagesData.length ? 0 : next;
+            const newIndex = next >= imagesData.length ? 0 : next;
+            console.log("➡️ Next slide calculated index:", newIndex);
+            return newIndex;
         });
         setIsTransitioning(true);
-
-        console.log("➡️ Next slide:", currentSlide + 1, "of", imagesData.length);
-    }, [imagesData.length, currentSlide]);
+    }, [imagesData.length]); // Dependency: Only imagesData.length
 
     const prevSlide = useCallback(() => {
         if (imagesData.length <= 1 || !isMountedRef.current) return;
 
         setCurrentSlide((prev) => {
             const next = prev - 1;
-            return next < 0 ? imagesData.length - 1 : next;
+            const newIndex = next < 0 ? imagesData.length - 1 : next;
+            console.log("⬅️ Previous slide calculated index:", newIndex);
+            return newIndex;
         });
         setIsTransitioning(true);
+    }, [imagesData.length]); // Dependency: Only imagesData.length
 
-        console.log("⬅️ Previous slide:", currentSlide - 1, "of", imagesData.length);
-    }, [imagesData.length, currentSlide]);
-
-    // --- FIXED Auto-scroll Effect ---
+    // --- Auto-scroll Effect (Now much more stable) ---
     useEffect(() => {
+        // If 0 or 1 image, ensure the interval is cleared.
         if (imagesData.length <= 1) {
-            // Clear interval if only one image
             if (autoScrollRef.current) {
                 clearInterval(autoScrollRef.current);
                 autoScrollRef.current = null;
@@ -75,6 +77,7 @@ function Slider({ data, imageSize = "400px", rounded }) {
         console.log("🔄 Starting auto-scroll with", imagesData.length, "images");
 
         // Start new interval
+        // We rely on the stable 'nextSlide' created above.
         autoScrollRef.current = setInterval(() => {
             if (isMountedRef.current && !isDragging) {
                 nextSlide();
@@ -88,7 +91,7 @@ function Slider({ data, imageSize = "400px", rounded }) {
                 autoScrollRef.current = null;
             }
         };
-    }, [imagesData.length, isDragging, nextSlide]);
+    }, [imagesData.length, isDragging, nextSlide]); // Dependencies only change when data size or dragging state changes
 
     // --- Infinite Loop Logic ---
     const handleTransitionEnd = useCallback(() => {
@@ -98,12 +101,11 @@ function Slider({ data, imageSize = "400px", rounded }) {
         setIsTransitioning(false);
 
         console.log("🔄 Transition ended at slide:", currentSlide);
-    }, [currentSlide]);
+    }, [currentSlide]); // Must depend on currentSlide to read the new value
 
     // --- Image Loading Handlers ---
     const handleImageLoad = useCallback((imageUrl) => {
         if (!isMountedRef.current) return;
-        console.log("✅ Image loaded:", imageUrl);
         setLoadedImages(prev => {
             const newSet = new Set(prev);
             newSet.add(imageUrl);
@@ -114,6 +116,7 @@ function Slider({ data, imageSize = "400px", rounded }) {
     const handleImageError = useCallback((e, imageUrl) => {
         if (!isMountedRef.current) return;
         console.warn("❌ Failed to load image:", imageUrl);
+        // Fallback placeholder image
         e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='12' fill='%239ca3af'%3EImage%3C/text%3E%3C/svg%3E";
 
         setLoadedImages(prev => {
@@ -127,8 +130,6 @@ function Slider({ data, imageSize = "400px", rounded }) {
     useEffect(() => {
         if (imagesData.length <= 1) return;
 
-        console.log("📥 Preloading images...");
-
         imagesData.forEach((item, index) => {
             const imageUrl = item?.image;
             if (imageUrl && !loadedImages.has(imageUrl)) {
@@ -136,7 +137,6 @@ function Slider({ data, imageSize = "400px", rounded }) {
                 img.src = imageUrl;
                 img.onload = () => handleImageLoad(imageUrl);
                 img.onerror = () => handleImageLoad(imageUrl);
-                console.log(`📥 Preloading image ${index + 1}:`, imageUrl);
             }
         });
     }, [imagesData, loadedImages, handleImageLoad]);
@@ -144,7 +144,6 @@ function Slider({ data, imageSize = "400px", rounded }) {
     // --- SWIPE HANDLERS ---
     const handleDragStart = useCallback((clientX) => {
         if (imagesData.length <= 1) return;
-        console.log("🖱️ Drag started");
         setIsTransitioning(false);
         setIsDragging(true);
         setDragStartX(clientX);
@@ -165,7 +164,6 @@ function Slider({ data, imageSize = "400px", rounded }) {
     const handleDragEnd = useCallback(() => {
         if (!isDragging || imagesData.length <= 1) return;
 
-        console.log("🖱️ Drag ended");
         setIsDragging(false);
         setIsTransitioning(true);
 
@@ -179,11 +177,18 @@ function Slider({ data, imageSize = "400px", rounded }) {
 
         // Restart auto-scroll after interaction
         if (!autoScrollRef.current && imagesData.length > 1) {
-            autoScrollRef.current = setInterval(nextSlide, AUTO_SCROLL_INTERVAL);
+            // Use a small timeout before restarting the interval to ensure the state updates finish
+            setTimeout(() => {
+                // Check again if still not dragging before starting
+                if (!isDragging) {
+                    autoScrollRef.current = setInterval(nextSlide, AUTO_SCROLL_INTERVAL);
+                }
+            }, 100);
         }
     }, [isDragging, dragDistance, imagesData.length, prevSlide, nextSlide]);
 
-    // Event Handlers
+
+    // Event Handlers for Mouse/Touch
     const onMouseDown = (e) => {
         e.preventDefault();
         handleDragStart(e.clientX);
@@ -209,13 +214,12 @@ function Slider({ data, imageSize = "400px", rounded }) {
     };
 
     const onTouchStart = (e) => {
-        e.preventDefault();
+        e.stopPropagation(); // Stop propagation to prevent conflicts with parent scrolling
         handleDragStart(e.touches[0].clientX);
     };
 
     const onTouchMove = (e) => {
         if (!isDragging) return;
-        e.preventDefault();
         handleDragMove(e.touches[0].clientX);
     };
 
@@ -244,17 +248,6 @@ function Slider({ data, imageSize = "400px", rounded }) {
         };
     }, []);
 
-    // Debug current state
-    useEffect(() => {
-        console.log("🎠 Slider State:", {
-            totalImages: imagesData.length,
-            currentSlide,
-            isTransitioning,
-            isDragging,
-            loadedImages: loadedImages.size
-        });
-    }, [imagesData.length, currentSlide, isTransitioning, isDragging, loadedImages.size]);
-
     // Early return if no data
     if (!data || data.length === 0) {
         return (
@@ -272,7 +265,7 @@ function Slider({ data, imageSize = "400px", rounded }) {
         return (
             <div className={`relative w-full bg-white overflow-hidden ${rounded}`} style={{ height: imageSize }}>
                 {singleImage?.status && (
-                    <span className="absolute top-3 left-3 bg-orange-300 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30">
+                    <span className="absolute top-3 left-3 bg-orange-300 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30 rounded">
                         {singleImage.status}
                     </span>
                 )}
@@ -293,38 +286,40 @@ function Slider({ data, imageSize = "400px", rounded }) {
     return (
         <div
             ref={sliderContainerRef}
-            className={`relative w-full bg-white overflow-hidden ${rounded}`}
+            className={`relative w-full bg-white overflow-hidden shadow-xl ${rounded || 'rounded-lg'}`}
             style={{ height: imageSize }}
         >
             <div className="relative w-full h-full">
                 {/* Fixed label */}
                 {currentSlideData?.status && (
-                    <span className="absolute top-3 left-3 bg-orange-300 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30">
+                    <span className="absolute top-3 left-3 bg-orange-500 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30 rounded">
                         {currentSlideData.status}
                     </span>
                 )}
 
                 {/* Loading indicator */}
                 {!loadedImages.has(currentSlideData?.image) && currentSlideData?.image && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-                        <span className="ml-2 text-gray-600">Loading image {currentSlide + 1} of {imagesData.length}</span>
+                        <span className="ml-3 text-gray-600 font-medium">Loading image {currentSlide + 1} of {imagesData.length}</span>
                     </div>
                 )}
 
                 {/* Slides wrapper */}
                 <div
-                    className={`flex h-full cursor-grab active:cursor-grabbing ${isTransitioning && !isDragging ? "transition-transform duration-500 ease-in-out" : ""
+                    className={`flex h-full select-none ${isTransitioning && !isDragging ? "transition-transform duration-500 ease-in-out" : ""
                         }`}
                     style={{
                         transform: totalTranslateX,
                         width: `${imagesData.length * 100}%`
                     }}
                     onTransitionEnd={handleTransitionEnd}
+                    // Mouse events for desktop dragging
                     onMouseDown={onMouseDown}
                     onMouseMove={onMouseMove}
                     onMouseUp={onMouseUp}
                     onMouseLeave={onMouseLeave}
+                    // Touch events for mobile swiping
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
@@ -340,7 +335,7 @@ function Slider({ data, imageSize = "400px", rounded }) {
                                     <img
                                         src={item.image}
                                         alt={`carousel-${index}`}
-                                        className="object-cover w-full h-full select-none"
+                                        className="object-cover w-full h-full"
                                         draggable="false"
                                         loading={index === currentSlide ? "eager" : "lazy"}
                                         onLoad={() => handleImageLoad(item.image)}
@@ -348,7 +343,7 @@ function Slider({ data, imageSize = "400px", rounded }) {
                                     />
                                 ) : (
                                     <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                        <div className="text-gray-400 text-sm">No image</div>
+                                        <div className="text-gray-400 text-sm">No image provided</div>
                                     </div>
                                 )}
                             </div>
@@ -360,18 +355,20 @@ function Slider({ data, imageSize = "400px", rounded }) {
             {/* Navigation buttons */}
             {imagesData.length > 1 && (
                 <>
+                    {/* Previous Button */}
                     <button
                         type="button"
-                        className="absolute top-1/2 left-2 z-20 flex items-center justify-center w-10 h-10 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="absolute top-1/2 left-2 z-20 flex items-center justify-center w-10 h-10 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                         onClick={prevSlide}
                         aria-label="Previous slide"
                     >
                         <ChevronLeftIcon className="w-6 h-6 text-gray-700" />
                     </button>
 
+                    {/* Next Button */}
                     <button
                         type="button"
-                        className="absolute top-1/2 right-2 z-20 flex items-center justify-center w-10 h-10 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="absolute top-1/2 right-2 z-20 flex items-center justify-center w-10 h-10 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                         onClick={nextSlide}
                         aria-label="Next slide"
                     >
@@ -383,9 +380,9 @@ function Slider({ data, imageSize = "400px", rounded }) {
                         {imagesData.map((_, index) => (
                             <button
                                 key={index}
-                                className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentSlide
-                                        ? 'bg-white scale-125'
-                                        : 'bg-white/50'
+                                className={`w-3 h-3 rounded-full transition-all duration-300 shadow ${index === currentSlide
+                                    ? 'bg-orange-500 scale-125'
+                                    : 'bg-white/70 hover:bg-white'
                                     }`}
                                 onClick={() => {
                                     setCurrentSlide(index);

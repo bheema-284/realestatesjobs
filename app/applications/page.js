@@ -777,20 +777,7 @@ export default function Jobs() {
         return item.categorySlug === categorySlug;
     });
 
-
-    // Auto-select first tab that has jobs
-    useEffect(() => {
-        if (jobList.length > 0 && activeTab === 0) {
-            // Find the first category that has jobs
-            const firstCategoryWithJobs = jobCategories.findIndex(category => {
-                return jobList.some(job => job.categorySlug === category.slug);
-            });
-
-            if (firstCategoryWithJobs !== -1 && firstCategoryWithJobs !== activeTab) {
-                setActiveTab(firstCategoryWithJobs);
-            }
-        }
-    }, [jobList, activeTab]);
+    // REMOVED: Auto-tab switching useEffect
 
     const handleCategoryClick = (categoryTitle) => {
         const currentCategory = jobCategories.find(cat => cat.title === categoryTitle);
@@ -893,14 +880,15 @@ export default function Jobs() {
         return parts.length > 0 ? parts.join(', ') : 'Flexible';
     };
 
-    // Enhanced tabs with job counts
+    // Enhanced tabs with job counts - Add job count badges
     const tabs = jobCategories.map((job, index) => {
         const categorySlug = job.slug;
+        const jobCount = jobList.filter(item => item.categorySlug === categorySlug).length;
 
         return {
             name: (
                 <div key={index} className="flex flex-wrap items-center gap-2 text-left">
-                    <div className="flex flex-col">
+                    <div className="flex flex-col relative">
                         <img
                             src={job.icon}
                             alt={job.title}
@@ -908,6 +896,13 @@ export default function Jobs() {
                         />
                         <span className="text-sm font-semibold">{job.title}</span>
                         <span className="text-xs text-gray-500">{job.description}</span>
+
+                        {/* Job count badge */}
+                        {jobCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                {jobCount}
+                            </span>
+                        )}
                     </div>
                 </div>
             ),
