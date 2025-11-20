@@ -136,35 +136,28 @@ function LayoutContent({ children }) {
 
     // Check if sidebar should be shown
     const shouldShowSidebar = () => {
-        if (!rootContext.authenticated) {
-            return false;
-        }
-
         const role = rootContext?.user?.role;
+        const isAuth = rootContext?.authenticated;
 
-        // Roles that should see sidebar
-        const sidebarRoles = ["recruiter", "company", "superadmin"];
+        if (!isAuth) return false;
 
-        if (!sidebarRoles.includes(role)) {
-            return false;
-        }
+        const allowedRoles = ["recruiter", "company", "superadmin"];
 
-        // Don't show sidebar on these pages
+        if (!allowedRoles.includes(role)) return false;
+
         const noSidebarRoutes = [
-            "/",
-            "/services",
-            "/about",
             "/login",
             "/signup",
+            "/",
+            "/about",
+            "/services",
             "/jobs",
             "/companies"
         ];
 
-        const shouldShow = !noSidebarRoutes.some(route =>
-            pathName === route || pathName.startsWith(route)
-        );
-        return shouldShow;
+        return !noSidebarRoutes.includes(pathName);
     };
+
 
     return (
         <>
@@ -199,7 +192,7 @@ function LayoutContent({ children }) {
                 )}
 
                 {/* Main content */}
-                <main className={`w-full ${shouldShowSidebar() ? 'lg:ml-64' : ''}`}>
+                <main className={`w-full`}>
                     {children}
                 </main>
             </div>
@@ -215,7 +208,7 @@ export default function RootLayoutClient({ children }) {
         <html lang="en" className={inter.variable}>
             <body className="w-full mx-auto">
                 <RootContextProvider>
-                    <LayoutContent children={children} />
+                    <LayoutContent>{children}</LayoutContent>
                 </RootContextProvider>
             </body>
         </html>
