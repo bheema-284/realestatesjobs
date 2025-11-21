@@ -6,7 +6,6 @@ import RootContext from "../config/rootcontext";
 import { contextObject } from "../config/contextobject";
 import { usePathname, useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
-import { companyData } from "../config/data";
 import Image from "next/image";
 import { useSWRFetch } from "../config/useswrfetch";
 import ForgetPassword from "./forgetpassword";
@@ -30,6 +29,42 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Create flattened array of all users (main users + recruiters)
+  const allUsers = [
+    ...(users || []).map(u => ({
+      ...u,
+      name: u.name || "",
+      email: u.email || "",
+      mobile: u.mobile || "",
+      password: u.password || "",
+      isRecruiter: false,
+      userType: "main"
+    })),
+    ...(users || []).flatMap(c =>
+      (c.recruiters || []).map(r => ({
+        ...r,
+        name: r.name || "",
+        email: r.email || "",
+        mobile: r.mobile || "",
+        password: r.password || "",
+        isRecruiter: true,
+        userType: "recruiter",
+        companyId: c._id,
+        companyName: c.name,
+        companyProfileImage: c.profileImage,
+        mainUserRole: c.role
+      }))
+    )
+  ];
+
+  // Superadmin credentials
+  const SUPERADMIN_CREDENTIALS = {
+    email: "superadmin@realestatejobs.co.in",
+    password: "Superadmin@2025"
+  };
+
+  console.log("allUsers", allUsers);
+
   const handleChange = (e, field) => {
     const updated = { ...formData };
 
@@ -48,26 +83,53 @@ const SignIn = () => {
     setFormData(updated);
   };
 
-  const authenticateUser = async (email, password) => {
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+  // Function to check if it's superadmin login
+  const isSuperAdminLogin = (email, password) => {
+    return email.toLowerCase() === SUPERADMIN_CREDENTIALS.email.toLowerCase() &&
+      password === SUPERADMIN_CREDENTIALS.password;
+  };
+
+  // Function to find user in the flattened allUsers array
+  const findUserByEmail = (email) => {
+    if (!allUsers || !Array.isArray(allUsers)) return null;
+
+    const searchEmail = email.toLowerCase();
+
+    // Find user in the flattened allUsers array
+    const userDetail = allUsers.find((user) =>
+      user.email && user.email.toLowerCase() === searchEmail
+    );
+
+    return userDetail || null;
+  };
+
+  // Simple authentication function that checks against users data
+  const authenticateUser = (email, password) => {
+    // Check for superadmin first
+    if (isSuperAdminLogin(email, password)) {
+      return {
+        success: true,
+        user: {
+          role: "superadmin",
+          email: email,
+          name: "Super Administrator"
         },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Authentication failed');
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      throw error;
+        token: "superadmin-token-" + Date.now()
+      };
     }
+
+    // Find user in the allUsers data
+    const userDetail = findUserByEmail(email);
+
+    if (!userDetail) {
+      throw new Error('User not found. Please check your email address.');
+    }
+
+    return {
+      success: true,
+      user: userDetail,
+      token: "user-token-" + Date.now() + "-" + (userDetail._id || userDetail.id)
+    };
   };
 
   const onSave = async (e) => {
@@ -80,46 +142,94 @@ const SignIn = () => {
         throw new Error('Please fill in all fields');
       }
 
-      // Authenticate user via API
-      const authResult = await authenticateUser(formData.email, formData.password);
+      // Authenticate user against users data
+      const authResult = authenticateUser(formData.email, formData.password);
 
-      // Find user details from local data (for name, etc.)
-      const allUsers = [...(users || []), ...(companyData || [])];
-      const userDetail = allUsers.find((c) => c.email.includes(formData.email));
+      // Prepare user session data
+      let userSessionData;
+
+      if (authResult.user?.role === "superadmin") {
+        // Superadmin login
+        userSessionData = {
+          name: "Super Administrator",
+          email: formData.email,
+          mobile: "",
+          role: "superadmin",
+          token: authResult.token,
+          id: "superadmin-" + Date.now(),
+          isSuperAdmin: true,
+          permissions: {
+            canPostJobs: true,
+            canViewApplications: true,
+            canManageJobs: true,
+            canManageRecruiters: true,
+            canManageCompanies: true,
+            canManageAllData: true,
+            canAccessAnalytics: true,
+            canManageUsers: true
+          }
+        };
+      } else {
+        // Regular user or recruiter login
+        const userDetail = authResult.user;
+
+        userSessionData = {
+          name: userDetail.name || formData.email.split("@")[0],
+          email: formData.email,
+          mobile: userDetail.mobile || "",
+          role: userDetail.role || (userDetail.isRecruiter ? "recruiter" : "user"),
+          token: authResult.token,
+          id: userDetail._id || userDetail.id,
+          ...(userDetail.isRecruiter && {
+            companyId: userDetail.companyId,
+            companyName: userDetail.companyName,
+            companyProfileImage: userDetail.companyProfileImage,
+            permissions: userDetail.permissions || {
+              canPostJobs: true,
+              canViewApplications: true,
+              canManageJobs: false,
+              canManageRecruiters: false
+            },
+            isRecruiter: true,
+            mainUserRole: userDetail.mainUserRole,
+            recruiterId: userDetail._id || userDetail.id
+          })
+        };
+      }
 
       // Success - Create user session
-      const username = userDetail?.name || formData.email.split("@")[0];
       const resp = {
         ...contextObject,
         authenticated: true,
-        user: {
-          name: username,
-          email: formData.email,
-          mobile: userDetail?.mobile || "",
-          role: authResult.user?.role || "applicant",
-          token: authResult.token,
-          id: userDetail?._id || authResult.user?._id || 1,
-        },
+        user: userSessionData,
         remember: formData.remember,
       };
+
+      // Set appropriate success message based on user type
+      let successMessage = "Welcome back!";
+      let successTitle = "Login Successful";
+
+      if (userSessionData.role === "superadmin") {
+        successMessage = "Welcome Super Administrator! Full system access granted.";
+        successTitle = "Superadmin Login Successful";
+      } else if (userSessionData.isRecruiter) {
+        successMessage = `Welcome back, ${userSessionData.name}! (Recruiter Access)`;
+        successTitle = "Recruiter Login Successful";
+      } else {
+        successMessage = `Welcome back, ${userSessionData.name}!`;
+        successTitle = "Login Successful";
+      }
 
       setRootContext(prev => ({
         ...prev,
         authenticated: true,
-        user: {
-          name: username,
-          email: formData.email,
-          mobile: userDetail?.mobile || "",
-          role: authResult.user?.role || "applicant",
-          token: authResult.token,
-          id: userDetail?._id || authResult.user?._id || 1,
-        },
+        user: userSessionData,
         toast: {
           show: true,
           dismiss: true,
           type: "success",
-          title: "Login Successful",
-          message: "Welcome back!",
+          title: successTitle,
+          message: successMessage,
         },
       }));
 
@@ -130,14 +240,16 @@ const SignIn = () => {
         sessionStorage.setItem("user_details", JSON.stringify(resp.user));
       }
       localStorage.setItem("user_details", JSON.stringify(resp.user));
+
       // Store auth token
       localStorage.setItem("auth_token", authResult.token);
+
+      // Redirect based on role and current path
       if (pathname === "/login") {
         router.push('/');
       } else {
         router.back();
       }
-
 
     } catch (error) {
       setRootContext((prev) => ({
@@ -188,87 +300,108 @@ const SignIn = () => {
         </div>
 
         {/* Right Side - Login Form */}
-        {screen === "login" ? <div className="w-full md:w-[45%] p-8 md:p-10 bg-white/80 flex flex-col justify-center">
-          <div className="mb-6 flex justify-center">
-            <Image
-              alt="logo"
-              width={160}
-              height={60}
-              src="/logo.webp"
-            />
-          </div>
+        {screen === "login" ? (
+          <div className="w-full md:w-[45%] p-8 md:p-10 bg-white/80 flex flex-col justify-center">
+            <div className="mb-6 flex justify-center">
+              <Image
+                alt="logo"
+                width={160}
+                height={60}
+                src="/logo.webp"
+              />
+            </div>
 
-          <form className="space-y-5 bg-white p-6 rounded-lg">
-            <Input
-              title="Your Email"
-              type="text"
-              placeholder="Enter Email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              onBlur={(e) => handleChange(e, "email")}
-              isError={isEmail.errVisible}
-              errormsg="Enter Valid Email"
-              required
-            />
-
-            <div className="relative">
+            <form className="space-y-5 bg-white p-6 rounded-lg">
               <Input
-                title="Password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter Password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                title="Your Email"
+                type="text"
+                placeholder="Enter Email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onBlur={(e) => handleChange(e, "email")}
+                isError={isEmail.errVisible}
+                errormsg="Enter Valid Email"
                 required
               />
-              <span
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
-              >
-                {showPassword ? (
-                  <EyeIcon className="w-4 h-4" />
-                ) : (
-                  <EyeSlashIcon className="w-4 h-4" />
-                )}
-              </span>
-            </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-start">
-                <CheckBox
-                  isChecked={formData.remember}
-                  onChange={(e) => handleChange(e, "remember")}
+              <div className="relative">
+                <Input
+                  title="Password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter Password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
                 />
-                <label className="ml-2 text-sm text-gray-500">Remember me</label>
+                <span
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
+                >
+                  {showPassword ? (
+                    <EyeIcon className="w-4 h-4" />
+                  ) : (
+                    <EyeSlashIcon className="w-4 h-4" />
+                  )}
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setScreen("otp")}
-                className="text-sm font-semibold text-purple-500 hover:underline"
-              >
-                Forgot Password?
-              </button>
-            </div>
 
-            <div className="flex justify-center pt-2">
-              <Button
-                disabled={!formData.email || !formData.password || isEmail.errVisible}
-                type="button"
-                onClick={onSave}
-                title="Sign In"
-              />
-            </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-start">
+                  <CheckBox
+                    isChecked={formData.remember}
+                    onChange={(e) => handleChange(e, "remember")}
+                  />
+                  <label className="ml-2 text-sm text-gray-500">Remember me</label>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setScreen("otp")}
+                  className="text-sm font-semibold text-purple-500 hover:underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
 
-            <p className="text-sm text-gray-500 text-center pt-3">
-              New User?{" "}
-              <span
-                onClick={() => router.push("/signup")}
-                className="font-medium cursor-pointer text-purple-500 hover:underline"
-              >
-                Sign up Now
-              </span>
-            </p>
-          </form>
-        </div> : <div className="w-full md:w-[45%] p-8 md:p-10 bg-white/80 flex flex-col justify-center">  <ForgetPassword setScreen={setScreen} /></div>}
+              <div className="flex justify-center pt-2">
+                <Button
+                  disabled={!formData.email || !formData.password || isEmail.errVisible}
+                  type="button"
+                  onClick={onSave}
+                  title="Sign In"
+                />
+              </div>
+
+              <p className="text-sm text-gray-500 text-center pt-3">
+                New User?{" "}
+                <span
+                  onClick={() => router.push("/signup")}
+                  className="font-medium cursor-pointer text-purple-500 hover:underline"
+                >
+                  Sign up Now
+                </span>
+              </p>
+
+              {/* Updated Info message about different access levels */}
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-700 text-center">
+                  <strong>Access Levels:</strong>
+                  <br />
+                  • <strong>Superadmin:</strong> Full system access & management
+                  <br />
+                  • <strong>Companies:</strong> Post jobs, manage recruiters & projects
+                  <br />
+                  • <strong>Recruiters:</strong> Post jobs & view applications
+                  <br />
+                  • <strong>Applicants:</strong> Apply jobs & manage profile
+                </p>
+              </div>
+            </form>
+          </div>
+        ) : (
+          <div className="w-full md:w-[45%] p-8 md:p-10 bg-white/80 flex flex-col justify-center">
+            <ForgetPassword setScreen={setScreen} />
+          </div>
+        )}
       </div>
     </section>
   );

@@ -34,6 +34,12 @@ const resetPasswordSchema = Joi.object({
     newPassword: Joi.string().min(6).required(),
 }).xor("email", "mobile"); // only one allowed
 
+const recruiterResetPasswordSchema = Joi.object({
+    recruiterEmail: Joi.string().email().required(),
+    newPassword: Joi.string().min(6).required(),
+    resetBy: Joi.string().required(), // companyId or 'superadmin'
+});
+
 // -------------------- Helpers for Cloudinary --------------------
 
 // Upload a buffer to Cloudinary; folder is full path like `users/${userId}/projects`
@@ -461,16 +467,95 @@ async function handleMediaUploads(formData, updateFields, existingUser, userId) 
  */
 function processRecruitersData(newRecruiters, existingRecruiters) {
     return newRecruiters.map(recruiter => {
-        const existingRecruiter = existingRecruiters.find(r => r.id === recruiter.id) || {};
+        const existingRecruiter =
+            existingRecruiters.find(r => r.id === recruiter.id) || {};
 
         return {
             ...existingRecruiter,
             ...recruiter,
-            id: recruiter.id || existingRecruiter.id || `recruiter-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-            joinDate: recruiter.joinDate || existingRecruiter.joinDate || new Date().toISOString().split('T')[0],
-            updatedAt: new Date().toISOString()
+
+            // never overwrite password with empty string
+            password: recruiter.password || existingRecruiter.password,
+
+            id:
+                recruiter.id ||
+                existingRecruiter.id ||
+                `recruiter-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+
+            joinDate:
+                recruiter.joinDate ||
+                existingRecruiter.joinDate ||
+                new Date().toISOString().split("T")[0],
+
+            updatedAt: new Date().toISOString(),
         };
     });
+}
+
+// -------------------- Recruiter Password Reset Helper --------------------
+async function resetRecruiterPassword(recruiterEmail, newPassword, resetBy) {
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DBNAME);
+    const usersCollection = db.collection("rej_users");
+
+    console.log('🔄 Resetting recruiter password:', { recruiterEmail, resetBy });
+
+    // Find the company that has this recruiter
+    const company = await usersCollection.findOne({
+        "recruiters.email": recruiterEmail.toLowerCase().trim()
+    });
+
+    if (!company) {
+        throw new Error("Recruiter not found in any company");
+    }
+
+    // Find the specific recruiter
+    const recruiter = company.recruiters.find(rec =>
+        rec.email?.toLowerCase().trim() === recruiterEmail.toLowerCase().trim()
+    );
+
+    if (!recruiter) {
+        throw new Error("Recruiter not found in company");
+    }
+
+    // Check permissions
+    if (resetBy !== 'superadmin') {
+        // If resetBy is a company ID, check if this company owns the recruiter
+        if (company._id.toString() !== resetBy) {
+            throw new Error("You don't have permission to reset this recruiter's password");
+        }
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the recruiter's password in the company's recruiters array
+    const result = await usersCollection.updateOne(
+        {
+            _id: company._id,
+            "recruiters.email": recruiterEmail.toLowerCase().trim()
+        },
+        {
+            $set: {
+                "recruiters.$.password": hashedPassword,
+                "recruiters.$.updatedAt": new Date().toISOString(),
+                "recruiters.$.lastUpdated": new Date()
+            }
+        }
+    );
+
+    if (result.modifiedCount === 0) {
+        throw new Error("Failed to update recruiter password");
+    }
+
+    console.log('✅ Recruiter password reset successfully');
+    return {
+        success: true,
+        message: "Recruiter password reset successfully",
+        recruiterName: recruiter.name,
+        recruiterEmail: recruiter.email,
+        companyName: company.name
+    };
 }
 
 // -------------------- PUT handler (main) --------------------
@@ -489,7 +574,40 @@ export async function PUT(request) {
         if (contentType.includes("application/json")) {
             const body = await request.json();
 
-            // Check if this is a reset password request
+            // 🔹 Handle Recruiter Password Reset
+            if (body.resetRecruiterPassword && body.recruiterEmail) {
+                console.log('🔄 Processing recruiter password reset request');
+
+                const { error, value } = recruiterResetPasswordSchema.validate({
+                    recruiterEmail: body.recruiterEmail,
+                    newPassword: body.newPassword,
+                    resetBy: body.resetBy
+                });
+
+                if (error) {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: error.details[0].message
+                    }), { status: 400 });
+                }
+
+                try {
+                    const result = await resetRecruiterPassword(
+                        value.recruiterEmail,
+                        value.newPassword,
+                        value.resetBy
+                    );
+
+                    return new Response(JSON.stringify(result), { status: 200 });
+                } catch (error) {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: error.message
+                    }), { status: 400 });
+                }
+            }
+
+            // 🔹 Handle Regular User Password Reset
             if (body.resetPassword && (body.email || body.mobile)) {
                 const { error, value } = resetPasswordSchema.validate({
                     email: body.email,
@@ -498,7 +616,10 @@ export async function PUT(request) {
                 });
 
                 if (error) {
-                    return new Response(JSON.stringify({ error: error.details[0].message }), { status: 400 });
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: error.details[0].message
+                    }), { status: 400 });
                 }
 
                 // Find user by email or mobile
@@ -509,6 +630,7 @@ export async function PUT(request) {
                 const user = await usersCollection.findOne(query);
                 if (!user) {
                     return new Response(JSON.stringify({
+                        success: false,
                         error: "User not found with provided email or mobile"
                     }), { status: 404 });
                 }
@@ -529,6 +651,7 @@ export async function PUT(request) {
 
                 if (result.modifiedCount === 0) {
                     return new Response(JSON.stringify({
+                        success: false,
                         error: "Failed to reset password"
                     }), { status: 500 });
                 }
@@ -551,6 +674,45 @@ export async function PUT(request) {
             const mobile = formData.get("mobile");
             const newPassword = formData.get("newPassword");
 
+            // 🔹 Handle Recruiter Password Reset via FormData
+            const resetRecruiterPasswordFlag = formData.get("resetRecruiterPassword");
+            const recruiterEmail = formData.get("recruiterEmail");
+            const resetBy = formData.get("resetBy");
+
+            if (resetRecruiterPasswordFlag === "true" && recruiterEmail && resetBy) {
+                console.log('🔄 Processing recruiter password reset via FormData');
+
+                const newPassword = formData.get("newPassword");
+
+                const { error, value } = recruiterResetPasswordSchema.validate({
+                    recruiterEmail: recruiterEmail,
+                    newPassword: newPassword,
+                    resetBy: resetBy
+                });
+
+                if (error) {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: error.details[0].message
+                    }), { status: 400 });
+                }
+
+                try {
+                    const result = await resetRecruiterPassword(
+                        value.recruiterEmail,
+                        value.newPassword,
+                        value.resetBy
+                    );
+
+                    return new Response(JSON.stringify(result), { status: 200 });
+                } catch (error) {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: error.message
+                    }), { status: 400 });
+                }
+            }
+
             if (resetPassword === "true" && (email || mobile) && newPassword) {
                 // Validate reset password data using Joi schema
                 const { error, value } = resetPasswordSchema.validate({
@@ -560,7 +722,10 @@ export async function PUT(request) {
                 });
 
                 if (error) {
-                    return new Response(JSON.stringify({ error: error.details[0].message }), { status: 400 });
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: error.details[0].message
+                    }), { status: 400 });
                 }
 
                 // Find user by email or mobile
@@ -571,6 +736,7 @@ export async function PUT(request) {
                 const user = await usersCollection.findOne(query);
                 if (!user) {
                     return new Response(JSON.stringify({
+                        success: false,
                         error: "User not found with provided email or mobile"
                     }), { status: 404 });
                 }
@@ -591,6 +757,7 @@ export async function PUT(request) {
 
                 if (result.modifiedCount === 0) {
                     return new Response(JSON.stringify({
+                        success: false,
                         error: "Failed to reset password"
                     }), { status: 500 });
                 }
@@ -603,11 +770,17 @@ export async function PUT(request) {
 
             // Regular profile update (not reset password)
             if (!userId)
-                return new Response(JSON.stringify({ error: "User ID required" }), { status: 400 });
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: "User ID required"
+                }), { status: 400 });
 
             const existingUser = await usersCollection.findOne({ _id: new ObjectId(userId) });
             if (!existingUser)
-                return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: "User not found"
+                }), { status: 404 });
 
             // 🔹 CRITICAL FIX: Only update fields that are provided, keep existing data
             updateFields.updatedAt = new Date();
@@ -639,12 +812,14 @@ export async function PUT(request) {
                 const isCurrentPasswordValid = await bcrypt.compare(currentPassword, existingUser.password);
                 if (!isCurrentPasswordValid) {
                     return new Response(JSON.stringify({
+                        success: false,
                         error: "Current password is incorrect"
                     }), { status: 400 });
                 }
 
                 if (newPasswordChange.length < 6) {
                     return new Response(JSON.stringify({
+                        success: false,
                         error: "New password must be at least 6 characters long"
                     }), { status: 400 });
                 }
@@ -755,6 +930,7 @@ export async function PUT(request) {
                         } else {
                             return new Response(
                                 JSON.stringify({
+                                    success: false,
                                     error: "Only company, superadmin, and recruiter roles can manage projects",
                                 }),
                                 { status: 403 }
@@ -769,72 +945,68 @@ export async function PUT(request) {
 
             // 🔹 Handle Recruiters - ONLY for company, superadmin roles
             const recruitersData = formData.get("recruiters");
+
             if (recruitersData) {
                 try {
                     const parsedRecruiters = JSON.parse(recruitersData);
+
                     if (Array.isArray(parsedRecruiters)) {
-                        // Check if user has permission to manage recruiters
+                        // 🔹 Permission check
                         if (["company", "superadmin"].includes(existingUser.role)) {
 
-                            // Process recruiters to ensure they have MongoDB ObjectIds
-                            const processedRecruiters = parsedRecruiters.map(recruiter => {
-                                // If recruiter doesn't have _id, create a new ObjectId
-                                if (!recruiter._id) {
-                                    const recruiterObjectId = new ObjectId();
+                            const processedRecruiters = await Promise.all(
+                                parsedRecruiters.map(async recruiter => {
+
+                                    let finalPassword = undefined;
+
+                                    // 🔹 If frontend sends password → hash it
+                                    if (recruiter.password && recruiter.password.trim() !== "") {
+                                        const salt = await bcrypt.genSalt(10);
+                                        finalPassword = await bcrypt.hash(recruiter.password, salt);
+                                    }
+
+                                    // 🔹 Ensure correct _id handling
+                                    if (!recruiter._id) {
+                                        return {
+                                            ...recruiter,
+                                            password: finalPassword || undefined, // don't overwrite if not sent
+                                            _id: new ObjectId(),
+                                            id: recruiter.id || `recruiter-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                                            addedDate: recruiter.addedDate || new Date(),
+                                            lastUpdated: new Date(),
+                                            updatedAt: new Date(),
+                                        };
+                                    }
+
+                                    if (recruiter._id && typeof recruiter._id === "string") {
+                                        return {
+                                            ...recruiter,
+                                            password: finalPassword || undefined,
+                                            _id: new ObjectId(recruiter._id),
+                                            lastUpdated: new Date(),
+                                            updatedAt: new Date(),
+                                        };
+                                    }
+
+                                    // Existing recruiter (keep old password unless new one provided)
                                     return {
                                         ...recruiter,
-                                        _id: recruiterObjectId,
-                                        id: `recruiter-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // Keep your existing ID format
-                                        addedDate: recruiter.addedDate || new Date(),
+                                        password: finalPassword || recruiter.password,
                                         lastUpdated: new Date(),
-                                        updatedAt: new Date()
+                                        updatedAt: new Date(),
                                     };
-                                }
+                                })
+                            );
 
-                                // If recruiter has _id but it's a string, convert to ObjectId
-                                if (recruiter._id && typeof recruiter._id === 'string') {
-                                    return {
-                                        ...recruiter,
-                                        _id: new ObjectId(recruiter._id),
-                                        lastUpdated: new Date(),
-                                        updatedAt: new Date()
-                                    };
-                                }
-
-                                // Existing recruiter with proper ObjectId, just update timestamps
-                                return {
-                                    ...recruiter,
-                                    lastUpdated: new Date(),
-                                    updatedAt: new Date()
-                                };
-                            });
-
-                            updateFields.recruiters = processRecruitersData(processedRecruiters, existingUser.recruiters || []);
+                            updateFields.recruiters = processRecruitersData(
+                                processedRecruiters,
+                                existingUser.recruiters || []
+                            );
                         }
                     }
-                } catch (error) {
-                    // If recruiters is not JSON, handle as regular field
-                    console.warn("Recruiters field is not valid JSON, treating as text");
+                } catch (err) {
+                    console.warn("Recruiters JSON invalid:", err);
                     updateFields.recruiters = recruitersData;
-                }
-            }
-
-            // 🔹 Handle Experience with documents
-            const experienceData = formData.get("experience");
-            if (experienceData) {
-                try {
-                    const parsedExperience = JSON.parse(experienceData);
-                    if (Array.isArray(parsedExperience)) {
-                        updateFields.experience = await processExperienceDocuments(
-                            formData,
-                            parsedExperience,
-                            userId,
-                            existingUser.experience || []
-                        );
-                    }
-                } catch (error) {
-                    console.warn("Experience field is not valid JSON, treating as text");
-                    updateFields.experience = experienceData;
                 }
             }
 
@@ -865,6 +1037,7 @@ export async function PUT(request) {
                 // Skip fields we've already processed and system fields
                 if (key === 'id' || key === 'userId' || key === 'image' || key === 'resume' ||
                     key === 'currentPassword' || key === 'newPassword' || key === 'resetPassword' ||
+                    key === 'resetRecruiterPassword' || key === 'recruiterEmail' || key === 'resetBy' ||
                     key.startsWith('galleryImage_') || key.startsWith('video_') || key.startsWith('projectImage_') ||
                     key.startsWith('projectGallery_') || key.startsWith('projectDocuments_') ||
                     key.startsWith('experienceDoc_') || key.startsWith('educationDoc_') ||
@@ -931,7 +1104,10 @@ export async function PUT(request) {
             );
 
             if (result.matchedCount === 0)
-                return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: "User not found"
+                }), { status: 404 });
 
             return new Response(JSON.stringify({
                 success: true,
@@ -944,6 +1120,39 @@ export async function PUT(request) {
         // ✅ Handle JSON request for regular profile updates
         const body = await request.json();
 
+        // 🔹 Handle Recruiter Password Reset in JSON
+        if (body.resetRecruiterPassword && body.recruiterEmail) {
+            console.log('🔄 Processing recruiter password reset request');
+
+            const { error, value } = recruiterResetPasswordSchema.validate({
+                recruiterEmail: body.recruiterEmail,
+                newPassword: body.newPassword,
+                resetBy: body.resetBy
+            });
+
+            if (error) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: error.details[0].message
+                }), { status: 400 });
+            }
+
+            try {
+                const result = await resetRecruiterPassword(
+                    value.recruiterEmail,
+                    value.newPassword,
+                    value.resetBy
+                );
+
+                return new Response(JSON.stringify(result), { status: 200 });
+            } catch (error) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: error.message
+                }), { status: 400 });
+            }
+        }
+
         // Check if this is a reset password request in JSON
         if (body.resetPassword && (body.email || body.mobile)) {
             const { error, value } = resetPasswordSchema.validate({
@@ -953,7 +1162,10 @@ export async function PUT(request) {
             });
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.details[0].message }), { status: 400 });
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: error.details[0].message
+                }), { status: 400 });
             }
 
             // Find user by email or mobile
@@ -964,6 +1176,7 @@ export async function PUT(request) {
             const user = await usersCollection.findOne(query);
             if (!user) {
                 return new Response(JSON.stringify({
+                    success: false,
                     error: "User not found with provided email or mobile"
                 }), { status: 404 });
             }
@@ -984,6 +1197,7 @@ export async function PUT(request) {
 
             if (result.modifiedCount === 0) {
                 return new Response(JSON.stringify({
+                    success: false,
                     error: "Failed to reset password"
                 }), { status: 500 });
             }
@@ -997,11 +1211,17 @@ export async function PUT(request) {
         // Regular JSON profile update
         userId = body.id || body.userId;
         if (!userId)
-            return new Response(JSON.stringify({ error: "User ID required" }), { status: 400 });
+            return new Response(JSON.stringify({
+                success: false,
+                error: "User ID required"
+            }), { status: 400 });
 
         const existingUser = await usersCollection.findOne({ _id: new ObjectId(userId) });
         if (!existingUser)
-            return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
+            return new Response(JSON.stringify({
+                success: false,
+                error: "User not found"
+            }), { status: 404 });
 
         // 🔹 CRITICAL FIX: Only update fields that are provided
         updateFields.updatedAt = new Date();
@@ -1009,7 +1229,7 @@ export async function PUT(request) {
         // 🔹 Handle ALL fields from the request body
         for (const [field, value] of Object.entries(body)) {
             // Skip system fields
-            if (field === 'id' || field === 'userId' || field === 'resetPassword') {
+            if (field === 'id' || field === 'userId' || field === 'resetPassword' || field === 'resetRecruiterPassword') {
                 continue;
             }
 
@@ -1017,6 +1237,7 @@ export async function PUT(request) {
             if (field === "password" && value) {
                 if (value.length < 6) {
                     return new Response(JSON.stringify({
+                        success: false,
                         error: "Password must be at least 6 characters long"
                     }), { status: 400 });
                 }
@@ -1029,6 +1250,7 @@ export async function PUT(request) {
                 const isCurrentPasswordValid = await bcrypt.compare(value, existingUser.password);
                 if (!isCurrentPasswordValid) {
                     return new Response(JSON.stringify({
+                        success: false,
                         error: "Current password is incorrect"
                     }), { status: 400 });
                 }
@@ -1038,6 +1260,7 @@ export async function PUT(request) {
             if (field === "newPassword" && body.currentPassword) {
                 if (value.length < 6) {
                     return new Response(JSON.stringify({
+                        success: false,
                         error: "New password must be at least 6 characters long"
                     }), { status: 400 });
                 }
@@ -1048,12 +1271,14 @@ export async function PUT(request) {
             // Handle role-specific restrictions
             if (field === "projects" && !["company", "superadmin", "recruiter"].includes(existingUser.role)) {
                 return new Response(JSON.stringify({
+                    success: false,
                     error: "Only company, superadmin, and recruiter roles can manage projects"
                 }), { status: 403 });
             }
 
             if (field === "recruiters" && !["company", "superadmin"].includes(existingUser.role)) {
                 return new Response(JSON.stringify({
+                    success: false,
                     error: "Only company and superadmin roles can manage recruiters"
                 }), { status: 403 });
             }
@@ -1090,6 +1315,7 @@ export async function PUT(request) {
                 );
             } else {
                 return new Response(JSON.stringify({
+                    success: false,
                     error: "Only company, superadmin, and recruiter roles can manage projects"
                 }), { status: 403 });
             }
@@ -1102,7 +1328,10 @@ export async function PUT(request) {
         );
 
         if (result.matchedCount === 0)
-            return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
+            return new Response(JSON.stringify({
+                success: false,
+                error: "User not found"
+            }), { status: 404 });
 
         return new Response(JSON.stringify({
             success: true,
@@ -1113,7 +1342,10 @@ export async function PUT(request) {
 
     } catch (err) {
         console.error("PUT /api/users error:", err);
-        return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+        return new Response(JSON.stringify({
+            success: false,
+            error: err.message
+        }), { status: 500 });
     }
 }
 
@@ -1121,107 +1353,314 @@ export async function PUT(request) {
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { error, value } = userSchema.validate(body);
+        const { email, password, isRecruiter, companyId } = body;
 
-        if (error)
+        console.log('🔐 Login attempt for:', email, 'isRecruiter:', isRecruiter);
+
+        // Basic validation
+        if (!email || !password) {
             return new Response(
-                JSON.stringify({ error: error.details[0].message }),
+                JSON.stringify({ error: "Email and password are required" }),
                 { status: 400 }
             );
+        }
 
         const client = await clientPromise;
         const db = client.db(process.env.MONGODB_DBNAME);
         const users = db.collection("rej_users");
 
-        // ✅ Check duplicate email only in rej_users
-        const existingUser = await users.findOne({ email: value.email });
-        if (existingUser) {
-            return new Response(
-                JSON.stringify({ error: "Email already exists" }),
-                { status: 400 }
-            );
-        }
+        const normalizedEmail = email.toLowerCase().trim();
 
-        // ✅ Hash password
-        const hashedPw = await bcrypt.hash(value.password, 10);
+        // If it's explicitly a recruiter login
+        if (isRecruiter) {
+            console.log('🔍 Searching for recruiter...');
 
-        // ✅ Common user data
-        const userBaseData = {
-            name: value.name,
-            email: value.email,
-            password: hashedPw,
-            profileImage: "",
-            summary: "",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-        };
+            let company = null;
+            let recruiter = null;
 
-        // ✅ Role-based user details
-        let newUser;
+            // Try to find recruiter by email in any company
+            const companies = await users.find({
+                "recruiters.email": normalizedEmail
+            }).toArray();
 
-        if (value.role === "applicant") {
-            newUser = {
-                ...userBaseData,
-                role: "applicant",
-                mobile: "",
-                experience: [],
-                education: [],
-                skills: [],
-                resume: "",
-                applications: [],
-                projects: [],
-                dateOfBirth: "",
-                gender: "",
-                location: "",
+            for (const comp of companies) {
+                const foundRecruiter = comp.recruiters.find(rec =>
+                    rec.email?.toLowerCase().trim() === normalizedEmail
+                );
+                if (foundRecruiter) {
+                    company = comp;
+                    recruiter = foundRecruiter;
+                    break;
+                }
+            }
+
+            if (!recruiter) {
+                console.log('❌ Recruiter not found with email:', normalizedEmail);
+                return new Response(
+                    JSON.stringify({ error: "Invalid email or password" }),
+                    { status: 401 }
+                );
+            }
+
+            console.log('✅ Found recruiter:', recruiter.email);
+            console.log('🔑 Password check - Input:', password.substring(0, 3) + '...', 'Stored:', recruiter.password?.substring(0, 10) + '...');
+
+            // Check if recruiter has password
+            if (!recruiter.password) {
+                console.log('❌ Recruiter has no password set');
+                return new Response(
+                    JSON.stringify({ error: "Invalid email or password" }),
+                    { status: 401 }
+                );
+            }
+
+            // Verify password
+            const isValidPassword = await bcrypt.compare(password, recruiter.password);
+            console.log('🔑 Password comparison result:', isValidPassword);
+
+            if (!isValidPassword) {
+                console.log('❌ Recruiter password incorrect');
+                return new Response(
+                    JSON.stringify({ error: "Invalid email or password" }),
+                    { status: 401 }
+                );
+            }
+
+            // Check if recruiter is active
+            if (recruiter.isActive === false) {
+                console.log('❌ Recruiter account deactivated');
+                return new Response(
+                    JSON.stringify({ error: "Your account has been deactivated" }),
+                    { status: 403 }
+                );
+            }
+
+            // Generate token and prepare response
+            const userData = {
+                _id: recruiter._id || new ObjectId(),
+                name: recruiter.name,
+                email: recruiter.email,
+                phone: recruiter.phone || recruiter.mobile,
+                isRecruiter: true,
+                companyId: company._id,
+                companyName: company.name,
+                companyProfileImage: company.profileImage,
+                mainUserRole: company.role,
+                permissions: recruiter.permissions || {
+                    canPostJobs: true,
+                    canViewApplications: true,
+                    canManageJobs: false,
+                    canManageRecruiters: false
+                },
+                isActive: recruiter.isActive !== false
             };
-        } else if (["company", "superadmin", "recruiter"].includes(value.role)) {
-            newUser = {
-                ...userBaseData,
-                role: value.role,
-                companyId: new ObjectId(), // Just for internal linking if needed later
-                name: value.name,
-                mobile: "",
-                experience: [],
-                education: [],
-                skills: [],
-                resume: "",
-                applications: [],
-                projects: [],
-                position:
-                    value.role === "company"
-                        ? "Founder/CEO"
-                        : value.role === "superadmin"
-                            ? "Administrator"
-                            : "Recruiter",
-                dateOfBirth: "",
-                gender: "",
-                location: "",
-            };
-        } else {
-            return new Response(
-                JSON.stringify({ error: "Invalid role specified" }),
-                { status: 400 }
-            );
-        }
 
-        // ✅ Insert only into rej_users
-        const userResult = await users.insertOne(newUser);
-
-        return new Response(
-            JSON.stringify({
+            const token = generateAuthToken(userData);
+            const responseData = {
                 success: true,
-                message: "User registered successfully",
-                insertedId: userResult.insertedId,
-                role: value.role,
-            }),
-            { status: 200 }
-        );
+                user: {
+                    _id: userData._id,
+                    name: userData.name,
+                    email: userData.email,
+                    role: "recruiter",
+                    mobile: userData.phone || "",
+                    companyId: userData.companyId,
+                    companyName: userData.companyName,
+                    companyProfileImage: userData.companyProfileImage,
+                    permissions: userData.permissions,
+                    isRecruiter: true,
+                    mainUserRole: userData.mainUserRole,
+                    recruiterId: userData._id
+                },
+                token: token
+            };
+
+            console.log('🎉 Recruiter login successful for:', userData.email);
+            return new Response(JSON.stringify(responseData), { status: 200 });
+
+        } else {
+            // Handle regular user login
+            console.log('🔍 Searching for regular user...');
+            const regularUser = await users.findOne({
+                email: normalizedEmail
+            });
+
+            if (!regularUser) {
+                console.log('❌ Regular user not found');
+                return new Response(
+                    JSON.stringify({ error: "Invalid email or password" }),
+                    { status: 401 }
+                );
+            }
+
+            console.log('✅ Found regular user:', regularUser.email);
+
+            // Verify password
+            const isValidPassword = await bcrypt.compare(password, regularUser.password);
+            if (!isValidPassword) {
+                console.log('❌ Regular user password incorrect');
+                return new Response(
+                    JSON.stringify({ error: "Invalid email or password" }),
+                    { status: 401 }
+                );
+            }
+
+            // Generate token and prepare response
+            const token = generateAuthToken(regularUser);
+            const responseData = {
+                success: true,
+                user: {
+                    _id: regularUser._id,
+                    name: regularUser.name,
+                    email: regularUser.email,
+                    role: regularUser.role || "user",
+                    mobile: regularUser.mobile || "",
+                    isRecruiter: false
+                },
+                token: token
+            };
+
+            console.log('🎉 Regular user login successful for:', regularUser.email);
+            return new Response(JSON.stringify(responseData), { status: 200 });
+        }
+
     } catch (err) {
-        console.error("❌ POST Error:", err);
-        return new Response(JSON.stringify({ error: err.message }), {
-            status: 500,
-        });
+        console.error("❌ POST Login Error:", err);
+        return new Response(
+            JSON.stringify({ error: "Internal server error. Please try again later." }),
+            { status: 500 }
+        );
     }
+}
+
+// Helper function to handle recruiter login
+async function handleRecruiterLogin(recruiter, company, password) {
+    try {
+        console.log('🔑 Recruiter password check for:', recruiter.email);
+        console.log('📝 Recruiter data:', {
+            email: recruiter.email,
+            hasPassword: !!recruiter.password,
+            passwordLength: recruiter.password?.length,
+            passwordPreview: recruiter.password?.substring(0, 20) + '...'
+        });
+
+        // Check if recruiter has a password
+        if (!recruiter.password) {
+            console.log('❌ Recruiter has no password set');
+            return null;
+        }
+
+        // Verify password
+        const isValidPassword = await bcrypt.compare(password, recruiter.password);
+        console.log('🔑 Password comparison result:', isValidPassword);
+
+        if (!isValidPassword) {
+            console.log('❌ Recruiter password incorrect');
+            return null;
+        }
+
+        // Prepare user data
+        return {
+            _id: recruiter._id || recruiter.id || new ObjectId(),
+            name: recruiter.name,
+            email: recruiter.email,
+            phone: recruiter.phone || recruiter.mobile,
+            isRecruiter: true,
+            companyId: company._id,
+            companyName: company.name,
+            companyProfileImage: company.profileImage,
+            mainUserRole: company.role,
+            permissions: recruiter.permissions || getDefaultRecruiterPermissions(),
+            isActive: recruiter.isActive !== false
+        };
+    } catch (error) {
+        console.error('❌ Error in handleRecruiterLogin:', error);
+        return null;
+    }
+}
+
+// Helper function to handle regular user login
+async function handleRegularUserLogin(regularUser, password) {
+    try {
+        console.log('🔑 Regular user password check for:', regularUser.email);
+
+        if (!regularUser.password) {
+            console.log('❌ User has no password set');
+            return null;
+        }
+
+        const isValidPassword = await bcrypt.compare(password, regularUser.password);
+        console.log('🔑 Password comparison result:', isValidPassword);
+
+        if (!isValidPassword) {
+            console.log('❌ User password incorrect');
+            return null;
+        }
+
+        return {
+            ...regularUser,
+            isRecruiter: false
+        };
+    } catch (error) {
+        console.error('❌ Error in handleRegularUserLogin:', error);
+        return null;
+    }
+}
+
+// Helper function for default recruiter permissions
+function getDefaultRecruiterPermissions() {
+    return {
+        canPostJobs: true,
+        canViewApplications: true,
+        canManageJobs: false,
+        canManageRecruiters: false,
+        canEditCompanyProfile: false
+    };
+}
+
+// Helper function to prepare response data
+function prepareResponseData(userData, token) {
+    const baseUser = {
+        _id: userData._id || userData.id,
+        name: userData.name,
+        email: userData.email,
+        role: userData.isRecruiter ? "recruiter" : userData.role,
+        mobile: userData.mobile || userData.phone || "",
+        isActive: userData.isActive !== false
+    };
+
+    if (userData.isRecruiter) {
+        baseUser.companyId = userData.companyId;
+        baseUser.companyName = userData.companyName;
+        baseUser.companyProfileImage = userData.companyProfileImage;
+        baseUser.permissions = userData.permissions;
+        baseUser.isRecruiter = true;
+        baseUser.mainUserRole = userData.mainUserRole;
+        baseUser.recruiterId = userData._id || userData.id;
+    }
+
+    return {
+        success: true,
+        user: baseUser,
+        token: token
+    };
+}
+
+// Helper function to generate auth token (unchanged)
+function generateAuthToken(userData) {
+    const tokenData = {
+        id: userData._id || userData.id,
+        email: userData.email,
+        role: userData.isRecruiter ? "recruiter" : userData.role,
+        isRecruiter: userData.isRecruiter || false,
+        timestamp: Date.now(),
+        ...(userData.isRecruiter && {
+            companyId: userData.companyId,
+            permissions: userData.permissions
+        })
+    };
+
+    return Buffer.from(JSON.stringify(tokenData)).toString('base64');
 }
 
 export async function GET(req) {

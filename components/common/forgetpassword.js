@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, Fragment, useContext } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { EyeIcon, EyeSlashIcon, InformationCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { EyeIcon, EyeSlashIcon, InformationCircleIcon, XMarkIcon, UserIcon, BuildingOfficeIcon } from "@heroicons/react/24/outline";
 import RootContext from "../config/rootcontext";
 
 export default function ForgetPassword({ setScreen }) {
     const [inputType, setInputType] = useState("email");
+    const [userType, setUserType] = useState("regular"); // "regular" or "recruiter"
     const [inputValue, setInputValue] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -20,7 +21,13 @@ export default function ForgetPassword({ setScreen }) {
     const toggleInputType = () => {
         setInputType(inputType === "email" ? "mobile" : "email");
         setInputValue("");
-        setIsUserNotFound(false); // Reset user not found state when switching input type
+        setIsUserNotFound(false);
+    };
+
+    const toggleUserType = () => {
+        setUserType(userType === "regular" ? "recruiter" : "regular");
+        setInputValue("");
+        setIsUserNotFound(false);
     };
 
     const handleSubmit = async (e) => {
@@ -72,23 +79,37 @@ export default function ForgetPassword({ setScreen }) {
             setLoading(true);
             setIsUserNotFound(false);
 
-            // Prepare payload with resetPassword flag
-            const payload = {
-                resetPassword: true,
-                newPassword: newPassword
-            };
+            let payload = {};
+            let endpoint = "/api/users";
+            let method = "PUT";
 
-            // Add either email or mobile based on input type
-            if (inputType === "email") {
-                payload.email = inputValue;
+            if (userType === "recruiter") {
+                // Recruiter password reset
+                payload = {
+                    resetRecruiterPassword: true,
+                    recruiterEmail: inputValue,
+                    newPassword: newPassword,
+                    resetBy: "superadmin" // This can be 'system' for self-service reset
+                };
             } else {
-                payload.mobile = inputValue;
+                // Regular user password reset
+                payload = {
+                    resetPassword: true,
+                    newPassword: newPassword
+                };
+
+                // Add either email or mobile based on input type
+                if (inputType === "email") {
+                    payload.email = inputValue;
+                } else {
+                    payload.mobile = inputValue;
+                }
             }
 
             console.log("Sending reset password request:", payload);
 
-            const res = await fetch("/api/users", {
-                method: "PUT",
+            const res = await fetch(endpoint, {
+                method: method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
@@ -96,6 +117,12 @@ export default function ForgetPassword({ setScreen }) {
             const data = await res.json();
 
             if (res.ok && data.success) {
+                let successMessage = "Password reset successfully! You can now login with your new password.";
+
+                if (userType === "recruiter") {
+                    successMessage = `Recruiter password reset successfully for ${data.recruiterName || inputValue}! You can now login with your new password.`;
+                }
+
                 setRootContext(prev => ({
                     ...prev,
                     toast: {
@@ -103,7 +130,7 @@ export default function ForgetPassword({ setScreen }) {
                         dismiss: true,
                         type: "success",
                         title: "Success",
-                        message: "Password reset successfully! You can now login with your new password.",
+                        message: successMessage,
                     },
                 }));
                 setNewPassword("");
@@ -112,14 +139,31 @@ export default function ForgetPassword({ setScreen }) {
                 setScreen("login");
             } else if (res.status === 404) {
                 setIsUserNotFound(true);
+                let errorMessage = `No ${userType} found with this ${inputType === "email" ? "email address" : "mobile number"}.`;
+
+                if (userType === "recruiter") {
+                    errorMessage = "Recruiter not found. Please check the email address or contact your company administrator.";
+                }
+
                 setRootContext(prev => ({
                     ...prev,
                     toast: {
                         show: true,
                         dismiss: true,
                         type: "error",
-                        title: "User Not Found",
-                        message: `No user found with this ${inputType === "email" ? "email address" : "mobile number"}.`,
+                        title: `${userType === 'recruiter' ? 'Recruiter' : 'User'} Not Found`,
+                        message: errorMessage,
+                    },
+                }));
+            } else if (res.status === 403) {
+                setRootContext(prev => ({
+                    ...prev,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        title: "Permission Denied",
+                        message: data.error || "You don't have permission to reset this password. Please contact your administrator.",
                     },
                 }));
             } else {
@@ -185,7 +229,7 @@ export default function ForgetPassword({ setScreen }) {
     return (
         <div>
             <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-lg p-6">
-                {/* Close Button (inside white div, top-right corner) */}
+                {/* Close Button */}
                 <button
                     onClick={() => setScreen("login")}
                     className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-purple-500 text-white hover:bg-purple-700 transition-colors"
@@ -195,32 +239,72 @@ export default function ForgetPassword({ setScreen }) {
 
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">Reset Password</h2>
 
-                <p className="mb-6 text-sm text-gray-600">
-                    Enter your{" "}
+                <p className="mb-4 text-sm text-gray-600">
+                    Select account type and enter your{" "}
                     <span className="font-semibold">
                         {inputType === "email" ? "email address" : "mobile number"}
                     </span>{" "}
-                    and create a new password.
+                    to reset your password.
                 </p>
+
+                {/* User Type Selection */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Account Type
+                    </label>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setUserType("regular")}
+                            className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${userType === "regular"
+                                ? "border-purple-500 bg-purple-50 text-purple-700"
+                                : "border-gray-300 bg-white text-gray-600 hover:border-purple-300"
+                                }`}
+                        >
+                            <UserIcon className="w-5 h-5" />
+                            <span className="text-sm font-medium">Regular User</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setUserType("recruiter")}
+                            className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${userType === "recruiter"
+                                ? "border-purple-500 bg-purple-50 text-purple-700"
+                                : "border-gray-300 bg-white text-gray-600 hover:border-purple-300"
+                                }`}
+                        >
+                            <BuildingOfficeIcon className="w-5 h-5" />
+                            <span className="text-sm font-medium">Recruiter</span>
+                        </button>
+                    </div>
+                </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4 text-left">
                     {/* Email/Mobile Input */}
                     <div>
                         <label htmlFor="userInput" className="block text-sm font-medium text-gray-700 mb-1">
-                            {inputType === "email" ? "Email Address" : "Mobile Number"}
+                            {userType === "recruiter" ? "Recruiter Email" :
+                                inputType === "email" ? "Email Address" : "Mobile Number"}
                         </label>
                         <input
                             type={inputType === "email" ? "email" : "tel"}
                             id="userInput"
-                            placeholder={inputType === "email" ? "Enter your email" : "Enter your mobile number"}
+                            placeholder={
+                                userType === "recruiter" ? "Enter recruiter email" :
+                                    inputType === "email" ? "Enter your email" : "Enter your mobile number"
+                            }
                             className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                             value={inputValue}
                             onChange={(e) => {
                                 setInputValue(e.target.value);
-                                setIsUserNotFound(false); // Reset error when user starts typing
+                                setIsUserNotFound(false);
                             }}
                             required
                         />
+                        {userType === "recruiter" && (
+                            <p className="text-xs text-gray-500 mt-1">
+                                Enter the email address associated with your recruiter account
+                            </p>
+                        )}
                     </div>
 
                     {/* New Password */}
@@ -254,17 +338,28 @@ export default function ForgetPassword({ setScreen }) {
                                 Resetting Password...
                             </span>
                         ) : (
-                            "Reset Password"
+                            `Reset ${userType === 'recruiter' ? 'Recruiter' : ''} Password`
                         )}
                     </button>
                 </form>
 
-                <button
-                    onClick={toggleInputType}
-                    className="mt-4 w-full border border-purple-500 rounded-lg p-3 text-sm font-semibold text-purple-500 transition-colors duration-200 hover:bg-purple-500 hover:text-white"
-                >
-                    Use {inputType === "email" ? "mobile number" : "email address"} instead
-                </button>
+                <div className="space-y-3 mt-4">
+                    {userType === "regular" && (
+                        <button
+                            onClick={toggleInputType}
+                            className="w-full border border-purple-500 rounded-lg p-3 text-sm font-semibold text-purple-500 transition-colors duration-200 hover:bg-purple-500 hover:text-white"
+                        >
+                            Use {inputType === "email" ? "mobile number" : "email address"} instead
+                        </button>
+                    )}
+
+                    <button
+                        onClick={toggleUserType}
+                        className="w-full border border-gray-300 rounded-lg p-3 text-sm font-semibold text-gray-600 transition-colors duration-200 hover:bg-gray-50 hover:border-gray-400"
+                    >
+                        Switch to {userType === "regular" ? "recruiter" : "regular user"} reset
+                    </button>
+                </div>
 
                 <div className="mt-4 text-center">
                     <button
@@ -274,18 +369,34 @@ export default function ForgetPassword({ setScreen }) {
                         ← Back to Login
                     </button>
                 </div>
+
+                {/* Information Box */}
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                        <InformationCircleIcon className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <div className="text-xs text-blue-700">
+                            <strong>Note:</strong>
+                            {userType === "recruiter"
+                                ? " Recruiter password resets require the exact email address registered with your company."
+                                : " Regular users can reset using email or mobile number associated with their account."
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* User Not Found Modal */}
             <Modal
                 isOpen={isUserNotFound}
                 onClose={() => setIsUserNotFound(false)}
-                title="User Not Found"
+                title={`${userType === 'recruiter' ? 'Recruiter' : 'User'} Not Found`}
                 icon={<InformationCircleIcon className="h-10 w-10 text-purple-500" />}
             >
                 <p className="text-gray-600">
-                    We couldn't find an account with the {inputType === "email" ? "email address" : "mobile number"} you provided.
-                    Please check the information and try again, or use a different {inputType === "email" ? "email address" : "mobile number"}.
+                    {userType === "recruiter"
+                        ? "We couldn't find a recruiter account with the email address you provided. Please check the email or contact your company administrator for assistance."
+                        : `We couldn't find an account with the ${inputType === "email" ? "email address" : "mobile number"} you provided. Please check the information and try again, or use a different ${inputType === "email" ? "email address" : "mobile number"}.`
+                    }
                 </p>
             </Modal>
         </div>

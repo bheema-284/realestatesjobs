@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useContext } from "react";
 import { useRouter } from "next/navigation";
-import { EyeIcon, EyeSlashIcon, UserIcon } from "@heroicons/react/24/solid";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import { RadioGroup } from "@headlessui/react";
 import Input from "../common/input";
 import RootContext from "../config/rootcontext";
@@ -41,6 +41,7 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const emailRegex = () => /^[\w-.]+@[\w.]+/gm;
+  const phoneRegex = () => /^[6-9]\d{9}$/;
 
   const departments = [
     { value: "hr", label: "Human Resources", description: "HR & Talent Acquisition" },
@@ -48,14 +49,14 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
     { value: "marketing", label: "Marketing", description: "Digital Marketing" },
     { value: "operations", label: "Operations", description: "Operations Management" },
     { value: "technical", label: "Technical", description: "IT & Technical Hiring" },
-    { value: "general", label: "General", description: "Multiple Departments" },
+    { value: "general", label: "General", description: "Multiple Departments" }
   ];
 
   const permissionOptions = [
     { id: "canPostJobs", label: "Post Jobs", description: "Create and publish new job openings" },
     { id: "canViewApplications", label: "View Applications", description: "Access and review job applications" },
     { id: "canManageJobs", label: "Manage Jobs", description: "Edit, close, or delete job postings" },
-    { id: "canManageRecruiters", label: "Manage Recruiters", description: "Add or remove other recruiters" },
+    { id: "canManageRecruiters", label: "Manage Recruiters", description: "Add or remove other recruiters" }
   ];
 
   const handleChange = (e, field) => {
@@ -101,10 +102,21 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
 
   const validateForm = () => {
     const requiredFields = ['name', 'email', 'password', 'department'];
-    const missingFields = requiredFields.filter(field => !formData[field] || formData[field].trim() === '');
+
+    const missingFields = requiredFields.filter(
+      field => !formData[field] || formData[field].trim() === ''
+    );
 
     if (missingFields.length > 0) {
       return `Please fill in required fields: ${missingFields.join(', ')}`;
+    }
+
+    if (!emailRegex().test(formData.email)) {
+      return 'Please enter a valid email address';
+    }
+
+    if (!phoneRegex().test(formData.phone.trim())) {
+      return 'Enter valid phone number (10 digits starting with 6-9)';
     }
 
     if (formData.password.length < 6) {
@@ -115,17 +127,12 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
       return 'Passwords do not match';
     }
 
-    if (!emailRegex().test(formData.email)) {
-      return 'Please enter a valid email address';
-    }
-
     return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate form
     const validationError = validateForm();
     if (validationError) {
       setRootContext(prev => ({
@@ -144,17 +151,13 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
     setIsSubmitting(true);
 
     try {
-      // Generate recruiter ID
       const recruiterId = generateRecruiterId();
 
-      // Calculate the recruiter index (position in the recruiters array)
-      const recruiterIndex = existingRecruiters.length;
-
-      // Build recruiter object
       const newRecruiter = {
         id: recruiterId,
         name: formData.name,
         email: formData.email,
+        password: formData.password, // ✔ sending password
         role: formData.role,
         department: formData.department,
         phone: formData.phone,
@@ -162,26 +165,16 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
         addedDate: new Date().toISOString(),
         lastUpdated: new Date().toISOString(),
         isActive: true,
-        createdBy: companyId,
-        // Password will be handled separately by your user creation logic
+        createdBy: companyId
       };
 
-      // Prepare FormData
       const fd = new FormData();
       fd.append("id", companyId);
 
-      // Preserve existing recruiters and add the new one
       const updatedRecruiters = [...existingRecruiters, newRecruiter];
+
       fd.append("recruiters", JSON.stringify(updatedRecruiters));
 
-      console.log('📊 Recruiters data:', {
-        existingCount: existingRecruiters.length,
-        newRecruiter: newRecruiter.name,
-        updatedCount: updatedRecruiters.length,
-        allRecruiters: updatedRecruiters.map(r => r.name)
-      });
-
-      // Send request to update user (company) with new recruiter
       const response = await fetch("/api/users", {
         method: "PUT",
         body: fd
@@ -205,7 +198,6 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
         onClose();
         router.refresh();
       } else {
-        console.error('Backend error:', result);
         setRootContext(prev => ({
           ...prev,
           toast: {
@@ -235,22 +227,7 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
     }
   };
 
-  const Button = ({ title, type, disabled, onClick }) => (
-    <button
-      type={type}
-      className={`w-full text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-all duration-300 ease-in-out 
-        bg-gradient-to-r from-green-500 to-blue-600
-        hover:from-green-600 hover:to-blue-700
-        ${disabled ? "opacity-50 cursor-not-allowed" : ""}
-        ${isSubmitting ? "animate-pulse" : ""}`}
-      disabled={disabled || isSubmitting}
-      onClick={onClick}
-    >
-      {isSubmitting ? "Adding Recruiter..." : title}
-    </button>
-  );
-
-  // Department Selector Component
+  // Department selector
   const DepartmentSelector = () => (
     <div className="w-full">
       <RadioGroup value={formData.department} onChange={(dept) => setFormData(prev => ({ ...prev, department: dept }))}>
@@ -306,7 +283,7 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
     </div>
   );
 
-  // Permissions Component
+  // Permissions
   const PermissionsSelector = () => (
     <div className="w-full">
       <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -316,9 +293,7 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
         {permissionOptions.map((permission) => (
           <div
             key={permission.id}
-            className={`flex items-start p-3 border rounded-lg transition-all duration-200 ${formData.permissions[permission.id]
-              ? "border-blue-500 bg-blue-50 shadow-sm"
-              : "border-gray-300 bg-white"
+            className={`flex items-start p-3 border rounded-lg ${formData.permissions[permission.id] ? "border-blue-500 bg-blue-50" : "border-gray-300"
               }`}
           >
             <input
@@ -326,16 +301,11 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
               id={permission.id}
               checked={formData.permissions[permission.id]}
               onChange={(e) => handlePermissionChange(permission.id, e.target.checked)}
-              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-0.5"
+              className="h-4 w-4 text-blue-600 rounded"
             />
             <label htmlFor={permission.id} className="ml-3 flex-1">
-              <span className={`text-sm font-medium ${formData.permissions[permission.id] ? "text-blue-700" : "text-gray-700"
-                }`}>
-                {permission.label}
-              </span>
-              <p className="text-xs text-gray-500 mt-1">
-                {permission.description}
-              </p>
+              <span className="text-sm font-medium">{permission.label}</span>
+              <p className="text-xs text-gray-500">{permission.description}</p>
             </label>
           </div>
         ))}
@@ -344,26 +314,21 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-xs bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[95vh] overflow-y-auto mx-auto">
-        <div className="p-4 sm:p-6">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Add New Recruiter</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl sm:text-3xl p-1"
-            >
-              ×
-            </button>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[95vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">Add New Recruiter</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-3xl">×</button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information Section */}
-            <div className="border-b border-gray-200 pb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Basic Info */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+
+              <div className="grid md:grid-cols-2 gap-4">
                 <Input
                   title="Full Name *"
                   type="text"
@@ -379,41 +344,43 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
                   placeholder="Enter professional email"
                   value={formData.email}
                   onChange={(e) => handleChange(e, "email")}
-                  onBlur={(e) => handleChange(e, "email")}
                   isError={isEmail.errVisible}
                   errormsg="Enter valid email address"
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="grid md:grid-cols-2 gap-4 mt-4">
                 <Input
-                  title="Phone Number"
+                  title="Phone Number *"
                   type="tel"
                   placeholder="Enter phone number"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
+                  isError={formData.phone && !phoneRegex().test(formData.phone)}
+                  errormsg="Enter valid 10 digit phone number"
                 />
               </div>
             </div>
 
-            {/* Department Selection */}
-            <div className="border-b border-gray-200 pb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Department & Role</h3>
+            {/* Department */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-semibold mb-4">Department & Role</h3>
               <DepartmentSelector />
             </div>
 
-            {/* Permissions Section */}
-            <div className="border-b border-gray-200 pb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Access Permissions</h3>
+            {/* Permissions */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-semibold mb-4">Access Permissions</h3>
               <PermissionsSelector />
             </div>
 
-            {/* Security Section */}
+            {/* Security */}
             <div className="pb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Security & Access</h3>
+              <h3 className="text-lg font-semibold mb-4">Security & Access</h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-4">
                 <div className="relative">
                   <Input
                     title="Password *"
@@ -425,17 +392,13 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
                   />
                   <span
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-500"
                   >
-                    {showPassword ? (
-                      <EyeIcon className="w-4 h-4" />
-                    ) : (
-                      <EyeSlashIcon className="w-4 h-4" />
-                    )}
+                    {showPassword ? <EyeIcon className="w-4 h-4" /> : <EyeSlashIcon className="w-4 h-4" />}
                   </span>
                 </div>
 
-                <div className="relative items-center">
+                <div className="relative">
                   <Input
                     title="Confirm Password *"
                     type={showCPassword ? "text" : "password"}
@@ -446,48 +409,44 @@ const AddRecruiterForm = ({ companyId, onClose, existingRecruiters = [], mutated
                     isError={isPassword.errVisible}
                     errormsg="Passwords do not match!"
                   />
+
                   <span
                     onClick={() => setShowCPassword(!showCPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-500"
                   >
-                    {showCPassword ? (
-                      <EyeIcon className="w-4 h-4" />
-                    ) : (
-                      <EyeSlashIcon className="w-4 h-4" />
-                    )}
+                    {showCPassword ? <EyeIcon className="w-4 h-4" /> : <EyeSlashIcon className="w-4 h-4" />}
                   </span>
                 </div>
               </div>
 
-              {/* Password Requirements */}
-              <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-3">
-                <p className="text-xs font-semibold text-gray-700 mb-2">Password Requirements:</p>
-                <ul className="text-xs text-gray-600 space-y-1">
+              <div className="mt-3 bg-gray-50 border rounded-lg p-3">
+                <p className="text-xs font-semibold">Password Requirements:</p>
+                <ul className="text-xs text-gray-600 mt-1 space-y-1">
                   <li>• Minimum 6 characters</li>
-                  <li>• Include uppercase and lowercase letters</li>
+                  <li>• Include uppercase & lowercase letters</li>
                   <li>• Include at least one number</li>
                 </ul>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3 pt-4 border-t">
+            {/* Buttons */}
+            <div className="flex justify-end gap-3 pt-4 border-t">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 sm:px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm sm:text-base order-2 sm:order-1"
-                disabled={isSubmitting}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm sm:text-base order-1 sm:order-2"
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
-                {isSubmitting ? 'Adding Recruiter...' : 'Add Recruiter'}
+                {isSubmitting ? "Adding Recruiter..." : "Add Recruiter"}
               </button>
             </div>
+
           </form>
         </div>
       </div>

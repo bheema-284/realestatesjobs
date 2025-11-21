@@ -1,396 +1,504 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 
-function Slider({ data, imageSize = "400px", rounded }) {
-    const [imagesData, setImagesData] = useState(data || []);
+function Slider({ data = [], imageSize = "400px", rounded = "" }) {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(true);
     const [loadedImages, setLoadedImages] = useState(new Set());
-
-    // State for swiping logic
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragStartX, setDragStartX] = useState(0);
-    const [dragDistance, setDragDistance] = useState(0);
-
-    // Refs for auto-scroll and cleanup
+    const [imageErrors, setImageErrors] = useState(new Set());
+    const [isHovered, setIsHovered] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
     const autoScrollRef = useRef(null);
-    const isMountedRef = useRef(true);
     const sliderContainerRef = useRef(null);
+    const isComponentMounted = useRef(true);
 
-    const slideWidth = 100;
-    const swipeThreshold = 50;
-    const AUTO_SCROLL_INTERVAL = 3000; // 3 seconds
+    const AUTO_SCROLL_INTERVAL = 5000;
 
-    // --- Sync data prop with state ---
+    // Debug data
     useEffect(() => {
-        if (data && data.length > 0) {
-            console.log("🔄 Slider received data:", data.length, "images");
-            setImagesData(data);
-            setCurrentSlide(0);
-            setLoadedImages(new Set());
+        if (process.env.NODE_ENV === 'development') {
+            console.log("🔄 Slider State:", {
+                totalImages: data?.length || 0,
+                currentSlide,
+                isHovered,
+                isPaused,
+                isMounted: isComponentMounted.current
+            });
         }
+    }, [data, currentSlide, isHovered, isPaused]);
+
+    // Set mounted state
+    useEffect(() => {
+        isComponentMounted.current = true;
+        return () => {
+            isComponentMounted.current = false;
+        };
+    }, []);
+
+    // Normalize data
+    const normalizedData = React.useMemo(() => {
+        if (!data) return [];
+        if (Array.isArray(data)) {
+            return data.filter(item => item != null);
+        }
+        return [data];
     }, [data]);
 
-    // --- Navigation Functions (Stabilized) ---
-    // IMPORTANT: Removed 'currentSlide' from dependencies because we use the functional update form of setCurrentSlide.
-    // This makes nextSlide and prevSlide stable, preventing the auto-scroll useEffect from restarting on every slide change.
+    // Navigation functions
     const nextSlide = useCallback(() => {
-        if (imagesData.length <= 1 || !isMountedRef.current) return;
+        if (!isComponentMounted.current || normalizedData.length <= 1) return;
 
-        setCurrentSlide((prev) => {
+        setCurrentSlide(prev => {
             const next = prev + 1;
-            const newIndex = next >= imagesData.length ? 0 : next;
-            console.log("➡️ Next slide calculated index:", newIndex);
-            return newIndex;
+            return next >= normalizedData.length ? 0 : next;
         });
         setIsTransitioning(true);
-    }, [imagesData.length]); // Dependency: Only imagesData.length
+    }, [normalizedData.length]);
 
     const prevSlide = useCallback(() => {
-        if (imagesData.length <= 1 || !isMountedRef.current) return;
+        if (!isComponentMounted.current || normalizedData.length <= 1) return;
 
-        setCurrentSlide((prev) => {
+        setCurrentSlide(prev => {
             const next = prev - 1;
-            const newIndex = next < 0 ? imagesData.length - 1 : next;
-            console.log("⬅️ Previous slide calculated index:", newIndex);
-            return newIndex;
+            return next < 0 ? normalizedData.length - 1 : next;
         });
         setIsTransitioning(true);
-    }, [imagesData.length]); // Dependency: Only imagesData.length
+    }, [normalizedData.length]);
 
-    // --- Auto-scroll Effect (Now much more stable) ---
+    // FIXED: Enhanced auto-scroll with better cleanup and isolation
     useEffect(() => {
-        // If 0 or 1 image, ensure the interval is cleared.
-        if (imagesData.length <= 1) {
+        if (!isComponentMounted.current) return;
+
+        const startAutoScroll = () => {
+            if (normalizedData.length <= 1 || isHovered || isPaused) {
+                return;
+            }
+
+            // Clear any existing interval first
             if (autoScrollRef.current) {
                 clearInterval(autoScrollRef.current);
-                autoScrollRef.current = null;
             }
-            return;
-        }
 
-        // Clear any existing interval first
-        if (autoScrollRef.current) {
-            clearInterval(autoScrollRef.current);
-        }
-
-        console.log("🔄 Starting auto-scroll with", imagesData.length, "images");
-
-        // Start new interval
-        // We rely on the stable 'nextSlide' created above.
-        autoScrollRef.current = setInterval(() => {
-            if (isMountedRef.current && !isDragging) {
-                nextSlide();
-            }
-        }, AUTO_SCROLL_INTERVAL);
-
-        // Cleanup on unmount or dependency change
-        return () => {
-            if (autoScrollRef.current) {
-                clearInterval(autoScrollRef.current);
-                autoScrollRef.current = null;
-            }
-        };
-    }, [imagesData.length, isDragging, nextSlide]); // Dependencies only change when data size or dragging state changes
-
-    // --- Infinite Loop Logic ---
-    const handleTransitionEnd = useCallback(() => {
-        if (!isMountedRef.current) return;
-
-        setDragDistance(0);
-        setIsTransitioning(false);
-
-        console.log("🔄 Transition ended at slide:", currentSlide);
-    }, [currentSlide]); // Must depend on currentSlide to read the new value
-
-    // --- Image Loading Handlers ---
-    const handleImageLoad = useCallback((imageUrl) => {
-        if (!isMountedRef.current) return;
-        setLoadedImages(prev => {
-            const newSet = new Set(prev);
-            newSet.add(imageUrl);
-            return newSet;
-        });
-    }, []);
-
-    const handleImageError = useCallback((e, imageUrl) => {
-        if (!isMountedRef.current) return;
-        console.warn("❌ Failed to load image:", imageUrl);
-        // Fallback placeholder image
-        e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='12' fill='%239ca3af'%3EImage%3C/text%3E%3C/svg%3E";
-
-        setLoadedImages(prev => {
-            const newSet = new Set(prev);
-            newSet.add(imageUrl);
-            return newSet;
-        });
-    }, []);
-
-    // --- Preload images ---
-    useEffect(() => {
-        if (imagesData.length <= 1) return;
-
-        imagesData.forEach((item, index) => {
-            const imageUrl = item?.image;
-            if (imageUrl && !loadedImages.has(imageUrl)) {
-                const img = new Image();
-                img.src = imageUrl;
-                img.onload = () => handleImageLoad(imageUrl);
-                img.onerror = () => handleImageLoad(imageUrl);
-            }
-        });
-    }, [imagesData, loadedImages, handleImageLoad]);
-
-    // --- SWIPE HANDLERS ---
-    const handleDragStart = useCallback((clientX) => {
-        if (imagesData.length <= 1) return;
-        setIsTransitioning(false);
-        setIsDragging(true);
-        setDragStartX(clientX);
-
-        // Pause auto-scroll during interaction
-        if (autoScrollRef.current) {
-            clearInterval(autoScrollRef.current);
-            autoScrollRef.current = null;
-        }
-    }, [imagesData.length]);
-
-    const handleDragMove = useCallback((clientX) => {
-        if (!isDragging || imagesData.length <= 1) return;
-        const newDragDistance = clientX - dragStartX;
-        setDragDistance(newDragDistance);
-    }, [isDragging, dragStartX, imagesData.length]);
-
-    const handleDragEnd = useCallback(() => {
-        if (!isDragging || imagesData.length <= 1) return;
-
-        setIsDragging(false);
-        setIsTransitioning(true);
-
-        if (dragDistance > swipeThreshold) {
-            prevSlide();
-        } else if (dragDistance < -swipeThreshold) {
-            nextSlide();
-        } else {
-            setDragDistance(0);
-        }
-
-        // Restart auto-scroll after interaction
-        if (!autoScrollRef.current && imagesData.length > 1) {
-            // Use a small timeout before restarting the interval to ensure the state updates finish
-            setTimeout(() => {
-                // Check again if still not dragging before starting
-                if (!isDragging) {
-                    autoScrollRef.current = setInterval(nextSlide, AUTO_SCROLL_INTERVAL);
+            autoScrollRef.current = setInterval(() => {
+                if (isComponentMounted.current && !isHovered && !isPaused) {
+                    nextSlide();
                 }
-            }, 100);
-        }
-    }, [isDragging, dragDistance, imagesData.length, prevSlide, nextSlide]);
+            }, AUTO_SCROLL_INTERVAL);
+        };
 
+        startAutoScroll();
 
-    // Event Handlers for Mouse/Touch
-    const onMouseDown = (e) => {
-        e.preventDefault();
-        handleDragStart(e.clientX);
-    };
-
-    const onMouseMove = (e) => {
-        if (!isDragging) return;
-        e.preventDefault();
-        handleDragMove(e.clientX);
-    };
-
-    const onMouseUp = (e) => {
-        if (!isDragging) return;
-        e.preventDefault();
-        handleDragEnd();
-    };
-
-    const onMouseLeave = (e) => {
-        if (isDragging) {
-            e.preventDefault();
-            handleDragEnd();
-        }
-    };
-
-    const onTouchStart = (e) => {
-        e.stopPropagation(); // Stop propagation to prevent conflicts with parent scrolling
-        handleDragStart(e.touches[0].clientX);
-    };
-
-    const onTouchMove = (e) => {
-        if (!isDragging) return;
-        handleDragMove(e.touches[0].clientX);
-    };
-
-    const onTouchEnd = (e) => {
-        if (!isDragging) return;
-        e.preventDefault();
-        handleDragEnd();
-    };
-
-    // Calculate transform
-    const totalTranslateX = imagesData.length > 0
-        ? `translateX(calc(-${currentSlide * slideWidth}% + ${dragDistance}px))`
-        : 'translateX(0)';
-
-    // Get current slide data
-    const currentSlideData = imagesData[currentSlide];
-
-    // Cleanup on unmount
-    useEffect(() => {
         return () => {
-            isMountedRef.current = false;
             if (autoScrollRef.current) {
                 clearInterval(autoScrollRef.current);
                 autoScrollRef.current = null;
             }
         };
+    }, [normalizedData.length, nextSlide, isHovered, isPaused]);
+
+    // FIXED: Pause auto-scroll when page is not visible
+    useEffect(() => {
+        if (!isComponentMounted.current) return;
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                setIsPaused(true);
+                if (autoScrollRef.current) {
+                    clearInterval(autoScrollRef.current);
+                }
+            } else {
+                setIsPaused(false);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []);
 
-    // Early return if no data
-    if (!data || data.length === 0) {
+    // FIXED: Enhanced mouse event handlers with timeout protection
+    const handleMouseEnter = useCallback((e) => {
+        if (!isComponentMounted.current) return;
+
+        e.stopPropagation();
+        e.preventDefault();
+
+        setIsHovered(true);
+        if (autoScrollRef.current) {
+            clearInterval(autoScrollRef.current);
+        }
+    }, []);
+
+    const handleMouseLeave = useCallback((e) => {
+        if (!isComponentMounted.current) return;
+
+        e.stopPropagation();
+        e.preventDefault();
+
+        setIsHovered(false);
+    }, []);
+
+    // FIXED: Touch event handlers for mobile
+    const handleTouchStart = useCallback((e) => {
+        if (!isComponentMounted.current) return;
+
+        e.stopPropagation();
+        setIsHovered(true);
+        if (autoScrollRef.current) {
+            clearInterval(autoScrollRef.current);
+        }
+    }, []);
+
+    const handleTouchEnd = useCallback((e) => {
+        if (!isComponentMounted.current) return;
+
+        e.stopPropagation();
+        // Delay to ensure user interaction is complete
+        setTimeout(() => {
+            if (isComponentMounted.current) {
+                setIsHovered(false);
+            }
+        }, 100);
+    }, []);
+
+    // FIXED: Enhanced click handlers with better isolation
+    const handlePrevClick = useCallback((e) => {
+        if (!isComponentMounted.current) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
+
+        // Temporarily pause auto-scroll on manual navigation
+        setIsPaused(true);
+        prevSlide();
+
+        // Resume auto-scroll after a delay
+        setTimeout(() => {
+            if (isComponentMounted.current) {
+                setIsPaused(false);
+            }
+        }, 3000);
+    }, [prevSlide]);
+
+    const handleNextClick = useCallback((e) => {
+        if (!isComponentMounted.current) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
+
+        // Temporarily pause auto-scroll on manual navigation
+        setIsPaused(true);
+        nextSlide();
+
+        // Resume auto-scroll after a delay
+        setTimeout(() => {
+            if (isComponentMounted.current) {
+                setIsPaused(false);
+            }
+        }, 3000);
+    }, [nextSlide]);
+
+    const handleIndicatorClick = useCallback((index, e) => {
+        if (!isComponentMounted.current) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
+
+        // Temporarily pause auto-scroll on manual navigation
+        setIsPaused(true);
+        setCurrentSlide(index);
+        setIsTransitioning(true);
+
+        // Resume auto-scroll after a delay
+        setTimeout(() => {
+            if (isComponentMounted.current) {
+                setIsPaused(false);
+            }
+        }, 3000);
+    }, []);
+
+    // Get image URL
+    const getImageUrl = useCallback((item) => {
+        if (!item) return null;
+
+        // Handle string directly
+        if (typeof item === 'string') return item;
+
+        // Handle object with image property
+        return item.image || item.url || item.src || item.imageUrl;
+    }, []);
+
+    // Image loading handler
+    const handleImageLoad = useCallback((imageUrl, index) => {
+        if (!isComponentMounted.current) return;
+
+        setLoadedImages(prev => {
+            const newSet = new Set(prev);
+            newSet.add(imageUrl);
+            return newSet;
+        });
+    }, []);
+
+    const handleImageError = useCallback((e, imageUrl, index) => {
+        if (!isComponentMounted.current) return;
+
+        setImageErrors(prev => {
+            const newSet = new Set(prev);
+            newSet.add(imageUrl);
+            return newSet;
+        });
+
+        // Still mark as "loaded" to remove loading indicator
+        setLoadedImages(prev => {
+            const newSet = new Set(prev);
+            newSet.add(imageUrl);
+            return newSet;
+        });
+    }, []);
+
+    // Check if image is already loaded from cache
+    const checkImageLoaded = useCallback((imageUrl) => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                if (isComponentMounted.current) {
+                    setLoadedImages(prev => {
+                        const newSet = new Set(prev);
+                        newSet.add(imageUrl);
+                        return newSet;
+                    });
+                }
+                resolve(true);
+            };
+            img.onerror = () => {
+                resolve(false);
+            };
+            img.src = imageUrl;
+        });
+    }, []);
+
+    // Pre-check cached images on mount
+    useEffect(() => {
+        if (!isComponentMounted.current || normalizedData.length === 0) return;
+
+        normalizedData.forEach(async (item) => {
+            const imageUrl = getImageUrl(item);
+            if (imageUrl) {
+                await checkImageLoaded(imageUrl);
+            }
+        });
+    }, [normalizedData, getImageUrl, checkImageLoaded]);
+
+    // Handle transition end
+    const handleTransitionEnd = useCallback(() => {
+        if (isComponentMounted.current) {
+            setIsTransitioning(false);
+        }
+    }, []);
+
+    // Check if current image should show loading
+    const shouldShowLoading = React.useMemo(() => {
+        if (normalizedData.length === 0) return false;
+
+        const currentImageUrl = getImageUrl(normalizedData[currentSlide]);
+        if (!currentImageUrl) return false;
+
+        return !loadedImages.has(currentImageUrl);
+    }, [normalizedData, currentSlide, getImageUrl, loadedImages]);
+
+    // Early return for no data
+    if (!normalizedData || normalizedData.length === 0) {
         return (
-            <div className={`relative w-full bg-white overflow-hidden ${rounded}`} style={{ height: imageSize }}>
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                    <div className="text-gray-500">No images available</div>
+            <div
+                className={`relative w-full bg-gray-200 overflow-hidden flex items-center justify-center ${rounded}`}
+                style={{ height: imageSize }}
+            >
+                <div className="text-gray-500 text-center p-4">
+                    <div className="text-lg font-semibold mb-2">No Images Available</div>
+                    <div className="text-sm">Please check your data source</div>
                 </div>
             </div>
         );
     }
 
     // Single image case
-    if (data.length === 1) {
-        const singleImage = data[0];
+    if (normalizedData.length === 1) {
+        const singleItem = normalizedData[0];
+        const imageUrl = getImageUrl(singleItem);
+        const isLoading = imageUrl && !loadedImages.has(imageUrl);
+
         return (
-            <div className={`relative w-full bg-white overflow-hidden ${rounded}`} style={{ height: imageSize }}>
-                {singleImage?.status && (
-                    <span className="absolute top-3 left-3 bg-orange-300 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30 rounded">
-                        {singleImage.status}
+            <div
+                className={`relative w-full bg-white overflow-hidden ${rounded}`}
+                style={{ height: imageSize }}
+            >
+                {singleItem?.status && (
+                    <span className="absolute top-3 left-3 bg-orange-300 text-white text-xs font-semibold px-3 py-1 z-30 rounded">
+                        {singleItem.status}
                     </span>
                 )}
+
+                {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                        <span className="ml-2 text-gray-600">Loading image...</span>
+                    </div>
+                )}
+
                 <div className="w-full h-full">
-                    <img
-                        src={singleImage.image}
-                        alt="carousel"
-                        className="object-cover w-full h-full"
-                        loading="eager"
-                        onLoad={() => handleImageLoad(singleImage.image)}
-                        onError={(e) => handleImageError(e, singleImage.image)}
-                    />
+                    {imageUrl ? (
+                        <img
+                            src={imageUrl}
+                            alt="Property"
+                            className="w-full h-full object-cover"
+                            onLoad={() => handleImageLoad(imageUrl, 0)}
+                            onError={(e) => handleImageError(e, imageUrl, 0)}
+                            crossOrigin="anonymous"
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-red-100 flex items-center justify-center">
+                            <div className="text-red-500 text-center">
+                                <div className="text-lg font-semibold mb-1">Invalid Image Data</div>
+                                <div className="text-sm">No valid image URL found</div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         );
     }
 
+    // Multiple images case
     return (
         <div
             ref={sliderContainerRef}
-            className={`relative w-full bg-white overflow-hidden shadow-xl ${rounded || 'rounded-lg'}`}
+            className={`relative w-full bg-white overflow-hidden isolate ${rounded}`}
             style={{ height: imageSize }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+            }}
         >
-            <div className="relative w-full h-full">
-                {/* Fixed label */}
-                {currentSlideData?.status && (
-                    <span className="absolute top-3 left-3 bg-orange-500 text-white text-[9px] font-semibold px-3 border border-white py-1 z-30 rounded">
-                        {currentSlideData.status}
+            {/* Status badge */}
+            {normalizedData[currentSlide]?.status && (
+                <span className="absolute top-3 left-3 bg-orange-300 text-white text-xs font-semibold px-3 py-1 z-30 rounded">
+                    {normalizedData[currentSlide].status}
+                </span>
+            )}
+
+            {/* Loading indicator */}
+            {shouldShowLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                    <span className="ml-2 text-gray-600">
+                        Loading {currentSlide + 1} of {normalizedData.length}
                     </span>
-                )}
+                </div>
+            )}
 
-                {/* Loading indicator */}
-                {!loadedImages.has(currentSlideData?.image) && currentSlideData?.image && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-                        <span className="ml-3 text-gray-600 font-medium">Loading image {currentSlide + 1} of {imagesData.length}</span>
-                    </div>
-                )}
+            {/* Slides container */}
+            <div
+                className={`flex h-full ${isTransitioning ? 'transition-transform duration-500 ease-in-out' : ''
+                    }`}
+                style={{
+                    transform: `translateX(-${currentSlide * 100}%)`,
+                    width: `${normalizedData.length * 100}%`
+                }}
+                onTransitionEnd={handleTransitionEnd}
+            >
+                {normalizedData.map((item, index) => {
+                    const imageUrl = getImageUrl(item);
+                    const isError = imageErrors.has(imageUrl);
 
-                {/* Slides wrapper */}
-                <div
-                    className={`flex h-full select-none ${isTransitioning && !isDragging ? "transition-transform duration-500 ease-in-out" : ""
-                        }`}
-                    style={{
-                        transform: totalTranslateX,
-                        width: `${imagesData.length * 100}%`
-                    }}
-                    onTransitionEnd={handleTransitionEnd}
-                    // Mouse events for desktop dragging
-                    onMouseDown={onMouseDown}
-                    onMouseMove={onMouseMove}
-                    onMouseUp={onMouseUp}
-                    onMouseLeave={onMouseLeave}
-                    // Touch events for mobile swiping
-                    onTouchStart={onTouchStart}
-                    onTouchMove={onTouchMove}
-                    onTouchEnd={onTouchEnd}
-                >
-                    {imagesData.map((item, index) => (
+                    return (
                         <div
-                            key={`${item?.image || 'empty'}-${index}`}
+                            key={`slide-${index}-${imageUrl || 'no-image'}`}
                             className="flex-none w-full h-full"
-                            style={{ width: `${100 / imagesData.length}%` }}
+                            style={{ width: `${100 / normalizedData.length}%` }}
                         >
                             <div className="w-full h-full">
-                                {item?.image ? (
-                                    <img
-                                        src={item.image}
-                                        alt={`carousel-${index}`}
-                                        className="object-cover w-full h-full"
-                                        draggable="false"
-                                        loading={index === currentSlide ? "eager" : "lazy"}
-                                        onLoad={() => handleImageLoad(item.image)}
-                                        onError={(e) => handleImageError(e, item.image)}
-                                    />
+                                {imageUrl ? (
+                                    <>
+                                        {isError && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-red-100 z-20">
+                                                <div className="text-red-500 text-center">
+                                                    <div className="text-lg font-semibold mb-1">Failed to load</div>
+                                                    <div className="text-sm">Image {index + 1}</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <img
+                                            src={imageUrl}
+                                            alt={`Property view ${index + 1}`}
+                                            className={`w-full h-full object-cover ${isError ? 'opacity-30' : ''
+                                                }`}
+                                            onLoad={() => handleImageLoad(imageUrl, index)}
+                                            onError={(e) => handleImageError(e, imageUrl, index)}
+                                            crossOrigin="anonymous"
+                                        />
+                                    </>
                                 ) : (
-                                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                        <div className="text-gray-400 text-sm">No image provided</div>
+                                    <div className="w-full h-full bg-yellow-100 flex items-center justify-center border-2 border-yellow-300">
+                                        <div className="text-yellow-700 text-center p-4">
+                                            <div className="text-lg font-semibold mb-1">No Image URL</div>
+                                            <div className="text-sm mb-2">Slide {index + 1}</div>
+                                        </div>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    ))}
-                </div>
+                    );
+                })}
             </div>
 
             {/* Navigation buttons */}
-            {imagesData.length > 1 && (
+            {normalizedData.length > 1 && (
                 <>
-                    {/* Previous Button */}
                     <button
                         type="button"
-                        className="absolute top-1/2 left-2 z-20 flex items-center justify-center w-10 h-10 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-                        onClick={prevSlide}
-                        aria-label="Previous slide"
+                        className="absolute top-1/2 left-4 z-20 flex items-center justify-center w-10 h-10 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        onClick={handlePrevClick}
+                        aria-label="Previous image"
                     >
                         <ChevronLeftIcon className="w-6 h-6 text-gray-700" />
                     </button>
 
-                    {/* Next Button */}
                     <button
                         type="button"
-                        className="absolute top-1/2 right-2 z-20 flex items-center justify-center w-10 h-10 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-                        onClick={nextSlide}
-                        aria-label="Next slide"
+                        className="absolute top-1/2 right-4 z-20 flex items-center justify-center w-10 h-10 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        onClick={handleNextClick}
+                        aria-label="Next image"
                     >
                         <ChevronRightIcon className="w-6 h-6 text-gray-700" />
                     </button>
 
                     {/* Slide indicators */}
                     <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2">
-                        {imagesData.map((_, index) => (
+                        {normalizedData.map((_, index) => (
                             <button
                                 key={index}
-                                className={`w-3 h-3 rounded-full transition-all duration-300 shadow ${index === currentSlide
-                                    ? 'bg-orange-500 scale-125'
-                                    : 'bg-white/70 hover:bg-white'
+                                className={`w-3 h-3 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white ${index === currentSlide
+                                    ? 'bg-white scale-110'
+                                    : 'bg-white/50 hover:bg-white/70'
                                     }`}
-                                onClick={() => {
-                                    setCurrentSlide(index);
-                                    setIsTransitioning(true);
-                                }}
-                                aria-label={`Go to slide ${index + 1}`}
+                                onClick={(e) => handleIndicatorClick(index, e)}
+                                aria-label={`Go to image ${index + 1}`}
                             />
                         ))}
+                    </div>
+
+                    {/* Slide counter */}
+                    <div className="absolute top-3 right-3 z-20 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        {currentSlide + 1} / {normalizedData.length}
                     </div>
                 </>
             )}

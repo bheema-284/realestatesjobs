@@ -135,7 +135,7 @@ export const Navbar = ({ rootContext: propRootContext, showLoader, logOut }) => 
             {
                 label: "Profile",
                 link: `/details/${rootContext?.user?.id || 1}/${rootContext?.user?.name || ""}`,
-                roles: ["superadmin", "company", "recruiter", "applicant"]
+                roles: ["superadmin", "company", "recruiter"]
             },
             {
                 label: "Add Projects",

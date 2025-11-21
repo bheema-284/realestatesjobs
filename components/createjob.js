@@ -87,17 +87,13 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
         { slug: 'legal', name: 'Legal' },
     ];
 
-    // Real Estate Experience Options
+    // Real Estate Experience Options - Detailed
     const experienceOptions = [
-        'Fresher',
-        '6 Months',
-        '1 Year',
-        '2 Years',
-        '3 Years',
-        '4 Years',
-        '5 Years',
-        '6-8 Years',
-        '8-10 Years',
+        'Beginner (0-1 Year)',
+        '1-3 Years',
+        '3-5 Years',
+        '5-7 Years',
+        '7-10 Years',
         '10+ Years'
     ];
 
