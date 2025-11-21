@@ -16,9 +16,8 @@ const useDebounce = (value, delay) => {
     };
   }, [value, delay]);
 
-  return deboncedValue;
+  return debouncedValue;
 };
-
 
 export default function Chat({ candidate, company, onClose, onSendMessage, userRole = 'company' }) {
   const [messages, setMessages] = useState([]);
