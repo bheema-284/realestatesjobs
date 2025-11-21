@@ -19,12 +19,68 @@ const useDebounce = (value, delay) => {
   return debouncedValue;
 };
 
+// Custom hook for real-time chat updates
+const useChatUpdates = (chatId, isActive, onNewMessages) => {
+  useEffect(() => {
+    if (!chatId || !isActive) return;
+
+    // Simulate real-time updates
+    const interval = setInterval(async () => {
+      console.log('🔄 Checking for real-time updates...');
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [chatId, isActive, onNewMessages]);
+};
+
+// Online status hook based on last message timestamp
+const useOnlineStatus = (messages, otherUserId, isCompany) => {
+  const [isOnline, setIsOnline] = useState(false);
+  const [lastSeen, setLastSeen] = useState(null);
+
+  useEffect(() => {
+    if (!messages || messages.length === 0 || !otherUserId) {
+      setIsOnline(false);
+      setLastSeen(null);
+      return;
+    }
+
+    // Find the last message from the other user
+    const otherUserMessages = messages.filter(msg => 
+      isCompany ? msg.role === 'candidate' : msg.role === 'company'
+    );
+
+    if (otherUserMessages.length === 0) {
+      setIsOnline(false);
+      setLastSeen(null);
+      return;
+    }
+
+    // Get the most recent message from other user
+    const lastMessage = otherUserMessages.reduce((latest, current) => 
+      new Date(current.timestamp) > new Date(latest.timestamp) ? current : latest
+    );
+
+    const lastMessageTime = new Date(lastMessage.timestamp);
+    const now = new Date();
+    const timeDiff = now - lastMessageTime;
+    
+    // Consider user online if they sent a message in the last 2 minutes
+    const isUserOnline = timeDiff < 120000; // 2 minutes
+    
+    setIsOnline(isUserOnline);
+    setLastSeen(isUserOnline ? null : lastMessageTime);
+
+  }, [messages, otherUserId, isCompany]);
+
+  return { isOnline, lastSeen };
+};
+
 export default function Chat({ candidate, company, onClose, onSendMessage, userRole = 'company' }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
-  const [isCandidateOnline, setIsCandidateOnline] = useState(true);
   const [isConnected, setIsConnected] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [selectedMessages, setSelectedMessages] = useState(new Set());
@@ -50,6 +106,14 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
   const isCompany = userRole === 'company';
   const currentUser = isCompany ? company : candidate;
   const otherUser = isCompany ? candidate : company;
+  const otherUserId = otherUser?._id || otherUser?.applicantId;
+
+  // Get online status based on last message timestamp
+  const { isOnline: isOtherUserOnline, lastSeen: otherUserLastSeen } = useOnlineStatus(
+    messages,
+    otherUserId,
+    isCompany
+  );
 
   // Debounced chatId for polling
   const debouncedChatId = useDebounce(chatId, 1000);
@@ -165,7 +229,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     return hasUnread;
   }, [isCompany]);
 
-  // Enhanced mark messages as read
+  // Enhanced mark messages as read using your new API endpoint
   const markMessagesAsRead = useCallback(async (currentChatId = null) => {
     if (chatDeletedRef.current || !isChatActive) {
       console.log('🚫 Skipping mark-read: Chat was deleted or inactive');
@@ -202,21 +266,24 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
         return;
       }
 
-      const readerType = isCompany ? 'company' : 'applicant';
+      const userId = isCompany ? companyId : applicantId;
+      const userType = isCompany ? 'company' : 'applicant';
 
-      console.log('📖 Marking messages as read for:', { readerType, targetChatId });
+      console.log('📖 Marking messages as read for:', { userId, userType, targetChatId });
 
-      const markReadResponse = await fetch('/api/chat', {
-        method: 'PUT',
+      // Use your new mark-read API endpoint
+      const markReadResponse = await fetch('/api/chat/mark-read', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           chatId: targetChatId,
-          readerType: readerType,
           applicantId: applicantId,
           companyId: companyId,
-          jobId: jobId
+          jobId: jobId,
+          userId: userId,
+          userType: userType
         })
       });
 
@@ -224,7 +291,8 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
 
       if (markReadResult.success) {
         console.log('✅ Mark as read successful:', {
-          modifiedCount: markReadResult.modifiedCount
+          modifiedCount: markReadResult.modifiedCount,
+          userType: markReadResult.userType
         });
 
         if (markReadResult.modifiedCount > 0) {
@@ -344,7 +412,8 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
         console.log('📥 Loaded chat history:', {
           messageCount: transformedMessages.length,
           hasUnread,
-          currentUser: isCompany ? 'company' : 'applicant'
+          currentUser: isCompany ? 'company' : 'applicant',
+          otherUserOnline: isOtherUserOnline
         });
         
         if (hasUnread && loadedChatId && isChatActive) {
@@ -374,7 +443,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     } finally {
       setIsLoadingMessages(false);
     }
-  }, [isCompany, candidate, company, markMessagesAsRead, checkUnreadMessages, isChatActive]);
+  }, [isCompany, candidate, company, markMessagesAsRead, checkUnreadMessages, isChatActive, isOtherUserOnline]);
 
   // Load chat history when component mounts and when chat becomes active
   useEffect(() => {
@@ -434,13 +503,12 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     };
 
     const handleBlur = () => {
-      // Delay setting inactive to prevent immediate deactivation during quick tab switches
       if (visibilityTimeoutRef.current) {
         clearTimeout(visibilityTimeoutRef.current);
       }
       visibilityTimeoutRef.current = setTimeout(() => {
         setIsChatActive(false);
-      }, 30000); // 30 seconds of inactivity
+      }, 30000);
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -469,7 +537,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       const now = Date.now();
       const timeSinceLastAction = now - lastActionTimeRef.current;
       
-      // Only poll if there's been recent activity (last 2 minutes)
       if (timeSinceLastAction > 120000) {
         console.log('⏸️ Skipping poll: No recent user activity');
         return;
@@ -487,7 +554,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
       }
-      pollIntervalRef.current = setInterval(pollForUpdates, 5000); // Poll every 5 seconds when active
+      pollIntervalRef.current = setInterval(pollForUpdates, 5000);
     }
 
     return () => {
@@ -994,6 +1061,25 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     });
   };
 
+  // Enhanced last seen formatting
+  const formatLastSeen = (lastSeen) => {
+    if (!lastSeen) return 'Just now';
+    
+    const now = new Date();
+    const lastSeenDate = new Date(lastSeen);
+    const diffInMinutes = Math.floor((now - lastSeenDate) / 60000);
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hour${Math.floor(diffInMinutes / 60) > 1 ? 's' : ''} ago`;
+    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} day${Math.floor(diffInMinutes / 1440) > 1 ? 's' : ''} ago`;
+    
+    return lastSeenDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   const shouldShowDate = (currentMsg, previousMsg) => {
     if (!previousMsg) return true;
     const currentDate = new Date(currentMsg.timestamp).toDateString();
@@ -1061,14 +1147,19 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
   };
 
+  // Enhanced online status with proper last seen handling
   const getOnlineStatus = () => {
-    if (isCandidateOnline) {
-      return { text: 'Online', color: 'bg-green-400' };
+    if (isOtherUserOnline) {
+      return { 
+        text: 'Online', 
+        color: 'bg-green-400',
+        showLastSeen: false
+      };
     } else {
-      const lastSeen = new Date(Date.now() - 600000);
       return {
-        text: `Last seen ${formatTime(lastSeen)}`,
-        color: 'bg-gray-400'
+        text: otherUserLastSeen ? `Last seen ${formatLastSeen(otherUserLastSeen)}` : 'Offline',
+        color: 'bg-gray-400',
+        showLastSeen: true
       };
     }
   };
@@ -1148,13 +1239,14 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
                   {userRole === "company" ? headerInfo.user.applicantProfile?.name : headerInfo?.name}
                 </h2>
                 <p className="text-green-100 text-xs flex items-center gap-1 truncate">
-                  <span className="truncate">{userRole === "company" ? headerInfo?.user?.applicantProfile?.position : headerInfo?.title}</span>
+                  <span className={`w-2 h-2 rounded-full ${onlineStatus.color} mr-1`}></span>
+                  {onlineStatus.text}
                   {!isConnected && (
-                    <span className="text-yellow-300 text-xs">• Offline</span>
+                    <span className="text-yellow-300 text-xs ml-1">• Offline</span>
                   )}
-                  {!isChatActive && (
-                    <span className="text-gray-300 text-xs">• Inactive</span>
-                  )}
+                </p>
+                <p className="text-green-100 text-xs truncate">
+                  {userRole === "company" ? headerInfo?.user?.applicantProfile?.position : headerInfo?.title}
                 </p>
               </div>
             </>
