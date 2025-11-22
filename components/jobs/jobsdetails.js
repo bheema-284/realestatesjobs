@@ -4,12 +4,26 @@ import React, { useContext, useState, useEffect } from 'react';
 import RootContext from '../config/rootcontext';
 import Loading from '../common/loading';
 
+// Import Heroicons
+import {
+    ClockIcon,
+    MapPinIcon,
+    CurrencyRupeeIcon,
+    BriefcaseIcon,
+    BuildingOfficeIcon,
+    UserGroupIcon,
+    AcademicCapIcon,
+    HeartIcon,
+    ChevronDownIcon,
+    ChevronUpIcon,
+} from '@heroicons/react/24/outline';
+
 // Utility function (MUST match the one used for navigation/routing)
 const createSlug = (title) => {
     return title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '';
 };
 
-const JobCard = ({ job, category }) => {
+const JobCard = ({ job, category, isOpen, onToggle }) => {
     const router = useRouter();
     const { rootContext, setRootContext } = useContext(RootContext);
 
@@ -98,68 +112,278 @@ const JobCard = ({ job, category }) => {
         }
     };
 
+    const handleCardClick = () => {
+        onToggle();
+    };
+
+    const handleButtonClick = (e) => {
+        e.stopPropagation();
+    };
+
     return (
-        <div className="relative w-full sm:w-[80%] mx-auto bg-white border border-gray-300 shadow-lg rounded-2xl flex flex-col sm:flex-row items-start p-4 sm:p-6 gap-6">
+        <div
+            className="
+                w-full max-w-6xl mx-auto
+                bg-white rounded-2xl 
+                shadow-[0px_0px_25px_rgba(21,58,103,0.15),0px_4px_12px_rgba(0,0,0,0.1)]
+                border border-blue-100
+                flex flex-col lg:flex-row items-start lg:items-center
+                p-2 sm:p-4 lg:p-5 lg:pl-44 relative
+                min-h-[120px] lg:min-h-[140px]
+                transition-all duration-300
+                hover:shadow-[0px_0px_30px_rgba(21,58,103,0.25),0px_4px_15px_rgba(0,0,0,0.12)]
+                hover:border-blue-200
+                sticky top-2 lg:top-4 z-10
+                cursor-pointer
+            "
+            onClick={handleCardClick}
+        >
             {serviceCall && <Loading />}
-            {/* Company Logo */}
-            <div className="absolute w-20 h-20 sm:w-24 sm:h-24 -top-3 -left-3 border border-gray-300 shadow-md bg-white rounded-xl flex items-center justify-center p-2">
+
+            {/* LEFT LOGO BOX - Responsive positioning */}
+            <div className="
+                lg:absolute lg:left-0 lg:top-1/2 lg:-translate-y-1/2
+                w-16 h-16 lg:w-40 lg:h-40 
+                bg-white 
+                rounded-2xl 
+                shadow-[0px_4px_20px_rgba(21,58,103,0.2)]
+                border border-gray-200
+                flex items-center justify-center
+                overflow-hidden
+                transition-all duration-300
+                hover:shadow-[0px_6px_25px_rgba(21,58,103,0.3)]
+                hover:scale-105
+                mb-4 lg:mb-0
+                mx-auto lg:mx-0
+            "
+                onClick={handleCardClick}
+            >
                 <img
-                    src={job.companyProfileImage || "/icons/job.png"}
+                    src={job.companyProfileImage || '/icons/job.png'}
                     alt={job.companyName}
-                    className="w-full h-full object-cover rounded-lg"
+                    className="w-[80%] h-[80%] object-contain transition-transform duration-300 hover:scale-110"
                 />
             </div>
 
-            {/* Job Info */}
-            <div className="flex-1 w-full pl-24 sm:pl-32">
-                <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800">
-                    {job.jobTitle}
+            {/* MIDDLE DETAILS - Responsive layout */}
+            <div onClick={handleCardClick} className="flex-1 w-full lg:w-auto lg:pl-0">
+                <h2 className="text-lg lg:text-xl font-bold text-gray-900 leading-tight text-center lg:text-left">
+                    {job.jobTitle} - {job.companyName}
                 </h2>
 
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                    Company: <span className="font-semibold">{job.companyName}</span> {/* Updated */}
-                </p>
+                <div className="flex flex-wrap justify-center lg:justify-start items-center gap-3 lg:gap-6 mt-3 lg:mt-4 text-gray-700 font-medium text-sm lg:text-[15px]">
 
-                <p className="text-xs sm:text-sm text-gray-600">Location: {job.location}</p>
-                <p className="text-xs sm:text-sm text-gray-600">Experience: {job.experience}</p>
-                <p className="text-xs sm:text-sm text-gray-600">Salary: {job.salary}</p>
-                <p className="text-xs sm:text-sm text-gray-600">
-                    Type: {job.employmentTypes?.[0]}
-                </p>
+                    <div className="flex items-center gap-2">
+                        <ClockIcon className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600" />
+                        <span className="font-semibold text-xs lg:text-sm">{job.employmentTypes?.[0] || job.type || "full_time"}</span>
+                    </div>
 
-                {/* Job Description */}
-                {job.jobDescription && (
+                    <div className="flex items-center gap-2">
+                        <MapPinIcon className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
+                        <span className="font-semibold text-xs lg:text-sm">{job.location || "Tirupati"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <CurrencyRupeeIcon className="w-4 h-4 lg:w-5 lg:h-5 text-emerald-600" />
+                        <span className="font-semibold text-xs lg:text-sm">{job.salary || job.salaryAmount || "20000"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <BriefcaseIcon className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600" />
+                        <span className="font-semibold text-xs lg:text-sm">{job.experience || "1-3 years"}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* RIGHT BUTTON - Responsive layout */}
+            <div className="flex items-center justify-between w-full lg:w-auto mt-4 lg:mt-0" onClick={handleButtonClick}>
+                {/* Blue Vertical Line - Hidden on mobile, visible on desktop */}
+                <div className="hidden lg:block w-[2px] h-20 lg:h-24 bg-[#153A67] mr-4"></div>
+
+                <div className="flex items-center gap-3 lg:gap-4 w-full justify-between lg:justify-normal">
+                    {/* Toggle Icon */}
+                    <div className={`flex items-center justify-center w-7 h-7 lg:w-8 lg:h-8 rounded-full transition-colors ${isOpen ? 'bg-blue-100' : 'bg-gray-100 hover:bg-gray-200'
+                        }`}>
+                        {isOpen ? (
+                            <ChevronUpIcon className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600" />
+                        ) : (
+                            <ChevronDownIcon className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
+                        )}
+                    </div>
+
+                    {/* Apply Button Logic */}
+                    <div className="flex flex-col items-center gap-2">
+                        {!isLoggedIn ? (
+                            <button
+                                onClick={() => router.push("/login")}
+                                className="
+                                    px-4 lg:px-6 py-2 
+                                    bg-green-600
+                                    text-white 
+                                    rounded-xl 
+                                    font-semibold 
+                                    hover:bg-green-700
+                                    transition-all duration-300
+                                    whitespace-nowrap
+                                    hover:shadow-[0px_4px_15px_rgba(34,197,94,0.4)]
+                                    hover:translate-y-[-2px]
+                                    text-xs lg:text-sm
+                                "
+                            >
+                                Login to Apply
+                            </button>
+                        ) : isApplicant ? (
+                            <button
+                                onClick={() => handleApply(job.companyId)}
+                                disabled={applied}
+                                className={`
+                                    px-4 lg:px-6 py-2 
+                                    rounded-xl 
+                                    font-semibold 
+                                    transition-all duration-300
+                                    whitespace-nowrap
+                                    hover:translate-y-[-2px]
+                                    text-xs lg:text-sm
+                                    ${applied
+                                        ? "bg-gray-400 cursor-not-allowed hover:shadow-none"
+                                        : "bg-[#153A67] text-white hover:bg-[#0d2c52] hover:shadow-[0px_4px_15px_rgba(21,58,103,0.4)]"
+                                    }
+                                `}
+                            >
+                                {applied ? "Applied" : "Apply Now"}
+                            </button>
+                        ) : (
+                            <p className="text-xs lg:text-sm text-gray-500 whitespace-nowrap text-center">
+                                Login as Applicant to apply
+                            </p>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const JobDetailsContent = ({ job, isOpen }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="
+            w-full max-w-6xl mx-auto
+            bg-white rounded-2xl 
+            shadow-[0px_0px_25px_rgba(21,58,103,0.15),0px_4px_12px_rgba(0,0,0,0.1)]
+            border border-blue-100
+            p-4 lg:p-8
+            mt-4 lg:mt-6
+            transition-all duration-300 ease-in-out
+            transform origin-top
+        ">
+            {/* Job Summary */}
+            <div className="mb-6 lg:mb-8">
+                <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 lg:mb-4">Job Summary</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4 text-gray-700">
+                    <div className="flex items-center gap-3">
+                        <BuildingOfficeIcon className="w-5 h-5 lg:w-6 lg:h-6 text-blue-600" />
+                        <div>
+                            <p className="font-semibold text-sm lg:text-base">Company</p>
+                            <p className="text-sm lg:text-base">{job.companyName}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <MapPinIcon className="w-5 h-5 lg:w-6 lg:h-6 text-green-600" />
+                        <div>
+                            <p className="font-semibold text-sm lg:text-base">Location</p>
+                            <p className="text-sm lg:text-base">{job.location}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <ClockIcon className="w-5 h-5 lg:w-6 lg:h-6 text-blue-600" />
+                        <div>
+                            <p className="font-semibold text-sm lg:text-base">Employment Type</p>
+                            <p className="text-sm lg:text-base">{job.employmentTypes?.[0] || job.type || "Full-time"}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <BriefcaseIcon className="w-5 h-5 lg:w-6 lg:h-6 text-purple-600" />
+                        <div>
+                            <p className="font-semibold text-sm lg:text-base">Experience</p>
+                            <p className="text-sm lg:text-base">{job.experience || "1-3 years"}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <CurrencyRupeeIcon className="w-5 h-5 lg:w-6 lg:h-6 text-emerald-600" />
+                        <div>
+                            <p className="font-semibold text-sm lg:text-base">Salary</p>
+                            <p className="text-sm lg:text-base">{job.salary || job.salaryAmount || "20000"}</p>
+                        </div>
+                    </div>
+                    {job.vacancies && (
+                        <div className="flex items-center gap-3">
+                            <UserGroupIcon className="w-5 h-5 lg:w-6 lg:h-6 text-orange-600" />
+                            <div>
+                                <p className="font-semibold text-sm lg:text-base">Vacancies</p>
+                                <p className="text-sm lg:text-base">{job.vacancies}</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Job Description */}
+            {job.jobDescription && (
+                <div className="mb-6 lg:mb-8">
+                    <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 lg:mb-4 flex items-center gap-2">
+                        <BriefcaseIcon className="w-5 h-5 lg:w-6 lg:h-6 text-purple-600" />
+                        Job Description
+                    </h3>
                     <div
-                        className="text-xs sm:text-sm text-gray-700 mt-2 prose"
+                        className="prose prose-sm lg:prose-lg max-w-none text-gray-700 text-sm lg:text-base"
                         dangerouslySetInnerHTML={{ __html: job.jobDescription }}
                     />
-                )}
+                </div>
+            )}
 
-                {/* Apply Button Logic */}
-                {!isLoggedIn ? (
-                    <button
-                        onClick={() => router.push("/login")}
-                        className="mt-3 px-4 py-2 text-xs sm:text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
-                    >
-                        Login to Apply
-                    </button>
-                ) : isApplicant ? (
-                    <button
-                        onClick={() => handleApply(job.companyId)}
-                        disabled={applied}
-                        className={`mt-3 px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition ${applied
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-blue-600 text-white hover:bg-blue-700"
-                            }`}
-                    >
-                        {applied ? "Applied" : "Apply"}
-                    </button>
-                ) : (
-                    <p className="text-sm text-gray-500 mt-3">
-                        Login as Applicant to apply
-                    </p>
-                )}
-            </div>
+            {/* Key Responsibilities */}
+            {job.responsibilities && (
+                <div className="mb-6 lg:mb-8">
+                    <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 lg:mb-4 flex items-center gap-2">
+                        <UserGroupIcon className="w-5 h-5 lg:w-6 lg:h-6 text-orange-600" />
+                        Key Responsibilities
+                    </h3>
+                    <div
+                        className="prose prose-sm lg:prose-lg max-w-none text-gray-700 text-sm lg:text-base"
+                        dangerouslySetInnerHTML={{ __html: job.responsibilities }}
+                    />
+                </div>
+            )}
+
+            {/* Qualifications */}
+            {job.qualifications && (
+                <div className="mb-6 lg:mb-8">
+                    <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 lg:mb-4 flex items-center gap-2">
+                        <AcademicCapIcon className="w-5 h-5 lg:w-6 lg:h-6 text-indigo-600" />
+                        Qualifications
+                    </h3>
+                    <div
+                        className="prose prose-sm lg:prose-lg max-w-none text-gray-700 text-sm lg:text-base"
+                        dangerouslySetInnerHTML={{ __html: job.qualifications }}
+                    />
+                </div>
+            )}
+
+            {/* Why Join Us */}
+            {job.benefits && (
+                <div className="mb-6 lg:mb-8">
+                    <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 lg:mb-4 flex items-center gap-2">
+                        <HeartIcon className="w-5 h-5 lg:w-6 lg:h-6 text-pink-600" />
+                        Why Join Us?
+                    </h3>
+                    <div
+                        className="prose prose-sm lg:prose-lg max-w-none text-gray-700 text-sm lg:text-base"
+                        dangerouslySetInnerHTML={{ __html: job.benefits }}
+                    />
+                </div>
+            )}
         </div>
     );
 };
@@ -169,6 +393,7 @@ const JobsDetails = () => {
     const [jobCategories, setJobCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [openJobId, setOpenJobId] = useState(null);
 
     // The params are already decoded
     const categorySlug = category || null;
@@ -313,11 +538,16 @@ const JobsDetails = () => {
         )
         : jobCategories;
 
+    // Handle job card toggle
+    const handleJobToggle = (jobId) => {
+        setOpenJobId(openJobId === jobId ? null : jobId);
+    };
+
     if (loading) {
         return (
-            <div className="jobs-details py-10">
-                <div className="flex justify-center items-center h-64">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="jobs-details sm:py-8 lg:py-10 sm:px-4 lg:px-0">
+                <div className="flex justify-center items-center h-48 lg:h-64">
+                    <div className="animate-spin rounded-full h-10 w-10 lg:h-12 lg:w-12 border-b-2 border-blue-600"></div>
                 </div>
             </div>
         );
@@ -325,12 +555,12 @@ const JobsDetails = () => {
 
     if (error) {
         return (
-            <div className="jobs-details py-10">
+            <div className="jobs-details sm:py-8 lg:py-10 sm:px-4 lg:px-0">
                 <div className="text-center text-red-600 p-4">
-                    <p>Error loading job details: {error}</p>
+                    <p className="text-sm lg:text-base">Error loading job details: {error}</p>
                     <button
                         onClick={() => window.location.reload()}
-                        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md"
+                        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm lg:text-base"
                     >
                         Retry
                     </button>
@@ -340,9 +570,9 @@ const JobsDetails = () => {
     }
 
     return (
-        <div className="jobs-details py-10">
+        <div className="jobs-details sm:py-8 lg:py-10 min-h-screen bg-gray-50 px-4 lg:px-0">
             {filteredCategories.length === 0 && (
-                <p className='text-center text-lg text-gray-600'>
+                <p className='text-center text-base lg:text-lg text-gray-600 px-4'>
                     No job category found matching the URL: "{categorySlug}"
                 </p>
             )}
@@ -356,23 +586,39 @@ const JobsDetails = () => {
                     : category.jobs;
 
                 return (
-                    <div className='py-5 space-y-8' key={category.title}>
+                    <div className='sm:py-4 lg:py-5 space-y-4 lg:space-y-6' key={category.title}>
                         {filteredJobs.length === 0 ? (
-                            <p className='text-center text-lg text-gray-600'>
+                            <p className='text-center text-base lg:text-lg text-gray-600 px-4'>
                                 {titleSlug
                                     ? `No jobs found matching "${titleSlug}" in category "${category.title}"`
                                     : `No jobs found in category "${category.title}"`
                                 }
                             </p>
                         ) : (
-                            filteredJobs.map((job, ind) => (
-                                <JobCard
-                                    key={job.id || ind}
-                                    job={job}
-                                    category={category.title}
-                                    logo={category.icon}
-                                />
-                            ))
+                            <div className="space-y-4 lg:space-y-6">
+                                {/* Job Cards with Toggle */}
+                                {filteredJobs.map((job, ind) => {
+                                    const jobUniqueId = job.id || `job-${ind}`;
+                                    return (
+                                        <div key={jobUniqueId} className="space-y-4 lg:space-y-6">
+                                            <JobCard
+                                                job={job}
+                                                category={category.title}
+                                                logo={category.icon}
+                                                isOpen={openJobId === jobUniqueId}
+                                                onToggle={() => handleJobToggle(jobUniqueId)}
+                                            />
+                                            {/* Scrollable Job Details */}
+                                            <div className="h-[calc(100vh-180px)] lg:h-[calc(100vh-200px)] overflow-y-auto">
+                                                <JobDetailsContent
+                                                    job={job}
+                                                    isOpen={openJobId === jobUniqueId}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         )}
                     </div>
                 );

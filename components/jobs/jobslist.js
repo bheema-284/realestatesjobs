@@ -3,6 +3,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import ButtonTab from '../common/buttontab';
 
+// Import Heroicons
+import {
+    ClockIcon,
+    MapPinIcon,
+    CurrencyRupeeIcon,
+} from '@heroicons/react/24/outline';
+
 // Utility function to create a URL-friendly slug
 const createSlug = (title) => {
     return title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '';
@@ -19,40 +26,88 @@ const JobCard = ({ job, logo, category, title }) => {
     };
 
     return (
-        <div className="relative w-full sm:w-[80%] mx-auto bg-white border border-gray-300 shadow-lg rounded-2xl flex flex-col sm:flex-row items-start p-4 sm:p-6 gap-6">
-            {/* Left Section: Logo (dummy or company icon) */}
-            <div className="absolute w-20 h-20 sm:w-24 sm:h-24 -top-3 -left-3 border border-gray-300 shadow-md bg-white rounded-xl flex items-center justify-center p-2">
+        <div className="
+            w-full max-w-4xl mx-auto
+            bg-white rounded-2xl 
+            shadow-[0px_0px_25px_rgba(21,58,103,0.15),0px_4px_12px_rgba(0,0,0,0.1)]
+            border border-blue-100
+            flex flex-col lg:flex-row items-start lg:items-center
+            p-4 lg:p-5 lg:pl-44 relative
+            min-h-[120px] lg:min-h-[140px]
+            transition-all duration-300
+            hover:shadow-[0px_0px_30px_rgba(21,58,103,0.25),0px_4px_15px_rgba(0,0,0,0.12)]
+            hover:border-blue-200
+        ">
+
+            {/* LEFT LOGO BOX - Responsive positioning */}
+            <div className="
+                lg:absolute lg:left-0 lg:top-1/2 lg:-translate-y-1/2
+                w-16 h-16 lg:w-40 lg:h-40 
+                bg-white 
+                rounded-2xl 
+                shadow-[0px_4px_20px_rgba(21,58,103,0.2)]
+                border border-gray-200
+                flex items-center justify-center
+                overflow-hidden
+                transition-all duration-300
+                hover:shadow-[0px_6px_25px_rgba(21,58,103,0.3)]
+                hover:scale-105
+                mb-3 lg:mb-0
+                mx-auto lg:mx-0
+            ">
                 <img
-                    src={job.companyProfileImage || "/icons/job.png"}
+                    src={job.companyProfileImage || '/icons/job.png'}
                     alt={job.companyName}
-                    className="w-full h-full object-contain"
+                    className="w-[80%] h-[80%] object-contain transition-transform duration-300 hover:scale-110"
                 />
             </div>
 
-            {/* Job Info */}
-            <div className="flex-1 w-full pl-24 sm:pl-32">
-                <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800">
-                    {job.jobTitle || job.title}
+            {/* MIDDLE DETAILS - Responsive spacing and layout */}
+            <div className="flex-1 w-full lg:w-auto text-center lg:text-left mb-4 lg:mb-0">
+                <h2 className="text-lg lg:text-xl font-bold text-gray-900 leading-tight">
+                    {job.jobTitle} - {job.companyName}
                 </h2>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                    Company: <span className="font-semibold">{job.companyName}</span> {/* Updated */}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600">
-                    Location: <span className="font-semibold">{job.location}</span>
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600">
-                    Experience: {job.experience}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600">
-                    Salary: {job.salary || job.salaryAmount} {job.salaryFrequency ? `(${job.salaryFrequency})` : ''}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600">
-                    Type: {job.employmentTypes?.[0] || job.type}
-                </p>
+
+                <div className="flex flex-wrap justify-center lg:justify-start items-center gap-3 lg:gap-6 mt-3 lg:mt-4 text-gray-700 font-medium text-sm lg:text-[15px]">
+
+                    <div className="flex items-center gap-2">
+                        <ClockIcon className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
+                        <span className="font-semibold">{job.employmentTypes?.[0] || job.type || "full_time"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <MapPinIcon className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
+                        <span className="font-semibold">{job.location || "Tirupati"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <CurrencyRupeeIcon className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
+                        <span className="font-semibold">{job.salary || job.salaryAmount || "20000"}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* RIGHT BUTTON - Responsive layout */}
+            <div className="flex items-center justify-center lg:justify-normal w-full lg:w-auto">
+                {/* Blue Vertical Line - Hidden on mobile, visible on desktop */}
+                <div className="hidden lg:block w-[2px] h-20 lg:h-24 bg-[#153A67] mr-4"></div>
 
                 <button
                     onClick={handleViewJob}
-                    className="mt-3 px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-md hover:bg-blue-700 transition"
+                    className="
+                        px-4 lg:px-6 py-2 
+                        bg-[#153A67] 
+                        text-white 
+                        rounded-xl 
+                        font-semibold 
+                        hover:bg-[#0d2c52] 
+                        transition-all duration-300
+                        whitespace-nowrap
+                        hover:shadow-[0px_4px_15px_rgba(21,58,103,0.4)]
+                        hover:translate-y-[-2px]
+                        text-sm lg:text-base
+                        w-full lg:w-auto
+                    "
                 >
                     View Details
                 </button>
@@ -60,6 +115,7 @@ const JobCard = ({ job, logo, category, title }) => {
         </div>
     );
 };
+
 
 // Main Jobs List
 const JobsList = () => {
@@ -328,12 +384,14 @@ const JobsList = () => {
             )}
 
             {/* Sticky Tabs Navigation */}
-            <div className={`fixed left-0 right-0 w-full sm:w-[80%] mx-auto z-30 bg-white top-20`}>
-                <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+            <div className='bg-white w-full'>
+                <div className={`fixed left-0 right-0 w-full sm:w-[80%] mx-auto z-30 bg-white top-20`}>
+                    <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+                </div>
             </div>
 
             {/* Job Listings - Content start pushed down by sticky header */}
-            <div className={`${initialLocationSlug ? 'mt-0' : 'mt-32'} space-y-8`}>
+            <div className={`${initialLocationSlug ? 'mt-0' : 'mt-36'} space-y-8`}>
                 {/* Check if a category is selected and has jobs */}
                 {jobsToDisplay.length > 0 ? (
                     jobsToDisplay.map((job, ind) => (
