@@ -19,68 +19,13 @@ const useDebounce = (value, delay) => {
   return debouncedValue;
 };
 
-// Custom hook for real-time chat updates
-const useChatUpdates = (chatId, isActive, onNewMessages) => {
-  useEffect(() => {
-    if (!chatId || !isActive) return;
-
-    // Simulate real-time updates
-    const interval = setInterval(async () => {
-      console.log('🔄 Checking for real-time updates...');
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [chatId, isActive, onNewMessages]);
-};
-
-// Online status hook based on last message timestamp
-const useOnlineStatus = (messages, otherUserId, isCompany) => {
-  const [isOnline, setIsOnline] = useState(false);
-  const [lastSeen, setLastSeen] = useState(null);
-
-  useEffect(() => {
-    if (!messages || messages.length === 0 || !otherUserId) {
-      setIsOnline(false);
-      setLastSeen(null);
-      return;
-    }
-
-    // Find the last message from the other user
-    const otherUserMessages = messages.filter(msg => 
-      isCompany ? msg.role === 'candidate' : msg.role === 'company'
-    );
-
-    if (otherUserMessages.length === 0) {
-      setIsOnline(false);
-      setLastSeen(null);
-      return;
-    }
-
-    // Get the most recent message from other user
-    const lastMessage = otherUserMessages.reduce((latest, current) => 
-      new Date(current.timestamp) > new Date(latest.timestamp) ? current : latest
-    );
-
-    const lastMessageTime = new Date(lastMessage.timestamp);
-    const now = new Date();
-    const timeDiff = now - lastMessageTime;
-    
-    // Consider user online if they sent a message in the last 2 minutes
-    const isUserOnline = timeDiff < 120000; // 2 minutes
-    
-    setIsOnline(isUserOnline);
-    setLastSeen(isUserOnline ? null : lastMessageTime);
-
-  }, [messages, otherUserId, isCompany]);
-
-  return { isOnline, lastSeen };
-};
-
 export default function Chat({ candidate, company, onClose, onSendMessage, userRole = 'company' }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
+  const [isOtherUserOnline, setIsOtherUserOnline] = useState(false);
+  const [lastSeenTime, setLastSeenTime] = useState(null);
   const [isConnected, setIsConnected] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [selectedMessages, setSelectedMessages] = useState(new Set());
@@ -101,52 +46,487 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
   const pollIntervalRef = useRef(null);
   const lastActionTimeRef = useRef(0);
   const visibilityTimeoutRef = useRef(null);
+  const messageRetryCountRef = useRef(new Map());
+  const isInitialLoadRef = useRef(true);
+  const isPollingActiveRef = useRef(false);
 
   // Determine if current user is company or applicant
   const isCompany = userRole === 'company';
   const currentUser = isCompany ? company : candidate;
   const otherUser = isCompany ? candidate : company;
-  const otherUserId = otherUser?._id || otherUser?.applicantId;
-
-  // Get online status based on last message timestamp
-  const { isOnline: isOtherUserOnline, lastSeen: otherUserLastSeen } = useOnlineStatus(
-    messages,
-    otherUserId,
-    isCompany
-  );
 
   // Debounced chatId for polling
   const debouncedChatId = useDebounce(chatId, 1000);
 
-  // Handle new messages from real-time updates
-  const handleNewMessages = useCallback((newMessages) => {
-    if (newMessages && newMessages.length > 0) {
-      setMessages(prev => {
-        const existingIds = new Set(prev.map(msg => msg.id));
-        const uniqueNewMessages = newMessages.filter(msg => !existingIds.has(msg.id));
-        
-        if (uniqueNewMessages.length === 0) return prev;
+  // FIXED: Enhanced message status detection with proper role mapping
+  const getMessageStatus = useCallback((message) => {
+    if (message.role === 'system') return 'read';
 
-        const mergedMessages = [...prev, ...uniqueNewMessages].sort((a, b) => 
-          new Date(a.timestamp) - new Date(b.timestamp)
-        );
+    const isOwnMessage = isCompany ?
+      (message.role === 'company' || message.senderType === 'company') :
+      (message.role === 'candidate' || message.senderType === 'applicant');
 
-        return mergedMessages;
-      });
-
-      // Check if there are unread messages from the other user
-      const hasUnreadFromOther = newMessages.some(msg => 
-        isCompany ? msg.role === 'candidate' && !msg.read : msg.role === 'company' && !msg.read
-      );
-
-      if (hasUnreadFromOther) {
-        markMessagesAsRead();
-      }
+    if (!isOwnMessage) {
+      return 'read';
     }
+
+    if (message.status && message.status !== 'sent') {
+      return message.status;
+    }
+
+    return message.status || 'sent';
   }, [isCompany]);
 
-  // Use custom hook for real-time updates
-  useChatUpdates(chatId, isConnected && isChatActive, handleNewMessages);
+  // NEW: Calculate online status based on recent activity
+  const calculateOnlineStatus = useCallback((messages) => {
+    if (!messages || messages.length === 0) {
+      setIsOtherUserOnline(false);
+      setLastSeenTime(null);
+      return;
+    }
+
+    const otherUserMessages = messages.filter(msg =>
+      isCompany ?
+        (msg.role === 'candidate' || msg.senderType === 'applicant') :
+        (msg.role === 'company' || msg.senderType === 'company')
+    );
+
+    if (otherUserMessages.length === 0) {
+      setIsOtherUserOnline(false);
+      setLastSeenTime(null);
+      return;
+    }
+
+    const latestMessage = otherUserMessages.reduce((latest, msg) => {
+      const msgTime = new Date(msg.timestamp).getTime();
+      const latestTime = latest ? new Date(latest.timestamp).getTime() : 0;
+      return msgTime > latestTime ? msg : latest;
+    }, null);
+
+    if (!latestMessage) return;
+
+    const messageTime = new Date(latestMessage.timestamp);
+    const currentTime = new Date();
+    const timeDiff = currentTime.getTime() - messageTime.getTime();
+
+    const isOnline = timeDiff < 2 * 60 * 1000;
+    setIsOtherUserOnline(isOnline);
+    setLastSeenTime(messageTime);
+  }, [isCompany]);
+
+  // FIXED: Enhanced check for unread messages with proper role mapping
+  const checkUnreadMessages = useCallback((messages) => {
+    const hasUnread = messages.some(msg => {
+      if (isCompany) {
+        return (msg.role === 'candidate' || msg.senderType === 'applicant') && !msg.read;
+      } else {
+        return (msg.role === 'company' || msg.senderType === 'company') && !msg.read;
+      }
+    });
+
+    hasUnreadMessagesRef.current = hasUnread;
+    return hasUnread;
+  }, [isCompany]);
+
+  // FIXED: Enhanced mark messages as read with better logging and role handling
+  const markMessagesAsRead = useCallback(async (currentChatId = null) => {
+    if (chatDeletedRef.current || !isChatActive) {
+      return;
+    }
+
+    const targetChatId = currentChatId || chatId;
+    if (!targetChatId) {
+      return;
+    }
+
+    const currentHasUnread = checkUnreadMessages(messages);
+    if (!currentHasUnread) {
+      return;
+    }
+
+    try {
+      let applicantId, companyId, jobId;
+
+      if (isCompany) {
+        applicantId = candidate?.applicantId || candidate?._id;
+        companyId = company?._id;
+        jobId = candidate?.jobId;
+      } else {
+        applicantId = candidate?.applicantId || candidate?._id;
+        companyId = company?._id || company?.companyId;
+        jobId = candidate?.jobId || company?.jobId;
+      }
+
+      if (!applicantId || !companyId || !jobId) {
+        return;
+      }
+
+      const readerType = isCompany ? 'company' : 'applicant';
+
+      const markReadResponse = await fetch('/api/chat', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatId: targetChatId,
+          readerType: readerType,
+          applicantId: applicantId,
+          companyId: companyId,
+          jobId: jobId
+        })
+      });
+
+      const markReadResult = await markReadResponse.json();
+
+      if (markReadResult.success && markReadResult.modifiedCount > 0) {
+        setMessages(prev => prev.map(msg => {
+          const shouldBeRead = isCompany ?
+            (msg.role === 'candidate' || msg.senderType === 'applicant') :
+            (msg.role === 'company' || msg.senderType === 'company');
+
+          if (shouldBeRead && !msg.read) {
+            return {
+              ...msg,
+              read: true,
+              status: 'read'
+            };
+          }
+          return msg;
+        }));
+
+        hasUnreadMessagesRef.current = false;
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  }, [isCompany, candidate, company, chatId, isChatActive, messages, checkUnreadMessages]);
+
+  // FIXED: Enhanced load chat history with proper abort control and caching
+  const loadChatHistory = useCallback(async (forceReload = false) => {
+    const now = Date.now();
+    const timeSinceLastLoad = now - lastLoadTimeRef.current;
+
+    // Prevent too frequent requests
+    if (!forceReload && timeSinceLastLoad < 3000) {
+      return;
+    }
+
+    // Create abort controller to cancel request if component unmounts
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 10000); // 10 second timeout
+
+    try {
+      let applicantId, companyId, jobId;
+
+      if (isCompany) {
+        applicantId = candidate?.applicantId || candidate?._id;
+        companyId = company?._id;
+        jobId = candidate?.jobId;
+      } else {
+        applicantId = candidate?.applicantId || candidate?._id;
+        companyId = company?._id || company?.companyId;
+        jobId = candidate?.jobId || company?.jobId;
+      }
+
+      if (!applicantId || !companyId || !jobId) {
+        setIsLoadingMessages(false);
+        return;
+      }
+
+      const params = new URLSearchParams({
+        applicantId: applicantId,
+        companyId: companyId,
+        jobId: jobId,
+        includeStatus: 'true',
+        t: forceReload ? Date.now().toString() : 'cache' // Cache busting for force reload
+      });
+
+      const response = await fetch(`/api/chat?${params}`, {
+        signal: abortController.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        const loadedChatId = result.chat.id;
+        setChatId(loadedChatId);
+        lastLoadTimeRef.current = now;
+
+        const transformedMessages = result.chat.messages.map(msg => {
+          const isFromOtherUser = isCompany ?
+            (msg.senderType === 'applicant') :
+            (msg.senderType === 'company');
+
+          const isOwnMessage = isCompany ?
+            (msg.senderType === 'company') :
+            (msg.senderType === 'applicant');
+
+          let messageStatus = msg.status || 'sent';
+
+          if (msg.read && isFromOtherUser) {
+            messageStatus = 'read';
+          }
+
+          return {
+            id: msg._id,
+            role: msg.senderType === 'company' ? 'company' : 'candidate',
+            content: msg.content,
+            timestamp: new Date(msg.timestamp),
+            senderId: msg.senderId,
+            senderName: msg.senderName,
+            read: msg.read || false,
+            isSelected: false,
+            status: messageStatus,
+            isOwnMessage: isOwnMessage,
+            senderType: msg.senderType
+          };
+        });
+
+        if (transformedMessages.length === 0) {
+          const systemMessage = isCompany
+            ? `You are chatting with ${candidate?.applicantName || 'Candidate'} about the ${candidate?.jobTitle || 'job'} position.`
+            : `You are chatting with ${company?.name || 'Company'} about the ${candidate?.jobTitle || 'job'} position.`;
+
+          transformedMessages.push({
+            id: 'system-1',
+            role: 'system',
+            content: systemMessage,
+            timestamp: new Date(),
+            isSelected: false,
+            read: true,
+            status: 'read',
+            isOwnMessage: false
+          });
+        }
+
+        setMessages(transformedMessages);
+        calculateOnlineStatus(transformedMessages);
+
+        const hasUnread = checkUnreadMessages(transformedMessages);
+        if (hasUnread && loadedChatId && isChatActive) {
+          markMessagesAsRead(loadedChatId);
+        }
+      } else {
+        throw new Error(result.error || 'Failed to load chat history');
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('Chat history request was aborted');
+        return;
+      }
+
+      console.error('Failed to load chat history:', error);
+
+      // Only set system message if this is the initial load and we have no messages
+      if (messages.length === 0 && isInitialLoadRef.current) {
+        const systemMessage = isCompany
+          ? `You are chatting with ${candidate?.applicantName || 'Candidate'} about the ${candidate?.jobTitle || 'job'} position.`
+          : `You are chatting with ${company?.name || 'Company'} about the ${candidate?.jobTitle || 'job'} position.`;
+
+        setMessages([{
+          id: 'system-1',
+          role: 'system',
+          content: systemMessage,
+          timestamp: new Date(),
+          isSelected: false,
+          read: true,
+          status: 'read',
+          isOwnMessage: false
+        }]);
+      }
+    } finally {
+      clearTimeout(timeoutId);
+      setIsLoadingMessages(false);
+      isInitialLoadRef.current = false;
+    }
+  }, [isCompany, candidate, company, markMessagesAsRead, checkUnreadMessages, isChatActive, calculateOnlineStatus, messages.length]);
+
+  // FIXED: Initial load only once on mount
+  useEffect(() => {
+    console.log('🚀 Initial chat load');
+    lastActionTimeRef.current = Date.now();
+    isInitialLoadRef.current = true;
+    loadChatHistory(true);
+
+    return () => {
+      // Cleanup function for component unmount
+      isInitialLoadRef.current = false;
+    };
+  }, []); // Empty dependency array - only run on mount
+
+  // FIXED: Smart polling with proper cleanup and conditions
+  useEffect(() => {
+    let isMounted = true;
+
+    const startPolling = () => {
+      if (!isMounted || !debouncedChatId || !isConnected || chatDeletedRef.current || !isChatActive) {
+        return;
+      }
+
+      // Clear existing interval
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+
+      // Start new polling interval
+      pollIntervalRef.current = setInterval(async () => {
+        if (!isMounted || !isPollingActiveRef.current) return;
+
+        const now = Date.now();
+        const timeSinceLastAction = now - lastActionTimeRef.current;
+
+        // Only poll if there's been recent activity (last 5 minutes)
+        if (timeSinceLastAction > 300000) {
+          return;
+        }
+
+        // Prevent multiple simultaneous requests
+        if (isPollingActiveRef.current) {
+          isPollingActiveRef.current = false;
+          try {
+            await loadChatHistory(false);
+          } catch (error) {
+            console.error('Polling error:', error);
+          } finally {
+            // Re-enable polling after a delay
+            setTimeout(() => {
+              if (isMounted) {
+                isPollingActiveRef.current = true;
+              }
+            }, 2000);
+          }
+        }
+      }, 5000); // Poll every 5 seconds
+    };
+
+    // Initialize polling state
+    isPollingActiveRef.current = true;
+    startPolling();
+
+    return () => {
+      isMounted = false;
+      isPollingActiveRef.current = false;
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, [debouncedChatId, isConnected, isChatActive, loadChatHistory]);
+
+  // FIXED: Reload chat only when specifically becoming active with chatId
+  useEffect(() => {
+    if (isChatActive && chatId && !isInitialLoadRef.current) {
+      const now = Date.now();
+      const timeSinceLastLoad = now - lastLoadTimeRef.current;
+
+      // Only reload if it's been more than 2 seconds since last load
+      if (timeSinceLastLoad > 2000) {
+        loadChatHistory(true);
+      }
+    }
+  }, [isChatActive, chatId, loadChatHistory]);
+
+  // Recalculate online status when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      calculateOnlineStatus(messages);
+    }
+  }, [messages, calculateOnlineStatus]);
+
+  // Enhanced auto-scroll with better detection
+  useEffect(() => {
+    if (isScrollingProgrammatically.current) {
+      isScrollingProgrammatically.current = false;
+      return;
+    }
+
+    const messagesContainer = messagesEndRef.current?.parentElement;
+    if (messagesContainer) {
+      const isNearBottom = messagesContainer.scrollHeight - messagesContainer.clientHeight - messagesContainer.scrollTop < 150;
+      if (isNearBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [messages]);
+
+  // FIXED: Enhanced visibility and focus handling
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        setIsChatActive(true);
+        lastActionTimeRef.current = Date.now();
+      } else {
+        setIsChatActive(false);
+      }
+    };
+
+    const handleFocus = () => {
+      setIsChatActive(true);
+      lastActionTimeRef.current = Date.now();
+    };
+
+    const handleBlur = () => {
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current);
+      }
+      visibilityTimeoutRef.current = setTimeout(() => {
+        setIsChatActive(false);
+      }, 30000);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Track user activity to keep polling active
+  useEffect(() => {
+    const handleActivity = () => {
+      lastActionTimeRef.current = Date.now();
+    };
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => {
+      document.addEventListener(event, handleActivity);
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity);
+      });
+    };
+  }, []);
+
+  // Enhanced connection monitoring
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsConnected(true);
+    };
+
+    const handleOffline = () => setIsConnected(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -175,395 +555,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       }
     };
   }, []);
-
-  // Enhanced connection monitoring
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsConnected(true);
-      // Reload messages when coming back online
-      if (isChatActive) {
-        loadChatHistory(true);
-      }
-    };
-    
-    const handleOffline = () => setIsConnected(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [isChatActive]);
-
-  // Chat activity monitoring - track when chat is actively being used
-  useEffect(() => {
-    const handleActivity = () => {
-      setIsChatActive(true);
-      lastActionTimeRef.current = Date.now();
-    };
-
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    events.forEach(event => {
-      document.addEventListener(event, handleActivity);
-    });
-
-    return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, handleActivity);
-      });
-    };
-  }, []);
-
-  // Check if there are unread messages from the other user
-  const checkUnreadMessages = useCallback((messages) => {
-    const hasUnread = messages.some(msg => {
-      if (isCompany) {
-        return msg.role === 'candidate' && !msg.read;
-      } else {
-        return msg.role === 'company' && !msg.read;
-      }
-    });
-    hasUnreadMessagesRef.current = hasUnread;
-    return hasUnread;
-  }, [isCompany]);
-
-  // Enhanced mark messages as read using your new API endpoint
-  const markMessagesAsRead = useCallback(async (currentChatId = null) => {
-    if (chatDeletedRef.current || !isChatActive) {
-      console.log('🚫 Skipping mark-read: Chat was deleted or inactive');
-      return;
-    }
-
-    if (!currentChatId && !chatId) {
-      console.log('🚫 Skipping mark-read: No chat ID available');
-      return;
-    }
-
-    if (!hasUnreadMessagesRef.current) {
-      console.log('🚫 Skipping mark-read: No unread messages');
-      return;
-    }
-
-    try {
-      let applicantId, companyId, jobId;
-
-      if (isCompany) {
-        applicantId = candidate?.applicantId || candidate?._id;
-        companyId = company?._id;
-        jobId = candidate?.jobId;
-      } else {
-        applicantId = candidate?.applicantId || candidate?._id;
-        companyId = company?._id || company?.companyId;
-        jobId = candidate?.jobId || company?.jobId;
-      }
-
-      const targetChatId = currentChatId || chatId;
-
-      if (!applicantId || !companyId || !jobId || !targetChatId) {
-        console.error('Missing required data for marking messages as read');
-        return;
-      }
-
-      const userId = isCompany ? companyId : applicantId;
-      const userType = isCompany ? 'company' : 'applicant';
-
-      console.log('📖 Marking messages as read for:', { userId, userType, targetChatId });
-
-      // Use your new mark-read API endpoint
-      const markReadResponse = await fetch('/api/chat/mark-read', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chatId: targetChatId,
-          applicantId: applicantId,
-          companyId: companyId,
-          jobId: jobId,
-          userId: userId,
-          userType: userType
-        })
-      });
-
-      const markReadResult = await markReadResponse.json();
-
-      if (markReadResult.success) {
-        console.log('✅ Mark as read successful:', {
-          modifiedCount: markReadResult.modifiedCount,
-          userType: markReadResult.userType
-        });
-
-        if (markReadResult.modifiedCount > 0) {
-          setMessages(prev => prev.map(msg => {
-            const shouldBeRead = isCompany ? 
-              (msg.role === 'candidate') : 
-              (msg.role === 'company');
-
-            if (shouldBeRead && !msg.read) {
-              return {
-                ...msg,
-                read: true,
-                status: 'read'
-              };
-            }
-            return msg;
-          }));
-
-          hasUnreadMessagesRef.current = false;
-        }
-      } else {
-        console.error('❌ Failed to mark messages as read:', markReadResult.error);
-      }
-    } catch (error) {
-      console.error('❌ Error marking messages as read:', error);
-    }
-  }, [isCompany, candidate, company, chatId, isChatActive]);
-
-  // Enhanced load chat history
-  const loadChatHistory = useCallback(async (forceReload = false) => {
-    const now = Date.now();
-    const timeSinceLastLoad = now - lastLoadTimeRef.current;
-    
-    if (!forceReload && timeSinceLastLoad < 2000) {
-      console.log('🕒 Skipping load: Too frequent requests', { timeSinceLastLoad });
-      return;
-    }
-
-    try {
-      let applicantId, companyId, jobId;
-
-      if (isCompany) {
-        applicantId = candidate?.applicantId || candidate?._id;
-        companyId = company?._id;
-        jobId = candidate?.jobId;
-      } else {
-        applicantId = candidate?.applicantId || candidate?._id;
-        companyId = company?._id || company?.companyId;
-        jobId = candidate?.jobId || company?.jobId;
-      }
-
-      if (!applicantId || !companyId || !jobId) {
-        console.error('Missing required data for chat');
-        setIsLoadingMessages(false);
-        return;
-      }
-
-      const params = new URLSearchParams({
-        applicantId: applicantId,
-        companyId: companyId,
-        jobId: jobId,
-        includeStatus: 'true'
-      });
-
-      console.log('📥 Loading chat history...');
-      const response = await fetch(`/api/chat?${params}`);
-      const result = await response.json();
-
-      if (result.success) {
-        const loadedChatId = result.chat.id;
-        setChatId(loadedChatId);
-        lastLoadTimeRef.current = now;
-
-        const transformedMessages = result.chat.messages.map(msg => {
-          const isFromOtherUser = isCompany ?
-            (msg.senderType === 'applicant') :
-            (msg.senderType === 'company');
-
-          const isOwnMessage = isCompany ?
-            (msg.senderType === 'company') :
-            (msg.senderType === 'applicant');
-
-          return {
-            id: msg._id,
-            role: msg.senderType === 'company' ? 'company' : 'candidate',
-            content: msg.content,
-            timestamp: new Date(msg.timestamp),
-            senderId: msg.senderId,
-            senderName: msg.senderName,
-            read: msg.read || false,
-            isSelected: false,
-            status: msg.status || 'sent',
-            isOwnMessage: isOwnMessage
-          };
-        });
-
-        if (transformedMessages.length === 0) {
-          const systemMessage = isCompany
-            ? `You are chatting with ${candidate?.applicantName || 'Candidate'} about the ${candidate?.jobTitle || 'job'} position.`
-            : `You are chatting with ${company?.name || 'Company'} about the ${candidate?.jobTitle || 'job'} position.`;
-
-          transformedMessages.push({
-            id: 'system-1',
-            role: 'system',
-            content: systemMessage,
-            timestamp: new Date(),
-            isSelected: false,
-            read: true,
-            status: 'read',
-            isOwnMessage: false
-          });
-        }
-
-        setMessages(transformedMessages);
-
-        const hasUnread = checkUnreadMessages(transformedMessages);
-        console.log('📥 Loaded chat history:', {
-          messageCount: transformedMessages.length,
-          hasUnread,
-          currentUser: isCompany ? 'company' : 'applicant',
-          otherUserOnline: isOtherUserOnline
-        });
-        
-        if (hasUnread && loadedChatId && isChatActive) {
-          markMessagesAsRead(loadedChatId);
-        }
-      } else {
-        throw new Error(result.error || 'Failed to load chat history');
-      }
-    } catch (error) {
-      console.error('Failed to load chat history:', error);
-      const systemMessage = isCompany
-        ? `You are chatting with ${candidate?.applicantName || 'Candidate'} about the ${candidate?.jobTitle || 'job'} position.`
-        : `You are chatting with ${company?.name || 'Company'} about the ${candidate?.jobTitle || 'job'} position.`;
-
-      setMessages([
-        {
-          id: 'system-1',
-          role: 'system',
-          content: systemMessage,
-          timestamp: new Date(),
-          isSelected: false,
-          read: true,
-          status: 'read',
-          isOwnMessage: false
-        },
-      ]);
-    } finally {
-      setIsLoadingMessages(false);
-    }
-  }, [isCompany, candidate, company, markMessagesAsRead, checkUnreadMessages, isChatActive, isOtherUserOnline]);
-
-  // Load chat history when component mounts and when chat becomes active
-  useEffect(() => {
-    console.log('🚀 Initial chat load');
-    lastActionTimeRef.current = Date.now();
-    loadChatHistory(true);
-  }, []);
-
-  // Reload chat when it becomes active again
-  useEffect(() => {
-    if (isChatActive && chatId) {
-      console.log('🔄 Chat became active, reloading messages');
-      loadChatHistory(true);
-    }
-  }, [isChatActive, chatId]);
-
-  // Enhanced auto-scroll with better detection
-  useEffect(() => {
-    if (isScrollingProgrammatically.current) {
-      isScrollingProgrammatically.current = false;
-      return;
-    }
-
-    const messagesContainer = messagesEndRef.current?.parentElement;
-    if (messagesContainer) {
-      const isNearBottom = messagesContainer.scrollHeight - messagesContainer.clientHeight - messagesContainer.scrollTop < 150;
-      if (isNearBottom) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  }, [messages]);
-
-  // Enhanced visibility and focus handling
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        setIsChatActive(true);
-        if (messages.length > 0 && chatId && !chatDeletedRef.current) {
-          const hasUnread = checkUnreadMessages(messages);
-          if (hasUnread) {
-            markMessagesAsRead();
-          }
-        }
-      } else {
-        setIsChatActive(false);
-      }
-    };
-
-    const handleFocus = () => {
-      setIsChatActive(true);
-      if (messages.length > 0 && chatId && !chatDeletedRef.current) {
-        const hasUnread = checkUnreadMessages(messages);
-        if (hasUnread) {
-          markMessagesAsRead();
-        }
-      }
-    };
-
-    const handleBlur = () => {
-      if (visibilityTimeoutRef.current) {
-        clearTimeout(visibilityTimeoutRef.current);
-      }
-      visibilityTimeoutRef.current = setTimeout(() => {
-        setIsChatActive(false);
-      }, 30000);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
-      if (visibilityTimeoutRef.current) {
-        clearTimeout(visibilityTimeoutRef.current);
-      }
-    };
-  }, [messages, chatId, markMessagesAsRead, checkUnreadMessages]);
-
-  // Optimized polling with activity detection
-  useEffect(() => {
-    let isMounted = true;
-
-    const pollForUpdates = async () => {
-      if (!isMounted || !debouncedChatId || !isConnected || chatDeletedRef.current || !isChatActive) {
-        return;
-      }
-
-      const now = Date.now();
-      const timeSinceLastAction = now - lastActionTimeRef.current;
-      
-      if (timeSinceLastAction > 120000) {
-        console.log('⏸️ Skipping poll: No recent user activity');
-        return;
-      }
-
-      try {
-        console.log('🔄 Polling for chat updates...');
-        await loadChatHistory(false);
-      } catch (error) {
-        console.error('Polling error:', error);
-      }
-    };
-
-    if (debouncedChatId && isChatActive) {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
-      pollIntervalRef.current = setInterval(pollForUpdates, 5000);
-    }
-
-    return () => {
-      isMounted = false;
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
-    };
-  }, [debouncedChatId, isConnected, isChatActive]);
 
   // Delete individual message
   const deleteMessage = async (messageId) => {
@@ -596,15 +587,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
 
       if (result.success) {
         setMessages(prev => prev.filter(msg => msg.id !== messageId));
-        console.log('Message deleted successfully');
-        
         lastActionTimeRef.current = Date.now();
-        checkUnreadMessages(messages.filter(msg => msg.id !== messageId));
-        
-        setTimeout(() => {
-          loadChatHistory(true);
-        }, 500);
-        
         return true;
       } else {
         throw new Error(result.error || 'Failed to delete message');
@@ -647,15 +630,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
 
       if (result.success) {
         setMessages(prev => prev.filter(msg => !messageIds.has(msg.id)));
-        console.log(`${messageIds.size} messages deleted successfully`);
-
         lastActionTimeRef.current = Date.now();
-        checkUnreadMessages(messages.filter(msg => !messageIds.has(msg.id)));
-        
-        setTimeout(() => {
-          loadChatHistory(true);
-        }, 500);
-        
         return true;
       } else {
         throw new Error(result.error || 'Failed to delete messages');
@@ -895,10 +870,10 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     return () => document.removeEventListener('mouseup', handleMouseUp);
   }, []);
 
-  // Enhanced send message with better error handling
+  // FIXED: Enhanced send message with better error handling and retry logic
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!input.trim() || chatDeletedRef.current) return;
+    if (!input.trim() || chatDeletedRef.current || loading) return;
 
     const tempMessageId = `temp-${Date.now()}`;
     const userMessage = {
@@ -911,23 +886,23 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       status: 'sending',
       isSelected: false,
       read: false,
-      isOwnMessage: true
+      isOwnMessage: true,
+      senderType: isCompany ? 'company' : 'applicant'
     };
 
-    // Add message immediately to UI
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
 
-    // Track user action
     lastActionTimeRef.current = Date.now();
     setIsChatActive(true);
+
+    messageRetryCountRef.current.set(tempMessageId, 0);
 
     try {
       const success = await onSendMessage(input);
 
       if (success) {
-        // Update to sent immediately
         setMessages(prev =>
           prev.map(msg =>
             msg.id === tempMessageId
@@ -936,11 +911,9 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
           )
         );
 
-        // Reload after delay to get actual message with proper status
+        // Reload chat history after sending
         setTimeout(() => {
-          loadChatHistory(true).catch(err =>
-            console.error('Failed to reload chat:', err)
-          );
+          loadChatHistory(true);
         }, 1000);
 
       } else {
@@ -948,49 +921,42 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       }
     } catch (err) {
       console.error('Send message error:', err);
-      // Mark as failed but don't remove from UI
+
+      const retryCount = messageRetryCountRef.current.get(tempMessageId) || 0;
+
+      if (retryCount < 2) {
+        messageRetryCountRef.current.set(tempMessageId, retryCount + 1);
+        setTimeout(() => {
+          sendMessage(e);
+        }, 1000);
+        return;
+      }
+
       setMessages(prev =>
         prev.map(msg =>
           msg.id === tempMessageId
             ? {
               ...msg,
-              status: 'failed'
+              status: 'failed',
+              error: err.message
             }
             : msg
         )
       );
+
+      messageRetryCountRef.current.delete(tempMessageId);
     } finally {
       setLoading(false);
     }
   };
 
-  // Improved message status icon that handles read status correctly
-  const getStatusIcon = useCallback((status, message) => {
-    // Only show status icons for own messages
+  // FIXED: Improved message status icon
+  const getStatusIcon = useCallback((message) => {
     if (!message.isOwnMessage) {
       return null;
     }
 
-    // For messages from server without explicit status
-    if (!status && message) {
-      // If message is read and it's our own message, show read status
-      if (message.read) {
-        return (
-          <div className="flex items-center">
-            <CheckIcon className="w-3 h-3 text-blue-500" />
-            <CheckIcon className="w-3 h-3 text-blue-500 -ml-2" />
-          </div>
-        );
-      } else {
-        // For own messages that are sent but not read yet
-        return (
-          <div className="flex items-center">
-            <CheckIcon className="w-3 h-3 text-gray-500" />
-            <CheckIcon className="w-3 h-3 text-gray-500 -ml-2" />
-          </div>
-        );
-      }
-    }
+    const status = getMessageStatus(message);
 
     switch (status) {
       case 'sending':
@@ -1029,8 +995,47 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
           </div>
         );
       default:
-        return null;
+        return (
+          <div className="flex items-center">
+            <CheckIcon className="w-3 h-3 text-gray-500" />
+          </div>
+        );
     }
+  }, [getMessageStatus]);
+
+  // Format last seen time
+  const formatLastSeen = useCallback((timestamp) => {
+    if (!timestamp) return '';
+
+    const now = new Date();
+    const lastSeen = new Date(timestamp);
+
+    if (lastSeen.toDateString() === now.toDateString()) {
+      return `last seen at ${lastSeen.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })}`;
+    }
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (lastSeen.toDateString() === yesterday.toDateString()) {
+      return `last seen yesterday at ${lastSeen.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })}`;
+    }
+
+    return `last seen ${lastSeen.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    })} at ${lastSeen.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })}`;
   }, []);
 
   const formatTime = (timestamp) => {
@@ -1058,25 +1063,6 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
       month: 'short',
       day: 'numeric',
       year: messageDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-    });
-  };
-
-  // Enhanced last seen formatting
-  const formatLastSeen = (lastSeen) => {
-    if (!lastSeen) return 'Just now';
-    
-    const now = new Date();
-    const lastSeenDate = new Date(lastSeen);
-    const diffInMinutes = Math.floor((now - lastSeenDate) / 60000);
-    
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hour${Math.floor(diffInMinutes / 60) > 1 ? 's' : ''} ago`;
-    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} day${Math.floor(diffInMinutes / 1440) > 1 ? 's' : ''} ago`;
-    
-    return lastSeenDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
     });
   };
 
@@ -1147,19 +1133,25 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
     return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
   };
 
-  // Enhanced online status with proper last seen handling
+  // Enhanced online status display
   const getOnlineStatus = () => {
     if (isOtherUserOnline) {
-      return { 
-        text: 'Online', 
+      return {
+        text: 'Online',
         color: 'bg-green-400',
-        showLastSeen: false
+        dotColor: 'text-green-400'
+      };
+    } else if (lastSeenTime) {
+      return {
+        text: formatLastSeen(lastSeenTime),
+        color: 'bg-gray-400',
+        dotColor: 'text-gray-400'
       };
     } else {
       return {
-        text: otherUserLastSeen ? `Last seen ${formatLastSeen(otherUserLastSeen)}` : 'Offline',
+        text: 'Offline',
         color: 'bg-gray-400',
-        showLastSeen: true
+        dotColor: 'text-gray-400'
       };
     }
   };
@@ -1239,14 +1231,13 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
                   {userRole === "company" ? headerInfo.user.applicantProfile?.name : headerInfo?.name}
                 </h2>
                 <p className="text-green-100 text-xs flex items-center gap-1 truncate">
-                  <span className={`w-2 h-2 rounded-full ${onlineStatus.color} mr-1`}></span>
-                  {onlineStatus.text}
+                  <span className={`inline-block w-1.5 h-1.5 rounded-full ${onlineStatus.dotColor}`}></span>
+                  <span className="truncate">
+                    {onlineStatus.text}
+                  </span>
                   {!isConnected && (
-                    <span className="text-yellow-300 text-xs ml-1">• Offline</span>
+                    <span className="text-yellow-300 text-xs">• Offline</span>
                   )}
-                </p>
-                <p className="text-green-100 text-xs truncate">
-                  {userRole === "company" ? headerInfo?.user?.applicantProfile?.position : headerInfo?.title}
                 </p>
               </div>
             </>
@@ -1363,7 +1354,7 @@ export default function Chat({ candidate, company, onClose, onSendMessage, userR
                       <>
                         <span>•</span>
                         <div className="flex items-center gap-1">
-                          {getStatusIcon(message.status, message)}
+                          {getStatusIcon(message)}
                         </div>
                       </>
                     )}

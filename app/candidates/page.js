@@ -256,8 +256,8 @@ const ApplicationList = () => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [selectedCandidate, setSelectedCandidate] = useState(null);
     const [openCategory, setOpenCategory] = useState('');
-    const [unreadChats, setUnreadChats] = useState({});
     const [currentlyOpenChatId, setCurrentlyOpenChatId] = useState(null);
+    const [isChatLoading, setIsChatLoading] = useState(false);
     const { data, error, isLoading } = useSWRFetch(`/api/companies`);
     const [isMounted, setIsMounted] = useState(false);
     const mutated = Mutated(`/api/companies`);
@@ -272,16 +272,20 @@ const ApplicationList = () => {
             }
         };
     }, []);
+    
 
-    // Get company data
+    // Get company data with improved error handling
     const getCompanyData = () => {
         if (data && Array.isArray(data) && data.length > 0) {
+            const companyData = data[0];
             return {
-                _id: data[0]._id,
-                name: data[0].name,
-                profileImage: data[0].profileImage || data[0].logo,
-                companyName: data[0].name,
-                companyId: data[0]._id
+                _id: companyData._id || 'unknown-company',
+                name: companyData.name || 'Company',
+                profileImage: companyData.profileImage || companyData.logo,
+                companyName: companyData.name || 'Company',
+                companyId: companyData._id || 'unknown-company',
+                // Add any additional fields that might be needed by Chat component
+                ...companyData
             };
         }
         return {
@@ -296,36 +300,74 @@ const ApplicationList = () => {
     const company = getCompanyData();
 
     const handleOpenChatWithCandidate = async (candidate, chatId = null) => {
-        let targetChatId = chatId;
-        console.log("candidate", candidate)
-        if (!targetChatId) {
-            const chat = data[0].chats?.find(chat =>
-                chat.applicantId?.toString() === candidate.applicantId &&
-                chat.jobId === candidate.jobId
-            );
-            targetChatId = chat?.chatId;
-        }
-
-        if (targetChatId) {
-            setCurrentlyOpenChatId(targetChatId.toString());
-        }
-
-        // Prepare candidate data for chat
-        const candidateData = {
-            applicantId: candidate.applicantId,
-            _id: candidate.applicantId,
-            applicantName: candidate.applicantName || candidate.name || 'Candidate',
-            profileImage: candidate.profileImage,
-            jobTitle: candidate.jobTitle,
-            jobId: candidate.jobId,
-            applicantProfile: candidate.applicantProfile || {
-                applicantName: candidate.applicantName || candidate.name || 'Candidate',
-                profileImage: candidate.profileImage,
-                jobTitle: candidate.jobTitle
+        setIsChatLoading(true);
+        try {
+            // Validate required fields
+            if (!candidate.applicantId || !candidate.jobId) {
+                console.error('Missing required candidate data:', candidate);
+                setRootContext(prevContext => ({
+                    ...prevContext,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        position: "Failed",
+                        message: "Cannot open chat: Missing candidate information"
+                    }
+                }));
+                return;
             }
-        };
-        setSelectedCandidate(candidateData);
-        setIsChatOpen(true);
+
+            let targetChatId = chatId;
+            console.log("Opening chat with candidate:", candidate);
+
+            if (!targetChatId && data && data[0]?.chats) {
+                const chat = data[0].chats.find(chat =>
+                    chat.applicantId?.toString() === candidate.applicantId &&
+                    chat.jobId === candidate.jobId
+                );
+                targetChatId = chat?.chatId;
+            }
+
+            if (targetChatId) {
+                setCurrentlyOpenChatId(targetChatId.toString());
+            }
+
+            // IMPROVED: Better candidate data preparation
+            const candidateData = {
+                applicantId: candidate.applicantId,
+                _id: candidate.applicantId,
+                applicantName: candidate.applicantName || candidate.name || 'Candidate',
+                profileImage: candidate.profileImage || candidate.applicantProfile?.profileImage,
+                jobTitle: candidate.jobTitle,
+                jobId: candidate.jobId,
+                // Ensure all required fields for chat component
+                applicantProfile: {
+                    name: candidate.applicantName || candidate.name || 'Candidate',
+                    profileImage: candidate.profileImage || candidate.applicantProfile?.profileImage,
+                    position: candidate.jobTitle || 'Applicant'
+                }
+            };
+
+            console.log('Prepared candidate data for chat:', candidateData);
+            setSelectedCandidate(candidateData);
+            setIsChatOpen(true);
+
+        } catch (error) {
+            console.error('Error opening chat:', error);
+            setRootContext(prevContext => ({
+                ...prevContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Failed",
+                    message: "Failed to open chat"
+                }
+            }));
+        } finally {
+            setIsChatLoading(false);
+        }
     };
 
     const handleCloseChat = () => {
@@ -403,6 +445,16 @@ const ApplicationList = () => {
     const handleSendMessage = async (message) => {
         if (!selectedCandidate) {
             console.error('No candidate selected for chat');
+            setRootContext(prevContext => ({
+                ...prevContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Failed",
+                    message: "No candidate selected for chat"
+                }
+            }));
             return false;
         }
 
@@ -443,10 +495,30 @@ const ApplicationList = () => {
                 return true;
             } else {
                 console.error('Chat API Error:', result.error);
+                setRootContext(prevContext => ({
+                    ...prevContext,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        position: "Failed",
+                        message: result.error || "Failed to send message"
+                    }
+                }));
                 return false;
             }
         } catch (error) {
             console.error('Chat message error:', error);
+            setRootContext(prevContext => ({
+                ...prevContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Failed",
+                    message: "Failed to send message"
+                }
+            }));
             return false;
         }
     };
@@ -588,6 +660,17 @@ const ApplicationList = () => {
                 </div>
             )}
 
+            {/* Chat Loading Overlay */}
+            {isChatLoading && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p className="text-gray-700">Opening chat...</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Chat Component */}
             {isChatOpen && selectedCandidate && (
                 <Chat
                     candidate={selectedCandidate}

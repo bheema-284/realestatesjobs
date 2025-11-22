@@ -98,12 +98,15 @@ export async function GET(req) {
         // Transform messages with proper status
         const transformedMessages = (chat.messages || []).map(msg => {
             const isFromApplicant = msg.senderType === 'applicant';
+            const isFromCompany = msg.senderType === 'company';
 
             // Determine status based on read status and sender
             let status = 'sent';
             if (msg.read) {
                 status = 'read';
             } else if (isFromApplicant) {
+                status = 'delivered';
+            } else if (isFromCompany) {
                 status = 'delivered';
             }
 
@@ -387,9 +390,10 @@ export async function DELETE(req) {
         const messageId = searchParams.get("messageId");
         const deleteType = searchParams.get("type");
         const deletedBy = searchParams.get("deletedBy");
+        const senderType = searchParams.get("senderType"); // Add senderType to identify who sent the message
 
         console.log('🗑️ Delete request:', {
-            chatId, applicantId, companyId, jobId, messageIds, messageId, deleteType, deletedBy
+            chatId, applicantId, companyId, jobId, messageIds, messageId, deleteType, deletedBy, senderType
         });
 
         if (!deletedBy || !['company', 'applicant'].includes(deletedBy)) {
@@ -403,21 +407,45 @@ export async function DELETE(req) {
         const db = client.db(process.env.MONGODB_DBNAME);
         const users = db.collection("rej_users");
 
-        // Helper function to get the correct user ID based on who is deleting
-        function getUserId(deletedBy, applicantId, companyId) {
-            if (deletedBy === 'company') {
-                return new ObjectId(companyId);
-            } else if (deletedBy === 'applicant') {
-                return new ObjectId(applicantId);
+        // Helper function to get both user IDs from chat
+        async function getUserIdsFromChat(chatId) {
+            try {
+                console.log('🔍 Looking for users with chatId:', chatId);
+
+                // Find any user who has this chatId in their chats
+                const user = await users.findOne({
+                    "chats.chatId": new ObjectId(chatId)
+                });
+
+                if (user && user.chats) {
+                    const chat = user.chats.find(c => c.chatId.toString() === chatId);
+                    if (chat) {
+                        console.log('🔍 Chat found:', {
+                            applicantId: chat.applicantId?.toString(),
+                            companyId: chat.companyId?.toString(),
+                            jobId: chat.jobId
+                        });
+
+                        return {
+                            applicantId: chat.applicantId?.toString(),
+                            companyId: chat.companyId?.toString(),
+                            jobId: chat.jobId
+                        };
+                    }
+                }
+
+                return null;
+            } catch (error) {
+                console.error('Error finding users by chatId:', error);
+                return null;
             }
-            return null;
         }
 
         // Helper function to update last message
         async function updateLastMessage(userId, chatId) {
             try {
                 const user = await users.findOne(
-                    { _id: userId, "chats.chatId": new ObjectId(chatId) },
+                    { _id: new ObjectId(userId), "chats.chatId": new ObjectId(chatId) },
                     { projection: { "chats.$": 1 } }
                 );
 
@@ -426,7 +454,7 @@ export async function DELETE(req) {
                     if (messages.length > 0) {
                         const lastMessage = messages[messages.length - 1];
                         await users.updateOne(
-                            { _id: userId, "chats.chatId": new ObjectId(chatId) },
+                            { _id: new ObjectId(userId), "chats.chatId": new ObjectId(chatId) },
                             {
                                 $set: {
                                     "chats.$.lastMessage": lastMessage,
@@ -437,7 +465,7 @@ export async function DELETE(req) {
                     } else {
                         // If no messages left, set empty last message
                         await users.updateOne(
-                            { _id: userId, "chats.chatId": new ObjectId(chatId) },
+                            { _id: new ObjectId(userId), "chats.chatId": new ObjectId(chatId) },
                             {
                                 $set: {
                                     "chats.$.lastMessage": null,
@@ -452,140 +480,257 @@ export async function DELETE(req) {
             }
         }
 
-        // Handle multiple message deletion (WhatsApp-style: only for deleting user)
-        if (deleteType === 'message' && messageIds && chatId && deletedBy) {
-            console.log('🗑️ Deleting multiple messages for user only with chatId:', chatId);
+        // Handle multiple message deletion
+        if (deleteType === 'message' && messageIds && chatId && deletedBy && senderType) {
+            console.log('🗑️ Deleting multiple messages with chatId:', chatId, 'deletedBy:', deletedBy, 'senderType:', senderType);
 
-            if (!applicantId || !companyId) {
+            // Get both user IDs from the chat
+            const chatUsers = await getUserIdsFromChat(chatId);
+            if (!chatUsers) {
                 return NextResponse.json(
-                    { success: false, error: "Missing applicantId or companyId" },
-                    { status: 400 }
-                );
-            }
-
-            const userId = getUserId(deletedBy, applicantId, companyId);
-            if (!userId) {
-                return NextResponse.json(
-                    { success: false, error: "Invalid user ID" },
-                    { status: 400 }
+                    { success: false, error: "Chat not found" },
+                    { status: 404 }
                 );
             }
 
             const messageIdArray = messageIds.split(',').map(id => new ObjectId(id.trim()));
+            const updatePromises = [];
 
-            console.log('🗑️ Deleting multiple messages only for user:', userId.toString(), 'messages:', messageIdArray);
+            // Check if user is deleting their own sent messages
+            const isDeletingOwnSentMessages =
+                (deletedBy === 'company' && senderType === 'company') ||
+                (deletedBy === 'applicant' && senderType === 'applicant');
 
-            // Delete messages only for this specific user
-            const updateResult = await users.updateOne(
-                {
-                    _id: userId,
-                    "chats.chatId": new ObjectId(chatId)
-                },
-                {
-                    $pull: {
-                        "chats.$.messages": {
-                            _id: { $in: messageIdArray }
-                        }
-                    },
-                    $set: { "chats.$.updatedAt": new Date() }
+            if (isDeletingOwnSentMessages) {
+                console.log('🗑️ User is deleting their own sent messages - deleting from both sides');
+
+                // Delete from both company and applicant
+                if (chatUsers.companyId) {
+                    updatePromises.push(
+                        users.updateOne(
+                            {
+                                _id: new ObjectId(chatUsers.companyId),
+                                "chats.chatId": new ObjectId(chatId)
+                            },
+                            {
+                                $pull: {
+                                    "chats.$.messages": {
+                                        _id: { $in: messageIdArray }
+                                    }
+                                },
+                                $set: { "chats.$.updatedAt": new Date() }
+                            }
+                        )
+                    );
                 }
-            );
 
-            if (updateResult.modifiedCount === 0) {
+                if (chatUsers.applicantId) {
+                    updatePromises.push(
+                        users.updateOne(
+                            {
+                                _id: new ObjectId(chatUsers.applicantId),
+                                "chats.chatId": new ObjectId(chatId)
+                            },
+                            {
+                                $pull: {
+                                    "chats.$.messages": {
+                                        _id: { $in: messageIdArray }
+                                    }
+                                },
+                                $set: { "chats.$.updatedAt": new Date() }
+                            }
+                        )
+                    );
+                }
+            } else {
+                console.log('🗑️ User is deleting received messages - deleting only from their side');
+
+                // Delete only from the deleting user's side
+                const userId = deletedBy === 'company' ? chatUsers.companyId : chatUsers.applicantId;
+                if (userId) {
+                    updatePromises.push(
+                        users.updateOne(
+                            {
+                                _id: new ObjectId(userId),
+                                "chats.chatId": new ObjectId(chatId)
+                            },
+                            {
+                                $pull: {
+                                    "chats.$.messages": {
+                                        _id: { $in: messageIdArray }
+                                    }
+                                },
+                                $set: { "chats.$.updatedAt": new Date() }
+                            }
+                        )
+                    );
+                }
+            }
+
+            // Execute all updates
+            const results = await Promise.all(updatePromises);
+            const totalModified = results.reduce((sum, result) => sum + (result.modifiedCount || 0), 0);
+
+            if (totalModified === 0) {
                 return NextResponse.json(
                     { success: false, error: "No messages found to delete or chat not found" },
                     { status: 404 }
                 );
             }
 
-            // Update last message for this user only
-            await updateLastMessage(userId, chatId);
+            // Update last messages for both users
+            const updateLastMessagePromises = [];
+            if (chatUsers.companyId) {
+                updateLastMessagePromises.push(updateLastMessage(chatUsers.companyId, chatId));
+            }
+            if (chatUsers.applicantId) {
+                updateLastMessagePromises.push(updateLastMessage(chatUsers.applicantId, chatId));
+            }
+            await Promise.all(updateLastMessagePromises);
 
             return NextResponse.json({
                 success: true,
-                message: `${messageIdArray.length} messages deleted successfully for your view only`,
+                message: isDeletingOwnSentMessages
+                    ? `${messageIdArray.length} messages deleted successfully from both sides`
+                    : `${messageIdArray.length} messages deleted successfully for your view only`,
                 deletedCount: messageIdArray.length,
+                deletedFrom: isDeletingOwnSentMessages ? 'both' : 'self',
                 deletedFor: deletedBy
             });
 
         }
-        // Handle single message deletion (WhatsApp-style: only for deleting user)
-        else if (deleteType === 'message' && messageId && chatId && deletedBy) {
-            console.log('🗑️ Deleting single message for user only with chatId:', chatId);
+        // Handle single message deletion
+        else if (deleteType === 'message' && messageId && chatId && deletedBy && senderType) {
+            console.log('🗑️ Deleting single message with chatId:', chatId, 'deletedBy:', deletedBy, 'senderType:', senderType);
 
-            if (!applicantId || !companyId) {
+            // Get both user IDs from the chat
+            const chatUsers = await getUserIdsFromChat(chatId);
+            if (!chatUsers) {
                 return NextResponse.json(
-                    { success: false, error: "Missing applicantId or companyId" },
-                    { status: 400 }
+                    { success: false, error: "Chat not found" },
+                    { status: 404 }
                 );
             }
 
-            const userId = getUserId(deletedBy, applicantId, companyId);
-            if (!userId) {
-                return NextResponse.json(
-                    { success: false, error: "Invalid user ID" },
-                    { status: 400 }
-                );
-            }
+            const updatePromises = [];
 
-            console.log('🗑️ Deleting single message only for user:', userId.toString(), 'message:', messageId);
+            // Check if user is deleting their own sent messages
+            const isDeletingOwnSentMessages =
+                (deletedBy === 'company' && senderType === 'company') ||
+                (deletedBy === 'applicant' && senderType === 'applicant');
 
-            // Delete message only for this specific user
-            const updateResult = await users.updateOne(
-                {
-                    _id: userId,
-                    "chats.chatId": new ObjectId(chatId)
-                },
-                {
-                    $pull: {
-                        "chats.$.messages": { _id: new ObjectId(messageId) }
-                    },
-                    $set: { "chats.$.updatedAt": new Date() }
+            if (isDeletingOwnSentMessages) {
+                console.log('🗑️ User is deleting their own sent message - deleting from both sides');
+
+                // Delete from both company and applicant
+                if (chatUsers.companyId) {
+                    updatePromises.push(
+                        users.updateOne(
+                            {
+                                _id: new ObjectId(chatUsers.companyId),
+                                "chats.chatId": new ObjectId(chatId)
+                            },
+                            {
+                                $pull: {
+                                    "chats.$.messages": { _id: new ObjectId(messageId) }
+                                },
+                                $set: { "chats.$.updatedAt": new Date() }
+                            }
+                        )
+                    );
                 }
-            );
 
-            if (updateResult.modifiedCount === 0) {
+                if (chatUsers.applicantId) {
+                    updatePromises.push(
+                        users.updateOne(
+                            {
+                                _id: new ObjectId(chatUsers.applicantId),
+                                "chats.chatId": new ObjectId(chatId)
+                            },
+                            {
+                                $pull: {
+                                    "chats.$.messages": { _id: new ObjectId(messageId) }
+                                },
+                                $set: { "chats.$.updatedAt": new Date() }
+                            }
+                        )
+                    );
+                }
+            } else {
+                console.log('🗑️ User is deleting received message - deleting only from their side');
+
+                // Delete only from the deleting user's side
+                const userId = deletedBy === 'company' ? chatUsers.companyId : chatUsers.applicantId;
+                if (userId) {
+                    updatePromises.push(
+                        users.updateOne(
+                            {
+                                _id: new ObjectId(userId),
+                                "chats.chatId": new ObjectId(chatId)
+                            },
+                            {
+                                $pull: {
+                                    "chats.$.messages": { _id: new ObjectId(messageId) }
+                                },
+                                $set: { "chats.$.updatedAt": new Date() }
+                            }
+                        )
+                    );
+                }
+            }
+
+            // Execute all updates
+            const results = await Promise.all(updatePromises);
+            const totalModified = results.reduce((sum, result) => sum + (result.modifiedCount || 0), 0);
+
+            if (totalModified === 0) {
                 return NextResponse.json(
                     { success: false, error: "Message not found or chat not found" },
                     { status: 404 }
                 );
             }
 
-            // Update last message for this user only
-            await updateLastMessage(userId, chatId);
+            // Update last messages for both users
+            const updateLastMessagePromises = [];
+            if (chatUsers.companyId) {
+                updateLastMessagePromises.push(updateLastMessage(chatUsers.companyId, chatId));
+            }
+            if (chatUsers.applicantId) {
+                updateLastMessagePromises.push(updateLastMessage(chatUsers.applicantId, chatId));
+            }
+            await Promise.all(updateLastMessagePromises);
 
             return NextResponse.json({
                 success: true,
-                message: "Message deleted successfully for your view only",
+                message: isDeletingOwnSentMessages
+                    ? "Message deleted successfully from both sides"
+                    : "Message deleted successfully for your view only",
+                deletedFrom: isDeletingOwnSentMessages ? 'both' : 'self',
                 deletedFor: deletedBy
             });
 
         }
-        // Handle chat deletion by chatId (WhatsApp-style: only for deleting user)
+        // Handle chat deletion by chatId (always delete only for the deleting user)
         else if (deleteType === 'chat' && chatId && deletedBy) {
             console.log('🗑️ Deleting chat by chatId for user only:', chatId);
 
-            if (!applicantId || !companyId) {
+            // Get both user IDs from the chat
+            const chatUsers = await getUserIdsFromChat(chatId);
+            if (!chatUsers) {
                 return NextResponse.json(
-                    { success: false, error: "Missing applicantId or companyId" },
-                    { status: 400 }
+                    { success: false, error: "Chat not found" },
+                    { status: 404 }
                 );
             }
 
-            const userId = getUserId(deletedBy, applicantId, companyId);
-            if (!userId) {
-                return NextResponse.json(
-                    { success: false, error: "Invalid user ID" },
-                    { status: 400 }
-                );
-            }
+            const userId = deletedBy === 'company' ? chatUsers.companyId : chatUsers.applicantId;
 
-            console.log('🗑️ Removing chat completely for user only:', userId.toString());
+            console.log('🗑️ Removing chat completely for user only:', userId);
 
             // Remove the chat only for this specific user
             const updateResult = await users.updateOne(
                 {
-                    _id: userId
+                    _id: new ObjectId(userId)
                 },
                 {
                     $pull: {
@@ -610,16 +755,16 @@ export async function DELETE(req) {
             });
 
         }
-        // Handle chat deletion by applicantId, companyId, and jobId (WhatsApp-style: only for deleting user)
+        // Handle chat deletion by applicantId, companyId, and jobId (always delete only for the deleting user)
         else if (applicantId && companyId && jobId && deletedBy) {
-            const userId = getUserId(deletedBy, applicantId, companyId);
+            const userId = deletedBy === 'company' ? companyId : applicantId;
 
-            console.log('🗑️ Deleting chat by IDs for user only:', { applicantId, companyId, jobId, userId: userId.toString() });
+            console.log('🗑️ Deleting chat by IDs for user only:', { applicantId, companyId, jobId, userId });
 
             // Remove the chat only for this specific user
             const updateResult = await users.updateOne(
                 {
-                    _id: userId
+                    _id: new ObjectId(userId)
                 },
                 {
                     $pull: {
@@ -651,7 +796,7 @@ export async function DELETE(req) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Missing required parameters for deletion. Required: type, deletedBy, and either chatId or (applicantId, companyId, jobId)"
+                    error: "Missing required parameters for deletion. Required: type, deletedBy, senderType and either chatId or (applicantId, companyId, jobId)"
                 },
                 { status: 400 }
             );
