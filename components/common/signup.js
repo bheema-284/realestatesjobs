@@ -1,13 +1,15 @@
 "use client";
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import Input from "./input";
 import { useRouter } from "next/navigation";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import { RadioGroup } from "@headlessui/react";
+import RootContext from "../config/rootcontext";
 
 const RegisterForm = () => {
   const router = useRouter();
+  const { setRootContext } = useContext(RootContext);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -16,79 +18,191 @@ const RegisterForm = () => {
     confirmPassword: ""
   });
 
-  const [isEmail, setIsEmail] = useState({
-    isErr: false,
-    errVisible: false,
+  const [errors, setErrors] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    name: "",
+    general: ""
   });
 
-  const [isPassword, setIsPassword] = useState({
-    isErr: false,
-    errVisible: false,
-  });
-
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showCPassword, setShowCPassword] = useState(false);
 
-  const emailRegex = () => /^[\w-.]+@[\w.]+/gm;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const roles = [
     { value: "applicant", label: "Applicant", description: "Job Seeker" },
     { value: "company", label: "Company", description: "Real Estate Company" },
   ];
 
-  const handleChange = (e, field) => {
-    const updatedFormData = { ...formData };
+  const validateForm = () => {
+    const newErrors = {
+      email: "",
+      password: "",
+      confirmPassword: "",
+      name: "",
+      general: ""
+    };
 
-    if (field === "email") {
-      updatedFormData.email = e.target.value;
-      if (updatedFormData.email !== "" && emailRegex().test(e.target.value)) {
-        setIsEmail({ isErr: true, errVisible: false });
-      } else {
-        setIsEmail({ isErr: false, errVisible: true });
-      }
-    } else if (field === "password") {
-      updatedFormData[field] = e.target.value;
+    let isValid = true;
+
+    // Name validation
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
+      isValid = false;
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
+      isValid = false;
     }
 
-    setFormData(updatedFormData);
+    // Email validation
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+      isValid = false;
+    }
+
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+      isValid = false;
+    }
+
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password";
+      isValid = false;
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check password match
-    if (formData.confirmPassword !== formData.password) {
-      setIsPassword({ isErr: false, errVisible: true });
+    // Clear previous errors
+    setErrors({
+      email: "",
+      password: "",
+      confirmPassword: "",
+      name: "",
+      general: ""
+    });
+
+    // Validate form
+    if (!validateForm()) {
       return;
     }
 
-    setIsPassword({ isErr: true, errVisible: false });
+    setLoading(true);
+    setErrors(prev => ({ ...prev, general: "" }));
 
     try {
       const res = await fetch("/api/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
+          action: "register",
+          name: formData.name.trim(),
+          email: formData.email.trim().toLowerCase(),
           role: formData.role,
-          password: formData.password
+          password: formData.password,
+          confirmPassword: formData.confirmPassword
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Something went wrong");
+        // Handle specific error messages from API
+        if (data.error === "Email already registered") {
+          setErrors(prev => ({ ...prev, email: "Email is already registered" }));
+        } else if (data.error === "Passwords do not match") {
+          setErrors(prev => ({ ...prev, confirmPassword: "Passwords do not match" }));
+        } else {
+          setErrors(prev => ({ ...prev, general: data.error || "Registration failed. Please try again." }));
+        }
         return;
       }
 
-      // ✅ Saved successfully
-      router.push("/login");
+      if (data.success) {
+        setRootContext((prev) => ({
+          ...prev,
+          toast: {
+            show: true,
+            type: "success",
+            title: "Success",
+            message: `Registration successful! Welcome ${data.user.name}`,
+          },
+        }));
+        router.push("/login"); // Redirect to dashboard instead of login
+      } else {
+        setErrors(prev => ({ ...prev, general: data.error || "Registration failed" }));
+        setRootContext((prev) => ({
+          ...prev,
+          toast: {
+            show: true,
+            type: "error",
+            title: "Failed",
+            message: data.error || "Registration failed",
+          },
+        }));
+      }
 
     } catch (err) {
-      console.error("❌ Error:", err);
-      alert("Server error, try again.");
+      console.error("❌ Registration error:", err);
+      setErrors(prev => ({ ...prev, general: "Network error. Please check your connection." }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+
+    // Clear field-specific error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: "" }));
+    }
+
+    // Special validation for email
+    if (field === "email" && value.trim()) {
+      if (!emailRegex.test(value)) {
+        setErrors(prev => ({ ...prev, email: "Please enter a valid email" }));
+      } else {
+        setErrors(prev => ({ ...prev, email: "" }));
+      }
+    }
+
+    // Special validation for password confirmation
+    if (field === "confirmPassword" && value && formData.password !== value) {
+      setErrors(prev => ({ ...prev, confirmPassword: "Passwords do not match" }));
+    } else if (field === "confirmPassword" && value && formData.password === value) {
+      setErrors(prev => ({ ...prev, confirmPassword: "" }));
+    }
+
+    // Special validation for password
+    if (field === "password" && value && value.length < 6) {
+      setErrors(prev => ({ ...prev, password: "Password must be at least 6 characters" }));
+    } else if (field === "password" && value && value.length >= 6) {
+      setErrors(prev => ({ ...prev, password: "" }));
+      // Also clear confirm password error if passwords now match
+      if (formData.confirmPassword && formData.confirmPassword === value) {
+        setErrors(prev => ({ ...prev, confirmPassword: "" }));
+      }
     }
   };
 
@@ -98,18 +212,24 @@ const RegisterForm = () => {
       className={`w-1/2 text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-all duration-300 ease-in-out 
         bg-gradient-to-r from-orange-400 via-purple-500 to-purple-700 
         hover:from-orange-500 hover:via-purple-600 hover:to-purple-800 
-        ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-      disabled={disabled}
+        ${disabled || loading ? "opacity-50 cursor-not-allowed" : ""}
+        ${loading ? "animate-pulse" : ""}`}
+      disabled={disabled || loading}
       onClick={onClick}
     >
-      {title}
+      {loading ? (
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+          Processing...
+        </div>
+      ) : title}
     </button>
   );
 
   // Headless UI Radio Group Component
   const RoleToggle = () => (
     <div className="w-full">
-      <RadioGroup value={formData.role} onChange={(role) => setFormData(prev => ({ ...prev, role }))}>
+      <RadioGroup value={formData.role} onChange={(role) => handleChange("role", role)}>
         <RadioGroup.Label className="block text-sm font-medium text-gray-700 mb-3">
           Select Your Role *
         </RadioGroup.Label>
@@ -200,57 +320,65 @@ const RegisterForm = () => {
               width={160}
               height={60}
               src="/logo.webp"
+              priority
             />
           </div>
 
-          <form className="space-y-5 bg-white p-6 rounded-lg shadow-md">
+          <form onSubmit={handleSubmit} className="space-y-5 bg-white p-6 rounded-lg shadow-md">
+            {/* Error Message */}
+            {errors.general && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+                <p className="text-sm font-medium">{errors.general}</p>
+              </div>
+            )}
+
             {/* Headless UI Role Toggle */}
             <RoleToggle />
 
             <Input
-              title="Your Name"
+              title={`${formData.role === "applicant" ? "Your Full Name" : "Company Name"}`}
               type="text"
-              placeholder="Enter Name"
+              placeholder={`${formData.role === "applicant" ? "Enter Your Name" : "Enter Company Name"}`}
               value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
+              onChange={(e) => handleChange("name", e.target.value)}
               required
+              isError={!!errors.name}
+              errormsg={errors.name}
             />
 
             <Input
-              title="Your Email"
-              type="text"
-              placeholder="Enter Email"
+              title={`${formData.role === "applicant" ? "Your Email" : "Company Email"}`}
+              type="email"
+              placeholder={`${formData.role === "applicant" ? "Enter Your Email" : "Enter Company Email"}`}
               value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-              onBlur={(e) => handleChange(e, "email")}
-              isError={isEmail.errVisible}
-              errormsg="Enter Valid Email"
+              onChange={(e) => handleChange("email", e.target.value)}
               required
+              isError={!!errors.email}
+              errormsg={errors.email}
             />
 
             <div className="relative">
               <Input
                 title="Password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter Password"
+                placeholder="Enter Password (min. 6 characters)"
                 value={formData.password}
-                onChange={(e) => handleChange(e, "password")}
+                onChange={(e) => handleChange("password", e.target.value)}
                 required
+                isError={!!errors.password}
+                errormsg={errors.password}
               />
-              <span
+              <button
+                type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500 hover:text-gray-700"
               >
                 {showPassword ? (
-                  <EyeIcon className="w-4 h-4" />
+                  <EyeSlashIcon className="w-5 h-5" />
                 ) : (
-                  <EyeSlashIcon className="w-4 h-4" />
+                  <EyeIcon className="w-5 h-5" />
                 )}
-              </span>
+              </button>
             </div>
 
             <div className="relative">
@@ -259,23 +387,22 @@ const RegisterForm = () => {
                 type={showCPassword ? "text" : "password"}
                 placeholder="Confirm Password"
                 value={formData.confirmPassword}
-                onChange={(e) =>
-                  setFormData({ ...formData, confirmPassword: e.target.value })
-                }
+                onChange={(e) => handleChange("confirmPassword", e.target.value)}
                 required
-                isError={isPassword.errVisible}
-                errormsg="Passwords do not match!"
+                isError={!!errors.confirmPassword}
+                errormsg={errors.confirmPassword}
               />
-              <span
+              <button
+                type="button"
                 onClick={() => setShowCPassword(!showCPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500 hover:text-gray-700"
               >
                 {showCPassword ? (
-                  <EyeIcon className="w-4 h-4" />
+                  <EyeSlashIcon className="w-5 h-5" />
                 ) : (
-                  <EyeSlashIcon className="w-4 h-4" />
+                  <EyeIcon className="w-5 h-5" />
                 )}
-              </span>
+              </button>
             </div>
 
             {/* Role-based information */}
@@ -285,7 +412,7 @@ const RegisterForm = () => {
               </p>
               <p className="text-xs text-blue-600">
                 {formData.role === 'applicant' && 'Apply for real estate jobs and manage your applications'}
-                {formData.role === 'company' && 'Manage recruiters and company projects'}
+                {formData.role === 'company' && 'Post job listings, manage recruiters and company projects'}
               </p>
             </div>
 
@@ -295,9 +422,10 @@ const RegisterForm = () => {
                   !formData.name ||
                   !formData.email ||
                   !formData.password ||
-                  !formData.confirmPassword
+                  !formData.confirmPassword ||
+                  Object.values(errors).some(error => error && error !== "general")
                 }
-                type="button"
+                type="submit"
                 onClick={handleSubmit}
                 title="Register"
               />
@@ -312,6 +440,20 @@ const RegisterForm = () => {
                 Login Now
               </span>
             </p>
+
+            {/* Terms and Conditions */}
+            <div className="text-xs text-gray-500 text-center pt-4 border-t">
+              <p>
+                By registering, you agree to our{" "}
+                <a href="/terms" className="text-purple-500 hover:underline">
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" className="text-purple-500 hover:underline">
+                  Privacy Policy
+                </a>
+              </p>
+            </div>
           </form>
         </div>
       </div>

@@ -1349,18 +1349,17 @@ export async function PUT(request) {
     }
 }
 
-
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { email, password, isRecruiter, companyId } = body;
+        const { action, ...data } = body;
 
-        console.log('🔐 Login attempt for:', email, 'isRecruiter:', isRecruiter);
+        console.log('📝 API Request:', { action, data });
 
-        // Basic validation
-        if (!email || !password) {
+        // Validate action
+        if (!['register', 'login', 'add-recruiter'].includes(action)) {
             return new Response(
-                JSON.stringify({ error: "Email and password are required" }),
+                JSON.stringify({ error: "Invalid action specified" }),
                 { status: 400 }
             );
         }
@@ -1369,168 +1368,528 @@ export async function POST(request) {
         const db = client.db(process.env.MONGODB_DBNAME);
         const users = db.collection("rej_users");
 
-        const normalizedEmail = email.toLowerCase().trim();
-
-        // If it's explicitly a recruiter login
-        if (isRecruiter) {
-            console.log('🔍 Searching for recruiter...');
-
-            let company = null;
-            let recruiter = null;
-
-            // Try to find recruiter by email in any company
-            const companies = await users.find({
-                "recruiters.email": normalizedEmail
-            }).toArray();
-
-            for (const comp of companies) {
-                const foundRecruiter = comp.recruiters.find(rec =>
-                    rec.email?.toLowerCase().trim() === normalizedEmail
-                );
-                if (foundRecruiter) {
-                    company = comp;
-                    recruiter = foundRecruiter;
-                    break;
-                }
-            }
-
-            if (!recruiter) {
-                console.log('❌ Recruiter not found with email:', normalizedEmail);
+        // Handle different actions
+        switch (action) {
+            case 'register':
+                return await handleRegister(data, users);
+            case 'login':
+                return await handleLogin(data, users);
+            case 'add-recruiter':
+                return await handleAddRecruiter(data, users);
+            default:
                 return new Response(
-                    JSON.stringify({ error: "Invalid email or password" }),
-                    { status: 401 }
+                    JSON.stringify({ error: "Invalid action" }),
+                    { status: 400 }
                 );
-            }
-
-            console.log('✅ Found recruiter:', recruiter.email);
-            console.log('🔑 Password check - Input:', password.substring(0, 3) + '...', 'Stored:', recruiter.password?.substring(0, 10) + '...');
-
-            // Check if recruiter has password
-            if (!recruiter.password) {
-                console.log('❌ Recruiter has no password set');
-                return new Response(
-                    JSON.stringify({ error: "Invalid email or password" }),
-                    { status: 401 }
-                );
-            }
-
-            // Verify password
-            const isValidPassword = await bcrypt.compare(password, recruiter.password);
-            console.log('🔑 Password comparison result:', isValidPassword);
-
-            if (!isValidPassword) {
-                console.log('❌ Recruiter password incorrect');
-                return new Response(
-                    JSON.stringify({ error: "Invalid email or password" }),
-                    { status: 401 }
-                );
-            }
-
-            // Check if recruiter is active
-            if (recruiter.isActive === false) {
-                console.log('❌ Recruiter account deactivated');
-                return new Response(
-                    JSON.stringify({ error: "Your account has been deactivated" }),
-                    { status: 403 }
-                );
-            }
-
-            // Generate token and prepare response
-            const userData = {
-                _id: recruiter._id || new ObjectId(),
-                name: recruiter.name,
-                email: recruiter.email,
-                phone: recruiter.phone || recruiter.mobile,
-                isRecruiter: true,
-                companyId: company._id,
-                companyName: company.name,
-                companyProfileImage: company.profileImage,
-                mainUserRole: company.role,
-                permissions: recruiter.permissions || {
-                    canPostJobs: true,
-                    canViewApplications: true,
-                    canManageJobs: false,
-                    canManageRecruiters: false
-                },
-                isActive: recruiter.isActive !== false
-            };
-
-            const token = generateAuthToken(userData);
-            const responseData = {
-                success: true,
-                user: {
-                    _id: userData._id,
-                    name: userData.name,
-                    email: userData.email,
-                    role: "recruiter",
-                    mobile: userData.phone || "",
-                    companyId: userData.companyId,
-                    companyName: userData.companyName,
-                    companyProfileImage: userData.companyProfileImage,
-                    permissions: userData.permissions,
-                    isRecruiter: true,
-                    mainUserRole: userData.mainUserRole,
-                    recruiterId: userData._id
-                },
-                token: token
-            };
-
-            console.log('🎉 Recruiter login successful for:', userData.email);
-            return new Response(JSON.stringify(responseData), { status: 200 });
-
-        } else {
-            // Handle regular user login
-            console.log('🔍 Searching for regular user...');
-            const regularUser = await users.findOne({
-                email: normalizedEmail
-            });
-
-            if (!regularUser) {
-                console.log('❌ Regular user not found');
-                return new Response(
-                    JSON.stringify({ error: "Invalid email or password" }),
-                    { status: 401 }
-                );
-            }
-
-            console.log('✅ Found regular user:', regularUser.email);
-
-            // Verify password
-            const isValidPassword = await bcrypt.compare(password, regularUser.password);
-            if (!isValidPassword) {
-                console.log('❌ Regular user password incorrect');
-                return new Response(
-                    JSON.stringify({ error: "Invalid email or password" }),
-                    { status: 401 }
-                );
-            }
-
-            // Generate token and prepare response
-            const token = generateAuthToken(regularUser);
-            const responseData = {
-                success: true,
-                user: {
-                    _id: regularUser._id,
-                    name: regularUser.name,
-                    email: regularUser.email,
-                    role: regularUser.role || "user",
-                    mobile: regularUser.mobile || "",
-                    isRecruiter: false
-                },
-                token: token
-            };
-
-            console.log('🎉 Regular user login successful for:', regularUser.email);
-            return new Response(JSON.stringify(responseData), { status: 200 });
         }
 
     } catch (err) {
-        console.error("❌ POST Login Error:", err);
+        console.error("❌ POST Error:", err);
         return new Response(
             JSON.stringify({ error: "Internal server error. Please try again later." }),
             { status: 500 }
         );
     }
+}
+
+// Handle user registration
+async function handleRegister(data, users) {
+    const { name, email, role, password, confirmPassword } = data;
+
+    console.log('📝 Registration attempt for:', email, 'role:', role);
+
+    // Basic validation
+    if (!name || !email || !password || !role) {
+        return new Response(
+            JSON.stringify({ error: "All fields are required" }),
+            { status: 400 }
+        );
+    }
+
+    // Validate role
+    if (!['applicant', 'company'].includes(role)) {
+        return new Response(
+            JSON.stringify({ error: "Invalid role specified" }),
+            { status: 400 }
+        );
+    }
+
+    // Check password confirmation
+    if (confirmPassword && password !== confirmPassword) {
+        return new Response(
+            JSON.stringify({ error: "Passwords do not match" }),
+            { status: 400 }
+        );
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if user already exists
+    const existingUser = await users.findOne({ email: normalizedEmail });
+    if (existingUser) {
+        return new Response(
+            JSON.stringify({ error: "Email already registered" }),
+            { status: 409 }
+        );
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Prepare user data based on role
+    const userData = {
+        name: name.trim(),
+        email: normalizedEmail,
+        password: hashedPassword,
+        role: role,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isActive: true,
+        lastSeen: new Date(),
+        online: false
+    };
+
+    // Add role-specific fields
+    if (role === 'company') {
+        userData.companyId = new ObjectId();
+        userData.profileImage = "";
+        userData.mobile = "";
+        userData.position = "";
+        userData.location = "";
+        userData.website = "";
+        userData.about = "";
+        userData.description = "";
+        userData.mission = "";
+        userData.vision = "";
+        userData.tagline = "";
+        userData.established = "";
+        userData.industry = "Real Estate";
+        userData.contactPerson = name;
+        userData.projects = [];
+        userData.recruiters = [];
+        userData.applicants = [];
+        userData.appliedJobs = [];
+        userData.chats = [];
+        userData.galleryImages = [];
+        userData.videos = [];
+        userData.services = [];
+        userData.achievements = [];
+        userData.certifications = [];
+        userData.leadership = [];
+        userData.statistics = [];
+        userData.values = [];
+        userData.whyChooseUs = [];
+        userData.socialMedia = {
+            linkedin: "",
+            twitter: "",
+            facebook: "",
+            instagram: ""
+        };
+    } else if (role === 'applicant') {
+        userData.applicantId = new ObjectId();
+        userData.profileImage = "";
+        userData.mobile = "";
+        userData.position = "";
+        userData.location = "";
+        userData.summary = "";
+        userData.experience = 0;
+        userData.education = 0;
+        userData.skills = [];
+        userData.workExperience = [];
+        userData.educationHistory = [];
+        userData.certifications = [];
+        userData.languages = [];
+        userData.appliedJobs = [];
+        userData.chats = [];
+        userData.resume = "";
+        userData.coverLetter = "";
+        userData.availability = "immediate";
+        userData.expectedSalary = "";
+        userData.preferredLocations = [];
+        userData.noticePeriod = 0;
+        userData.dateOfBirth = "";
+        userData.gender = "";
+        userData.maritalStatus = "";
+        userData.nationality = "";
+        userData.address = "";
+        userData.city = "";
+        userData.state = "";
+        userData.pincode = "";
+        userData.linkedin = "";
+        userData.github = "";
+        userData.portfolio = "";
+    }
+
+    // Insert user
+    const result = await users.insertOne(userData);
+    const insertedId = result.insertedId;
+
+    console.log('✅ User registered successfully:', email, 'role:', role);
+
+    // Generate JWT token for immediate login
+    const token = generateAuthToken({
+        _id: insertedId,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role
+    });
+
+    // Prepare response data
+    const responseData = {
+        success: true,
+        user: {
+            _id: insertedId,
+            name: userData.name,
+            email: userData.email,
+            role: userData.role,
+            mobile: userData.mobile || "",
+            isRecruiter: false
+        },
+        token: token
+    };
+
+    // Add role-specific response data
+    if (role === 'company') {
+        responseData.user.companyId = userData.companyId;
+        responseData.user.companyName = userData.name;
+        responseData.user.isCompany = true;
+    } else if (role === 'applicant') {
+        responseData.user.applicantId = userData.applicantId;
+        responseData.user.isApplicant = true;
+    }
+
+    return new Response(
+        JSON.stringify(responseData),
+        {
+            status: 201,
+            headers: {
+                "Content-Type": "application/json",
+                "Set-Cookie": `auth_token=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800`
+            }
+        }
+    );
+}
+
+// Handle user login
+async function handleLogin(data, users) {
+    const { email, password, isRecruiter } = data;
+
+    console.log('🔐 Login attempt for:', email, 'isRecruiter:', isRecruiter);
+
+    // Basic validation
+    if (!email || !password) {
+        return new Response(
+            JSON.stringify({ error: "Email and password are required" }),
+            { status: 400 }
+        );
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Step 1: First check if it's a recruiter (even if isRecruiter is false)
+    console.log('🔍 Searching for recruiter in companies...');
+    let company = null;
+    let recruiter = null;
+
+    // Try to find recruiter by email in any company
+    const companies = await users.find({
+        "role": "company",
+        "recruiters.email": normalizedEmail
+    }).toArray();
+
+    for (const comp of companies) {
+        const foundRecruiter = comp.recruiters?.find(rec =>
+            rec.email?.toLowerCase().trim() === normalizedEmail
+        );
+        if (foundRecruiter) {
+            company = comp;
+            recruiter = foundRecruiter;
+            break;
+        }
+    }
+
+    if (recruiter) {
+        console.log('✅ Found recruiter:', recruiter.email, 'in company:', company.name);
+
+        // Verify recruiter password
+        let isValidPassword = false;
+
+        if (recruiter.password && recruiter.password.startsWith('$2b$')) {
+            // Password is bcrypt hashed
+            isValidPassword = await bcrypt.compare(password, recruiter.password);
+        } else if (recruiter.password) {
+            // Password is plain text (for testing/dev)
+            isValidPassword = (password === recruiter.password);
+        } else {
+            console.log('❌ Recruiter has no password set');
+            return new Response(
+                JSON.stringify({ error: "Invalid email or password" }),
+                { status: 401 }
+            );
+        }
+
+        console.log('🔑 Password comparison result:', isValidPassword);
+
+        if (!isValidPassword) {
+            console.log('❌ Recruiter password incorrect');
+            return new Response(
+                JSON.stringify({ error: "Invalid email or password" }),
+                { status: 401 }
+            );
+        }
+
+        // Check if recruiter is active
+        if (recruiter.isActive === false) {
+            console.log('❌ Recruiter account deactivated');
+            return new Response(
+                JSON.stringify({ error: "Your account has been deactivated" }),
+                { status: 403 }
+            );
+        }
+
+        // Generate token and prepare response for recruiter
+        const userData = {
+            _id: recruiter._id || recruiter.id || new ObjectId(),
+            name: recruiter.name,
+            email: recruiter.email,
+            phone: recruiter.phone || recruiter.mobile || "",
+            isRecruiter: true,
+            companyId: company._id,
+            companyName: company.name,
+            companyProfileImage: company.profileImage,
+            mainUserRole: company.role,
+            permissions: recruiter.permissions || {
+                canPostJobs: true,
+                canViewApplications: true,
+                canManageJobs: false,
+                canManageRecruiters: false
+            },
+            isActive: recruiter.isActive !== false,
+            recruiterId: recruiter._id || recruiter.id,
+            department: recruiter.department || ""
+        };
+
+        const token = generateAuthToken(userData);
+        const responseData = {
+            success: true,
+            user: {
+                _id: userData._id,
+                name: userData.name,
+                email: userData.email,
+                role: "recruiter",
+                mobile: userData.phone || "",
+                companyId: userData.companyId,
+                companyName: userData.companyName,
+                companyProfileImage: userData.companyProfileImage,
+                permissions: userData.permissions,
+                isRecruiter: true,
+                mainUserRole: userData.mainUserRole,
+                recruiterId: userData.recruiterId,
+                department: userData.department,
+                createdBy: recruiter.createdBy || ""
+            },
+            token: token
+        };
+
+        console.log('🎉 Recruiter login successful for:', userData.email);
+        return new Response(JSON.stringify(responseData), { status: 200 });
+    }
+
+    // Step 2: If not a recruiter, check for regular user (applicant or company)
+    console.log('🔍 Searching for regular user...');
+    const regularUser = await users.findOne({
+        email: normalizedEmail
+    });
+
+    if (!regularUser) {
+        console.log('❌ User not found with email:', normalizedEmail);
+        return new Response(
+            JSON.stringify({ error: "Invalid email or password" }),
+            { status: 401 }
+        );
+    }
+
+    console.log('✅ Found user:', regularUser.email, 'role:', regularUser.role);
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, regularUser.password);
+    if (!isValidPassword) {
+        console.log('❌ Password incorrect');
+        return new Response(
+            JSON.stringify({ error: "Invalid email or password" }),
+            { status: 401 }
+        );
+    }
+
+    // Generate token and prepare response based on role
+    const token = generateAuthToken(regularUser);
+    let userResponse = {
+        _id: regularUser._id,
+        name: regularUser.name,
+        email: regularUser.email,
+        mobile: regularUser.mobile || "",
+        isRecruiter: false,
+        profileImage: regularUser.profileImage || ""
+    };
+
+    // Add role-specific data
+    if (regularUser.role === 'company') {
+        userResponse = {
+            ...userResponse,
+            role: "company",
+            companyId: regularUser._id,
+            companyName: regularUser.name,
+            isCompany: true,
+            projects: regularUser.projects || [],
+            recruiters: regularUser.recruiters || [],
+            applicants: regularUser.applicants || [],
+            website: regularUser.website || "",
+            location: regularUser.location || "",
+            industry: regularUser.industry || "Real Estate"
+        };
+    } else if (regularUser.role === 'applicant') {
+        userResponse = {
+            ...userResponse,
+            role: "applicant",
+            isApplicant: true,
+            applicantId: regularUser._id,
+            position: regularUser.position || "",
+            experience: regularUser.experience || 0,
+            education: regularUser.education || "",
+            skills: regularUser.skills || [],
+            location: regularUser.location || "",
+            summary: regularUser.summary || ""
+        };
+    } else {
+        userResponse.role = regularUser.role || "user";
+    }
+
+    const responseData = {
+        success: true,
+        user: userResponse,
+        token: token
+    };
+
+    console.log('🎉 Login successful for:', regularUser.email);
+    return new Response(JSON.stringify(responseData), { status: 200 });
+}
+
+// Handle adding recruiter
+async function handleAddRecruiter(data, users) {
+    const { companyId, recruiter } = data;
+
+    console.log('👥 Add recruiter attempt for company:', companyId);
+
+    if (!companyId || !recruiter) {
+        return new Response(
+            JSON.stringify({ error: "Company ID and recruiter data required" }),
+            { status: 400 }
+        );
+    }
+
+    // Check if company exists
+    const company = await users.findOne({
+        _id: new ObjectId(companyId),
+        role: "company"
+    });
+
+    if (!company) {
+        return new Response(
+            JSON.stringify({ error: "Company not found" }),
+            { status: 404 }
+        );
+    }
+
+    // Validate recruiter data
+    if (!recruiter.name || !recruiter.email || !recruiter.password) {
+        return new Response(
+            JSON.stringify({ error: "Recruiter name, email, and password are required" }),
+            { status: 400 }
+        );
+    }
+
+    // Check if recruiter email already exists in this company
+    const existingRecruiter = company.recruiters?.find(
+        rec => rec.email?.toLowerCase() === recruiter.email.toLowerCase()
+    );
+
+    if (existingRecruiter) {
+        return new Response(
+            JSON.stringify({ error: "Recruiter with this email already exists in your company" }),
+            { status: 409 }
+        );
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(recruiter.password, 10);
+
+    // Generate recruiter ID
+    const generateRecruiterId = () => {
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(2, 8);
+        return `recruiter-${timestamp}-${random}`;
+    };
+
+    // Prepare recruiter data
+    const recruiterData = {
+        _id: new ObjectId(),
+        id: recruiter.id || generateRecruiterId(),
+        name: recruiter.name,
+        email: recruiter.email.toLowerCase(),
+        password: hashedPassword,
+        role: "recruiter",
+        department: recruiter.department || "general",
+        phone: recruiter.phone || "",
+        permissions: recruiter.permissions || {
+            canPostJobs: true,
+            canViewApplications: true,
+            canManageJobs: false,
+            canManageRecruiters: false
+        },
+        addedDate: new Date(),
+        lastUpdated: new Date(),
+        updatedAt: new Date(),
+        isActive: true,
+        createdBy: companyId,
+        joinDate: recruiter.joinDate || new Date().toISOString().split('T')[0]
+    };
+
+    // Update company with new recruiter
+    const result = await users.updateOne(
+        { _id: new ObjectId(companyId) },
+        {
+            $push: {
+                recruiters: recruiterData
+            },
+            $set: {
+                updatedAt: new Date()
+            }
+        }
+    );
+
+    if (result.modifiedCount === 0) {
+        return new Response(
+            JSON.stringify({ error: "Failed to add recruiter" }),
+            { status: 500 }
+        );
+    }
+
+    console.log('✅ Recruiter added successfully:', recruiterData.email);
+
+    return new Response(
+        JSON.stringify({
+            success: true,
+            message: "Recruiter added successfully",
+            recruiter: {
+                id: recruiterData.id,
+                name: recruiterData.name,
+                email: recruiterData.email,
+                department: recruiterData.department,
+                permissions: recruiterData.permissions
+            }
+        }),
+        { status: 201 }
+    );
 }
 
 // Helper function to handle recruiter login
