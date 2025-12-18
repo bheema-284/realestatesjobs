@@ -9,7 +9,6 @@ import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, CalendarIcon, ChevronDownIc
 import RootContext from "../components/config/rootcontext";
 import { Popover } from "@headlessui/react";
 import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays, parseISO, isWithinInterval, startOfDay } from "date-fns";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import AddEditTaskModal from "./task/addnewtask";
