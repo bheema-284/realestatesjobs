@@ -20,7 +20,7 @@ const jobSchema = Joi.object({
     salaryAmount: Joi.string().allow('').optional(),
     salaryFrequency: Joi.string().valid('Monthly', 'Yearly', 'Commission Based', 'Performance Based').default('Monthly'),
     salaryNegotiable: Joi.boolean().default(false),
-    salary: Joi.string().required(),
+    salaryRange: Joi.string().required(),
     location: Joi.string().min(2).max(100).required(),
     experience: Joi.string().required(),
     categorySlug: Joi.string().valid(
