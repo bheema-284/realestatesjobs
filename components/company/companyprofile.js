@@ -1307,8 +1307,8 @@ const ProjectsSection = ({ tempProfile, startEditingSection, canEdit }) => {
                                         </div>
                                     )}
                                     <div className="absolute top-3 right-3">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
-                                            {getStatusText(project.status)}
+                                        <span className={`px-3 py-1 capitalize rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                                            {getStatusText((project.status || "").toLowerCase())}
                                         </span>
                                     </div>
                                 </div>
@@ -1773,14 +1773,13 @@ function CompanyLandingPage({ profile, mutated }) {
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Hero Section */}
-            <div className="relative bg-gradient-to-r from-blue-900 via-blue-800 to-blue-600 rounded-3xl overflow-hidden mb-12">
+            {/* <div className="relative bg-gradient-to-r from-blue-900 via-blue-800 to-blue-600 rounded-3xl overflow-hidden mb-12">
                 <div className="absolute inset-0 bg-black/20"></div>
                 <div className="relative px-8 py-16 text-center text-white">
                     <h1 className="text-5xl font-bold mb-4">{tempProfile.name || tempProfile.name}</h1>
                     <p className="text-2xl mb-6 opacity-90">{tempProfile.tagline}</p>
                     <p className="text-xl max-w-3xl mx-auto opacity-80">{tempProfile.description}</p>
 
-                    {/* Quick Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12 max-w-2xl mx-auto">
                         {tempProfile.statistics?.map((stat, index) => (
                             <div key={index} className="text-center">
@@ -1790,7 +1789,7 @@ function CompanyLandingPage({ profile, mutated }) {
                         ))}
                     </div>
                 </div>
-            </div>
+            </div> */}
 
             {/* About Company Section */}
             <section className="mb-16">
