@@ -547,7 +547,7 @@ const EnhancedJobList = ({
 
                     {/* Manual Create Button */}
                     <button
-                        onClick={() => handleCategoryClick(tabName)}
+                        onClick={() => { { handleCategoryClick(tabName); setMode("create"); } }}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
                     >
                         <PlusIcon className="w-5 h-5" />
