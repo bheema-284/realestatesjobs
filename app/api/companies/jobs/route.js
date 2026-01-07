@@ -125,12 +125,7 @@ const jobSchema = Joi.object({
         )
     ).default([]),
     vehicleRequirement: Joi.boolean().default(false),
-    targetAudience: Joi.string().valid(
-        'inbound-leads', 'database-calling', 'walk-in-customers',
-        'channel-partners', 'brokers', 'nri', 'investors',
-        'nri', 'local', 'corporate', 'investors', 'end-users',
-        'channel-partners', 'brokers', 'all', ''
-    ).allow('').optional(),
+    targetAudience: Joi.string().allow('').optional(),
     salesTargets: Joi.string().allow('').optional(),
     leadProvided: Joi.boolean().default(false),
     trainingProvided: Joi.boolean().default(false),
