@@ -8,7 +8,6 @@ import { ChevronDownIcon, BellIcon } from "@heroicons/react/24/outline";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, Transition } from "@headlessui/react";
 import AnimatedBorderLoader from "./animatedbutton";
-import JobPostingModal from "../createjob";
 import RootContext from "@/components/config/rootcontext";
 import NotificationDropdown from "./notificationdropdown";
 import { useNotificationService } from "./usenotificationservice";
@@ -65,7 +64,6 @@ export const Navbar = ({ rootContext: propRootContext, showLoader, logOut }) => 
     const rootContext = propRootContext || contextRootContext;
 
     const [menuOpen, setMenuOpen] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
     const role = rootContext?.user?.role;
@@ -232,7 +230,7 @@ export const Navbar = ({ rootContext: propRootContext, showLoader, logOut }) => 
                                         <AnimatedBorderLoader title={"POST NEW JOB"} />
                                     ) : (
                                         <button
-                                            onClick={() => setIsOpen(!isOpen)}
+                                            onClick={() => { authenticated && router.push("/applications") }}
                                             className="bg-gray-900 border-1.5 border-gray-900 text-white px-3 sm:px-4 py-1.5 rounded text-sm sm:text-base whitespace-nowrap ml-4"
                                         >
                                             POST NEW JOB
@@ -446,7 +444,7 @@ export const Navbar = ({ rootContext: propRootContext, showLoader, logOut }) => 
                             {/* Post Job Button for allowed roles */}
                             {canPostJobs && (
                                 <button
-                                    onClick={() => { setIsOpen(true); setMenuOpen(false); }}
+                                    onClick={() => { authenticated && router.push("/applications") }}
                                     className="w-full px-4 py-2 rounded-lg text-center bg-gray-900 border-1.5 border-gray-900 text-white hover:bg-gray-700 mt-2"
                                 >
                                     POST NEW JOB
@@ -486,16 +484,6 @@ export const Navbar = ({ rootContext: propRootContext, showLoader, logOut }) => 
                         </button>
                     )}
                 </div>
-            )}
-
-            {authenticated && isOpen && (
-                <JobPostingModal
-                    isOpen={isOpen}
-                    setIsOpen={setIsOpen}
-                    title="Post New Job"
-                    mode="create"
-                    userProfile={rootContext?.user}
-                />
             )}
         </nav>
     );
