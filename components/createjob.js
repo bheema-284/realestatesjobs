@@ -1194,6 +1194,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                 {languageOptions.map((option) => (
                                     <div
                                         key={option.id}
+                                        title={option.id}
                                         className={`relative flex cursor-pointer rounded-lg px-3 py-2 shadow-sm border text-sm
                                         ${formData[fieldName]?.includes(option.id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
                                         hover:border-blue-500 hover:shadow-md transition-all duration-200`}
@@ -1638,27 +1639,8 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
 
                                     <div className="mt-2">
                                         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                                            {/* Job Category Selection */}
-                                            <div>
-                                                <label htmlFor="categorySlug" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Job Category *
-                                                </label>
-                                                <select
-                                                    id="categorySlug"
-                                                    value={formData.categorySlug}
-                                                    onChange={(e) => handleInputChange('categorySlug', e.target.value)}
-                                                    className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                    required
-                                                >
-                                                    <option value="">Select a category</option>
-                                                    {jobCategories.map((category) => (
-                                                        <option key={category.slug} value={category.slug}>{category.name}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
                                             {/* Job Title (auto-filled from category) */}
-                                            <div>
+                                            <div className='bg-blue-300 border border-blue-400 p-2'>
                                                 <label htmlFor="jobTitle" className="block text-sm font-medium text-gray-700 mb-2">
                                                     Job Title *
                                                 </label>
