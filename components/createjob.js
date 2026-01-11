@@ -1640,8 +1640,8 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                     <div className="mt-2">
                                         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                                             {/* Job Title (auto-filled from category) */}
-                                            <div className='bg-blue-300 border border-blue-400 p-2'>
-                                                <label htmlFor="jobTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                                            <div className='bg-blue-300 border border-blue-400 p-2 rounded-lg'>
+                                                <label htmlFor="jobTitle" className="block text-sm font-medium text-blue-700 mb-2">
                                                     Job Title *
                                                 </label>
                                                 <input
@@ -1649,11 +1649,11 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                     id="jobTitle"
                                                     value={formData.jobTitle}
                                                     onChange={(e) => handleInputChange('jobTitle', e.target.value)}
-                                                    className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    className="w-full p-2.5 sm:p-3 border text-blue-800 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                     placeholder="Job title will auto-fill based on category"
                                                     required
                                                 />
-                                                <p className="text-xs text-gray-500 mt-1">
+                                                <p className="text-xs text-blue-500 mt-1">
                                                     This is auto-filled from the selected category. You can edit it if needed.
                                                 </p>
                                             </div>
