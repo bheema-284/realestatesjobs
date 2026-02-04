@@ -15,7 +15,7 @@ const dummyLogos = [
     'https://placehold.co/48x48/F0F0F0/000000?text=YouTube',
 ];
 
-export default function AboutMe({ profile }) {
+export default function AboutMe({ profile, canEdit }) {
     // State for Summary section
     const [editingSummary, setEditingSummary] = useState(false);
     const [tempSummary, setTempSummary] = useState('');
@@ -52,24 +52,13 @@ export default function AboutMe({ profile }) {
     const [uploadingEduDoc, setUploadingEduDoc] = useState(null);
     const [eduDocumentPreview, setEduDocumentPreview] = useState({ show: false, file: null, index: null });
 
-    // State for Personal Details
-    const [tempPersonal, setTempPersonal] = useState({
-        name: profile?.name || '',
-        email: profile?.email || '',
-        mobile: profile?.mobile || '',
-        gender: profile?.gender || '',
-        dateOfBirth: profile?.dateOfBirth ? profile?.dateOfBirth.split('T')[0] : '',
-        company: profile?.company || '',
-        position: profile?.position || ''
-    });
-
-    const [editingPersonal, setEditingPersonal] = useState(false);
     const { rootContext, setRootContext } = useContext(RootContext);
     const [isAddingOrEditing, setIsAddingOrEditing] = useState(false);
     const [serviceCall, setServiceCall] = useState(false);
 
-    // Check if user is applicant
-    const isApplicant = rootContext?.user?.role === "applicant";
+    // Check if user can edit (passed from parent)
+    const isApplicant = canEdit;
+
     // Use users API instead of employees API
     const mutated = Mutated(profile?._id ? `/api/users?id=${profile?._id}` : null);
 
@@ -100,22 +89,12 @@ export default function AboutMe({ profile }) {
 
         setExperience(sortedExperiences);
         setEducation(sortedEducation);
-
-        setTempPersonal({
-            name: profile?.name || '',
-            email: profile?.email || '',
-            mobile: profile?.mobile || '',
-            gender: profile?.gender || '',
-            dateOfBirth: profile?.dateOfBirth ? profile?.dateOfBirth.split('T')[0] : '',
-            company: profile?.company || '',
-            position: profile?.position || ''
-        });
     }, [profile]);
 
     // Effect to manage the global adding/editing state
     useEffect(() => {
-        setIsAddingOrEditing(editingSummary || editingExperienceIndex !== null || editingEducationIndex !== null || editingPersonal);
-    }, [editingSummary, editingExperienceIndex, editingEducationIndex, editingPersonal]);
+        setIsAddingOrEditing(editingSummary || editingExperienceIndex !== null || editingEducationIndex !== null);
+    }, [editingSummary, editingExperienceIndex, editingEducationIndex]);
 
     // Generic update function using FormData for document uploads
     const updateProfileWithDocuments = async (updateData, documents = []) => {
@@ -868,29 +847,6 @@ export default function AboutMe({ profile }) {
         setTempEducation({ ...tempEducation, [field]: e.target.value });
     };
 
-    // Personal Details Handlers
-    const handleSavePersonal = async () => {
-        if (!isApplicant) return;
-
-        const success = await updateProfileWithDocuments(tempPersonal);
-        if (success) {
-            setEditingPersonal(false);
-        }
-    };
-
-    const handleCancelPersonal = () => {
-        setEditingPersonal(false);
-        setTempPersonal({
-            name: profile?.name || '',
-            email: profile?.email || '',
-            mobile: profile?.mobile || '',
-            gender: profile?.gender || '',
-            dateOfBirth: profile?.dateOfBirth ? profile?.dateOfBirth.split('T')[0] : '',
-            company: profile?.company || '',
-            position: profile?.position || ''
-        });
-    };
-
     // Initialize tempSummary when editing starts
     useEffect(() => {
         if (editingSummary) {
@@ -972,127 +928,6 @@ export default function AboutMe({ profile }) {
                     <p className="text-base text-gray-700 leading-relaxed whitespace-pre-line">
                         {summary}
                     </p>
-                )}
-            </section>
-
-            {/* Personal Details Section */}
-            <section className="bg-white rounded-xl p-2 sm:p-6 text-gray-800 shadow-lg border border-gray-200 mb-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-gray-800">PERSONAL DETAILS</h3>
-                    {!editingPersonal && isApplicant ? (
-                        <button
-                            onClick={() => setEditingPersonal(true)}
-                            className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 shadow-md"
-                            disabled={isAddingOrEditing}
-                        >
-                            <PencilIcon className="w-5 h-5" />
-                        </button>
-                    ) : null}
-                </div>
-
-                {editingPersonal ? (
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                                <input
-                                    type="text"
-                                    value={tempPersonal.name}
-                                    onChange={(e) => setTempPersonal({ ...tempPersonal, name: e.target.value })}
-                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <input
-                                    type="email"
-                                    value={tempPersonal.email}
-                                    onChange={(e) => setTempPersonal({ ...tempPersonal, email: e.target.value })}
-                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
-                                <input
-                                    type="text"
-                                    value={tempPersonal.mobile || ''}
-                                    onChange={(e) => setTempPersonal({ ...tempPersonal, mobile: e.target.value })}
-                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                                <select
-                                    value={tempPersonal.gender}
-                                    onChange={(e) => setTempPersonal({ ...tempPersonal, gender: e.target.value })}
-                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">Select Gender</option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                                <input
-                                    type="date"
-                                    value={tempPersonal.dateOfBirth}
-                                    onChange={(e) => setTempPersonal({ ...tempPersonal, dateOfBirth: e.target.value })}
-                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
-                                <input
-                                    type="text"
-                                    value={tempPersonal.company}
-                                    onChange={(e) => setTempPersonal({ ...tempPersonal, company: e.target.value })}
-                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
-                                <input
-                                    type="text"
-                                    value={tempPersonal.position}
-                                    onChange={(e) => setTempPersonal({ ...tempPersonal, position: e.target.value })}
-                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end space-x-3 mt-4">
-                            <button
-                                onClick={handleSavePersonal}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200 shadow-md"
-                            >
-                                Save
-                            </button>
-                            <button
-                                onClick={handleCancelPersonal}
-                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors duration-200"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
-                        <p><span className="font-semibold">Full Name:</span> {profile?.name || '-'}</p>
-                        <p><span className="font-semibold">Email:</span> {profile?.email || '-'}</p>
-                        <p><span className="font-semibold">Mobile:</span> {profile?.mobile || '-'}</p>
-                        <p><span className="font-semibold">Gender:</span> {profile?.gender || '-'}</p>
-                        <p><span className="font-semibold">Date of Birth:</span> {formatDateTime(profile?.dateOfBirth, "DD-MM-YYYY") || '-'}</p>
-                        <p><span className="font-semibold">Company:</span> {profile?.company || '-'}</p>
-                        <p><span className="font-semibold">Position:</span> {profile?.position || '-'}</p>
-                    </div>
                 )}
             </section>
 

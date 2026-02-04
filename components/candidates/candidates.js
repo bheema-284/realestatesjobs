@@ -15,13 +15,7 @@ import { Mutated, useSWRFetch } from '../config/useswrfetch';
 import { useParams } from 'next/navigation';
 import Loading from '../common/loading';
 
-const tabs = [
-    { name: 'About Me', component: AboutMe },
-    { name: 'My Applications', component: Applications },
-    { name: 'My Projects', component: Projects },
-    { name: 'My Premium Services', component: Services },
-    { name: 'My Digital Marketing', component: Marketing },
-];
+
 
 // Aspect ratio options
 const ASPECT_RATIOS = [
@@ -68,6 +62,21 @@ function ProfilePage() {
     const fileInputRef = useRef(null);
 
     const { rootContext, setRootContext } = useContext(RootContext);
+
+    // Determine tabs based on user role
+    const tabs = rootContext.user?.role === "company"
+        ? [
+            { name: "About Applicant", component: AboutMe },
+            { name: 'Applicant Projects', component: Projects }
+        ]
+        : [
+            { name: "About Me", component: AboutMe },
+            { name: 'My Applications', component: Applications },
+            { name: 'My Projects', component: Projects },
+            { name: 'My Premium Services', component: Services },
+            { name: 'My Digital Marketing', component: Marketing }
+        ];
+
     // Use users API
     const { data: userData = [], error, isLoading } = useSWRFetch(id ? `/api/users?id=${id}` : null);
     const mutated = Mutated(id ? `/api/users?id=${id}` : null);
