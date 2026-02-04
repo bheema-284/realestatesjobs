@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { PencilIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, XMarkIcon, PhoneIcon, EnvelopeIcon, CakeIcon, BuildingOfficeIcon, BriefcaseIcon, UserIcon } from '@heroicons/react/24/solid';
 import { ChevronDownIcon, ArrowPathIcon, ArrowsPointingOutIcon } from '@heroicons/react/20/solid';
 import AboutMe from './aboutme';
 import Applications from './applications';
@@ -14,8 +14,7 @@ import RootContext from '../config/rootcontext';
 import { Mutated, useSWRFetch } from '../config/useswrfetch';
 import { useParams } from 'next/navigation';
 import Loading from '../common/loading';
-
-
+import { formatDateTime } from '../config/sitesettings';
 
 // Aspect ratio options
 const ASPECT_RATIOS = [
@@ -31,14 +30,17 @@ function ProfilePage() {
     const [activeTab, setActiveTab] = useState(0);
     const [profile, setProfile] = useState({
         name: '', position: '', email: '', image: '', summary: '', experience: [], education: [],
+        mobile: '', gender: '', dateOfBirth: '', company: ''
     });
     const [tempProfile, setTempProfile] = useState({
         name: '', position: '', email: '', image: '', summary: '', experience: [], education: [],
+        mobile: '', gender: '', dateOfBirth: '', company: ''
     });
     const [editingHeader, setEditingHeader] = useState(false);
     const [accordionOpen, setAccordionOpen] = useState(null);
     const [previewImage, setPreviewImage] = useState('');
     const [serviceCall, setServiceCall] = useState(false);
+    const [editingPersonalDetails, setEditingPersonalDetails] = useState(false);
 
     // Enhanced Crop states
     const [cropping, setCropping] = useState(false);
@@ -349,6 +351,14 @@ function ProfilePage() {
             formData.append("position", tempProfile.position || "");
             formData.append("role", "applicant");
 
+            // Add personal details
+            formData.append("mobile", tempProfile.mobile || "");
+            formData.append("gender", tempProfile.gender || "");
+            if (tempProfile.dateOfBirth) {
+                formData.append("dateOfBirth", tempProfile.dateOfBirth);
+            }
+            formData.append("company", tempProfile.company || "");
+
             if (tempProfile.password) formData.append("password", tempProfile.password);
             if (tempProfile.imageFile) formData.append("image", tempProfile.imageFile);
             if (tempProfile.summary) formData.append("summary", tempProfile.summary);
@@ -366,6 +376,7 @@ function ProfilePage() {
             if (res.ok) {
                 setProfile(prev => ({ ...prev, ...tempProfile }));
                 setEditingHeader(false);
+                setEditingPersonalDetails(false);
                 setPreviewImage('');
                 mutated();
 
@@ -407,8 +418,73 @@ function ProfilePage() {
         }
     };
 
+    const handleSavePersonalDetails = async () => {
+        setServiceCall(true);
+        try {
+            const formData = new FormData();
+            formData.append("id", id);
+            formData.append("mobile", tempProfile.mobile || "");
+            formData.append("gender", tempProfile.gender || "");
+            if (tempProfile.dateOfBirth) {
+                formData.append("dateOfBirth", tempProfile.dateOfBirth);
+            }
+            formData.append("company", tempProfile.company || "");
+            formData.append("position", tempProfile.position || "");
+
+            const res = await fetch(`/api/users`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            const data = await res.json();
+            setServiceCall(false);
+
+            if (res.ok) {
+                setProfile(prev => ({ ...prev, ...tempProfile }));
+                setEditingPersonalDetails(false);
+                mutated();
+
+                setRootContext(prevContext => ({
+                    ...prevContext,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "success",
+                        position: "Success",
+                        message: "Personal details updated successfully"
+                    }
+                }));
+            } else {
+                setRootContext(prevContext => ({
+                    ...prevContext,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        position: "Failed",
+                        message: data.error || "Failed to update personal details"
+                    }
+                }));
+            }
+        } catch (err) {
+            console.error("Update Error:", err);
+            setServiceCall(false);
+            setRootContext(prevContext => ({
+                ...prevContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Failed",
+                    message: "Something went wrong while updating personal details"
+                }
+            }));
+        }
+    };
+
     const handleCancelEdit = () => {
         setEditingHeader(false);
+        setEditingPersonalDetails(false);
         setPreviewImage("");
         setTempProfile(profile);
         setCropping(false);
@@ -431,27 +507,38 @@ function ProfilePage() {
         }));
     };
 
+    // Toggle edit mode for personal details
+    const togglePersonalDetailsEdit = () => {
+        if (editingPersonalDetails) {
+            setEditingPersonalDetails(false);
+            setTempProfile(profile);
+        } else {
+            setEditingPersonalDetails(true);
+            setEditingHeader(false);
+        }
+    };
+
     return (
         <div className="bg-white min-h-screen mt-20">
             {serviceCall && <Loading />}
 
             {/* Card Content */}
             <div className="max-w-5xl border border-gray-200 rounded-t-xl mx-auto relative shadow-sm">
-                <div className="p-6 flex flex-col sm:flex-row items-center gap-4 relative z-10">
+                <div className="p-6 flex flex-col sm:flex-row items-start gap-4 relative z-10">
                     {/* Profile Image with Enhanced Cropping */}
                     <div className="absolute -top-12 left-6 sm:left-6">
                         <label
                             htmlFor="profileImageInput"
-                            className={`${editingHeader && canEditProfile ? "cursor-pointer group" : "cursor-default"} relative block`}
+                            className={`${(editingHeader || editingPersonalDetails) && canEditProfile ? "cursor-pointer group" : "cursor-default"} relative block`}
                         >
                             <input
                                 id="profileImageInput"
                                 ref={fileInputRef}
                                 type="file"
                                 accept="image/*"
-                                disabled={!editingHeader || !canEditProfile}
+                                disabled={!(editingHeader || editingPersonalDetails) || !canEditProfile}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                onChange={editingHeader && canEditProfile ? handleImageChange : undefined}
+                                onChange={(editingHeader || editingPersonalDetails) && canEditProfile ? handleImageChange : undefined}
                             />
                             <div className="relative">
                                 <img
@@ -459,7 +546,7 @@ function ProfilePage() {
                                     alt="Profile Avatar"
                                     className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border-4 border-white object-cover shadow-lg"
                                 />
-                                {editingHeader && canEditProfile && (
+                                {(editingHeader || editingPersonalDetails) && canEditProfile && (
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl text-white font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                         Change
                                     </div>
@@ -468,7 +555,8 @@ function ProfilePage() {
                         </label>
                     </div>
 
-                    <div className="flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 w-full ml-0 sm:ml-40">
+                    <div className="flex-1 flex flex-col gap-4 w-full ml-0 sm:ml-40">
+                        {/* Basic Info Section */}
                         <div className="flex-1">
                             {editingHeader ? (
                                 <div className="flex flex-col gap-3 text-gray-700">
@@ -521,26 +609,130 @@ function ProfilePage() {
                                     )}
                                 </div>
                             ) : (
-                                <div>
-                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
-                                    <p className="text-sm sm:text-base text-gray-600">{profile.position}</p>
-                                    <p className="text-xs sm:text-sm text-gray-500">{profile.email}</p>
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                    <div>
+                                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
+                                        <p className="text-sm sm:text-base text-gray-600">{profile.position}</p>
+                                        <p className="text-xs sm:text-sm text-gray-500">{profile.email}</p>
+                                    </div>
+
+                                    {/* Only show edit button if user is applicant and owns this profile */}
+                                    {!editingHeader && canEditProfile && (
+                                        <button
+                                            onClick={() => {
+                                                setEditingHeader(true);
+                                                setEditingPersonalDetails(false);
+                                                setTempProfile(profile);
+                                            }}
+                                            className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0 flex items-center gap-1"
+                                        >
+                                            <PencilIcon className="w-4 h-4" />
+                                            <span className="text-sm">Edit Basic Info</span>
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
 
-                        {/* Only show edit button if user is applicant and owns this profile */}
-                        {!editingHeader && canEditProfile && (
-                            <button
-                                onClick={() => {
-                                    setEditingHeader(true);
-                                    setTempProfile(profile);
-                                }}
-                                className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0"
-                            >
-                                <PencilIcon className="w-5 h-5" />
-                            </button>
-                        )}
+                        {/* Personal Details Section */}
+                        <div className="border-t pt-4 mt-4">
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="text-lg font-semibold text-gray-800">Personal Details</h3>
+                                {!editingPersonalDetails && canEditProfile && (
+                                    <button
+                                        onClick={togglePersonalDetailsEdit}
+                                        className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                                    >
+                                        <PencilIcon className="w-4 h-4" />
+                                        <span className="text-sm">Edit</span>
+                                    </button>
+                                )}
+                            </div>
+
+                            {editingPersonalDetails ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Mobile Number</label>
+                                        <input
+                                            type="text"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.mobile || ''}
+                                            onChange={(e) => handleInputChange('mobile', e.target.value)}
+                                            placeholder="Enter mobile number"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Gender</label>
+                                        <select
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.gender || ''}
+                                            onChange={(e) => handleInputChange('gender', e.target.value)}
+                                        >
+                                            <option value="">Select Gender</option>
+                                            <option value="male">Male</option>
+                                            <option value="female">Female</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
+                                        <input
+                                            type="date"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.dateOfBirth ? tempProfile.dateOfBirth.split('T')[0] : ''}
+                                            onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Company</label>
+                                        <input
+                                            type="text"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.company || ''}
+                                            onChange={(e) => handleInputChange('company', e.target.value)}
+                                            placeholder="Current company"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2 flex justify-end gap-3">
+                                        <button
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                            onClick={handleSavePersonalDetails}
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                            onClick={togglePersonalDetailsEdit}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                                    <div className="flex items-center gap-2">
+                                        <PhoneIcon className="w-4 h-4 text-gray-500" />
+                                        <span className="font-medium">Mobile:</span>
+                                        <span>{profile.mobile || 'Not provided'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <UserIcon className="w-4 h-4 text-gray-500" />
+                                        <span className="font-medium">Gender:</span>
+                                        <span>{profile.gender || 'Not provided'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <CakeIcon className="w-4 h-4 text-gray-500" />
+                                        <span className="font-medium">Date of Birth:</span>
+                                        <span>{profile.dateOfBirth ? formatDateTime(profile.dateOfBirth, "DD-MM-YYYY") : 'Not provided'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <BuildingOfficeIcon className="w-4 h-4 text-gray-500" />
+                                        <span className="font-medium">Company:</span>
+                                        <span>{profile.company || 'Not provided'}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

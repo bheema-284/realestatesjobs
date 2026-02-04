@@ -1,1095 +1,691 @@
 'use client';
-import React, { useState, useEffect, useContext, useRef } from 'react';
-import ReactCrop from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
-import { PencilIcon, XMarkIcon, PhoneIcon, EnvelopeIcon, CakeIcon, BuildingOfficeIcon, BriefcaseIcon, UserIcon } from '@heroicons/react/24/solid';
-import { ChevronDownIcon, ArrowPathIcon, ArrowsPointingOutIcon } from '@heroicons/react/20/solid';
-import AboutMe from './aboutme';
-import Applications from './applications';
-import Projects from './projects';
-import Services from './services';
-import Marketing from './marketing';
-import ButtonTab from '../common/buttontab';
-import RootContext from '../config/rootcontext';
-import { Mutated, useSWRFetch } from '../config/useswrfetch';
-import { useParams } from 'next/navigation';
-import Loading from '../common/loading';
-import { formatDateTime } from '../config/sitesettings';
+import Chat from '@/components/common/chat';
+import RootContext from '@/components/config/rootcontext';
+import { Mutated, useSWRFetch } from '@/components/config/useswrfetch';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid';
+import { ChatBubbleOvalLeftEllipsisIcon, EyeIcon, MapPinIcon } from '@heroicons/react/24/solid';
+import { useRouter } from 'next/navigation';
+import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
+import {
+    FaGraduationCap,
+    FaHandshake,
+    FaChartLine,
+    FaMoneyBillAlt,
+    FaStar,
+    FaCheckCircle,
+    FaUserTie,
+    FaBuilding,
+    FaPhoneAlt,
+    FaHeadset,
+    FaHome,
+    FaChartBar,
+    FaUsers,
+    FaCog
+} from 'react-icons/fa';
 
-// Aspect ratio options
-const ASPECT_RATIOS = [
-    { label: "Free Form", value: 0 },
-    { label: "1:1 Square", value: 1 },
-    { label: "4:3", value: 4 / 3 },
-    { label: "16:9", value: 16 / 9 },
-];
+// Candidate Card Component
+const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange, unreadCount = 0 }) => {
+    const router = useRouter();
+    const [status, setStatus] = useState(candidate.status || 'Applied');
+    const [isUpdating, setIsUpdating] = useState(false);
+    const isNotChatEnabled = status === 'Not Interested';
+    const ratingValue = candidate.ratings || 0;
 
-function ProfilePage() {
-    const params = useParams();
-    const { id, category } = params;
-    const [activeTab, setActiveTab] = useState(0);
-    const [profile, setProfile] = useState({
-        name: '', position: '', email: '', image: '', summary: '', experience: [], education: [],
-        mobile: '', gender: '', dateOfBirth: '', company: ''
-    });
-    const [tempProfile, setTempProfile] = useState({
-        name: '', position: '', email: '', image: '', summary: '', experience: [], education: [],
-        mobile: '', gender: '', dateOfBirth: '', company: ''
-    });
-    const [editingHeader, setEditingHeader] = useState(false);
-    const [accordionOpen, setAccordionOpen] = useState(null);
-    const [previewImage, setPreviewImage] = useState('');
-    const [serviceCall, setServiceCall] = useState(false);
-    const [editingPersonalDetails, setEditingPersonalDetails] = useState(false);
+    const handleViewProfile = () => router.push(`/profile/${candidate.applicantId}/${candidate.category}`);
 
-    // Enhanced Crop states
-    const [cropping, setCropping] = useState(false);
-    const [cropImage, setCropImage] = useState(null);
-    const [crop, setCrop] = useState({
-        unit: '%',
-        width: 50,
-        height: 50,
-        x: 25,
-        y: 25
-    });
-    const [completedCrop, setCompletedCrop] = useState(null);
-    const [aspect, setAspect] = useState(0);
-    const [rotation, setRotation] = useState(0);
-    const [zoom, setZoom] = useState(1);
-    const [flip, setFlip] = useState({ horizontal: false, vertical: false });
-    const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+    const handleStatusChange = async (newStatus) => {
+        setStatus(newStatus);
+        setIsUpdating(true);
 
-    const imgRef = useRef(null);
-    const previewCanvasRef = useRef(null);
-    const fileInputRef = useRef(null);
-
-    const { rootContext, setRootContext } = useContext(RootContext);
-
-    // Determine tabs based on user role
-    const tabs = rootContext.user?.role === "company"
-        ? [
-            { name: "About Applicant", component: AboutMe },
-            { name: 'Applicant Projects', component: Projects }
-        ]
-        : [
-            { name: "About Me", component: AboutMe },
-            { name: 'My Applications', component: Applications },
-            { name: 'My Projects', component: Projects },
-            { name: 'My Premium Services', component: Services },
-            { name: 'My Digital Marketing', component: Marketing }
-        ];
-
-    // Use users API
-    const { data: userData = [], error, isLoading } = useSWRFetch(id ? `/api/users?id=${id}` : null);
-    const mutated = Mutated(id ? `/api/users?id=${id}` : null);
-
-    useEffect(() => {
-        if (userData) {
-            setProfile(userData);
-            setTempProfile(userData);
-        }
-    }, [userData]);
-
-    // Generate preview when crop changes
-    useEffect(() => {
-        if (completedCrop?.width && completedCrop?.height && imgRef.current && previewCanvasRef.current) {
-            generateImagePreview(imgRef.current, previewCanvasRef.current, completedCrop);
-        }
-    }, [completedCrop, rotation, flip, zoom]);
-
-    // Cleanup object URLs on unmount
-    useEffect(() => {
-        return () => {
-            if (previewImage) {
-                URL.revokeObjectURL(previewImage);
-            }
-            if (cropImage) {
-                URL.revokeObjectURL(cropImage);
-            }
-        };
-    }, [previewImage, cropImage]);
-
-    const ActiveComponent = tabs[activeTab].component;
-
-    // Check if current user can edit this profile
-    const canEditProfile = rootContext?.user?.role === "applicant" && rootContext?.user?._id === id;
-
-    /** ─── Enhanced Image Upload + Crop ────────────────────── **/
-    const handleImageChange = (e) => {
-        // Only allow image change if user can edit
-        if (!canEditProfile) return;
-
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Check file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            setRootContext(prev => ({
-                ...prev,
-                toast: {
-                    show: true,
-                    dismiss: true,
-                    type: "warning",
-                    position: "Warning",
-                    message: "Please select an image smaller than 5MB",
-                },
-            }));
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            setCropImage(reader.result);
-            setCropping(true);
-            // Reset crop settings to center
-            setCrop({
-                unit: '%',
-                width: 50,
-                height: 50,
-                x: 25,
-                y: 25
-            });
-            setCompletedCrop(null);
-            setZoom(1);
-            setRotation(0);
-            setFlip({ horizontal: false, vertical: false });
-            setAspect(0);
-        };
-        reader.readAsDataURL(file);
-
-        // Reset file input to allow selecting same file again
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+        try {
+            await onStatusChange(candidate.applicantId, candidate.jobId, newStatus);
+        } catch (error) {
+            console.error('Failed to update status:', error);
+            setStatus(candidate.status || 'Applied');
+        } finally {
+            setIsUpdating(false);
         }
     };
 
-    const generateImagePreview = (image, canvas, crop) => {
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+    const renderStars = (rating) => {
+        const fullStars = Math.floor(rating);
+        const hasHalfStar = rating % 1 !== 0;
+        const emptyStars = 5 - Math.ceil(rating);
 
-        const scaleX = image.naturalWidth / image.width;
-        const scaleY = image.naturalHeight / image.height;
-        const pixelRatio = window.devicePixelRatio || 1;
-
-        canvas.width = Math.floor(crop.width * scaleX * pixelRatio);
-        canvas.height = Math.floor(crop.height * scaleY * pixelRatio);
-
-        ctx.scale(pixelRatio, pixelRatio);
-        ctx.imageSmoothingQuality = 'high';
-
-        const cropX = crop.x * scaleX;
-        const cropY = crop.y * scaleY;
-        const cropWidth = crop.width * scaleX;
-        const cropHeight = crop.height * scaleY;
-
-        // Apply transformations
-        ctx.save();
-
-        // Translate to center
-        ctx.translate(cropWidth / 2, cropHeight / 2);
-
-        // Apply flip
-        ctx.scale(flip.horizontal ? -1 : 1, flip.vertical ? -1 : 1);
-
-        // Apply rotation
-        ctx.rotate((rotation * Math.PI) / 180);
-
-        // Draw image
-        ctx.drawImage(
-            image,
-            cropX, cropY, cropWidth, cropHeight,
-            -cropWidth / 2, -cropHeight / 2, cropWidth, cropHeight
+        return (
+            <>
+                {[...Array(fullStars)].map((_, i) => (
+                    <FaStar key={`full-${i}`} className="w-3 h-3 text-yellow-400" />
+                ))}
+                {hasHalfStar && <FaStar key="half" className="w-3 h-3 text-yellow-400 opacity-50" />}
+                {[...Array(emptyStars)].map((_, i) => (
+                    <FaStar key={`empty-${i}`} className="w-3 h-3 text-gray-500 opacity-30" />
+                ))}
+            </>
         );
-
-        ctx.restore();
     };
 
-    const handleCropSave = async () => {
-        try {
-            const canvas = previewCanvasRef.current;
-            if (!canvas) {
-                throw new Error('Canvas not available');
-            }
+    const companyLogo = candidate.comapnyLogo || candidate.jobDetails?.companyProfileImage ||
+        candidate.companyDetails?.profileImage ||
+        candidate.companyProfileImage;
 
-            canvas.toBlob((blob) => {
-                if (!blob) {
-                    throw new Error('Failed to create blob');
-                }
+    const candidateImage = candidate.applicantProfile?.profileImage ||
+        candidate.applicantProfile?.profileImage ||
+        candidate.profileImage;
 
-                // Clean up previous preview URL if exists
-                if (previewImage) {
-                    URL.revokeObjectURL(previewImage);
-                }
-
-                const previewUrl = URL.createObjectURL(blob);
-                const file = new File([blob], "profile.jpg", { type: "image/jpeg" });
-
-                setPreviewImage(previewUrl);
-                setTempProfile((prev) => ({ ...prev, imageFile: file, profileImage: previewUrl }));
-                setCropping(false);
-                setCropImage(null);
-                setCompletedCrop(null);
-
-                setRootContext(prev => ({
-                    ...prev,
-                    toast: {
-                        show: true,
-                        dismiss: true,
-                        type: "success",
-                        position: "Success",
-                        message: "Image cropped successfully",
-                    },
-                }));
-            }, 'image/jpeg', 0.95);
-        } catch (err) {
-            console.error("Cropping failed:", err);
-            setRootContext(prev => ({
-                ...prev,
-                toast: {
-                    show: true,
-                    dismiss: true,
-                    type: "error",
-                    position: "Failed",
-                    message: "Failed to crop image. Please try again.",
-                },
-            }));
-        }
-    };
-
-    const handleCropCancel = () => {
-        setCropping(false);
-        setCropImage(null);
-        setCompletedCrop(null);
-        // Clean up crop image URL
-        if (cropImage) {
-            URL.revokeObjectURL(cropImage);
-        }
-    };
-
-    const resetCropSettings = () => {
-        setCrop({
-            unit: '%',
-            width: 50,
-            height: 50,
-            x: 25,
-            y: 25
-        });
-        setZoom(1);
-        setRotation(0);
-        setFlip({ horizontal: false, vertical: false });
-        setAspect(0);
-    };
-
-    const toggleAspect = (newAspect) => {
-        setAspect(newAspect);
-
-        if (newAspect === 0) {
-            // Free form - no constraints
-            return;
-        }
-
-        // Calculate new crop based on aspect ratio
-        if (imgRef.current && imgRef.current.naturalWidth && imgRef.current.naturalHeight) {
-            const image = imgRef.current;
-            const imageAspect = image.naturalWidth / image.naturalHeight;
-            let newCrop = { ...crop };
-
-            if (newAspect > imageAspect) {
-                // Crop is wider than image aspect
-                newCrop.width = 100;
-                newCrop.height = (100 / newAspect) * imageAspect;
-                newCrop.x = 0;
-                newCrop.y = (100 - newCrop.height) / 2;
-            } else {
-                // Crop is taller than image aspect
-                newCrop.height = 100;
-                newCrop.width = 100 * newAspect / imageAspect;
-                newCrop.x = (100 - newCrop.width) / 2;
-                newCrop.y = 0;
-            }
-
-            setCrop(newCrop);
-        }
-    };
-
-    const toggleFlip = (direction) => {
-        setFlip(prev => ({
-            ...prev,
-            [direction]: !prev[direction]
-        }));
-    };
-
-    const setFullCrop = () => {
-        setCrop({
-            unit: '%',
-            width: 100,
-            height: 100,
-            x: 0,
-            y: 0
-        });
-    };
-
-    const handleImageLoad = (e) => {
-        const img = e.target;
-        if (img.naturalWidth && img.naturalHeight) {
-            setImageDimensions({
-                width: img.naturalWidth,
-                height: img.naturalHeight
-            });
-            setCompletedCrop(crop);
-        }
-    };
-
-    // Save profile with image upload
-    const handleSaveHeader = async () => {
-        setServiceCall(true);
-        try {
-            const formData = new FormData();
-            formData.append("id", id);
-            formData.append("name", tempProfile.name || "");
-            formData.append("email", tempProfile.email || "");
-            formData.append("position", tempProfile.position || "");
-            formData.append("role", "applicant");
-
-            // Add personal details
-            formData.append("mobile", tempProfile.mobile || "");
-            formData.append("gender", tempProfile.gender || "");
-            if (tempProfile.dateOfBirth) {
-                formData.append("dateOfBirth", tempProfile.dateOfBirth);
-            }
-            formData.append("company", tempProfile.company || "");
-
-            if (tempProfile.password) formData.append("password", tempProfile.password);
-            if (tempProfile.imageFile) formData.append("image", tempProfile.imageFile);
-            if (tempProfile.summary) formData.append("summary", tempProfile.summary);
-            if (tempProfile.experience) formData.append("experience", JSON.stringify(tempProfile.experience));
-            if (tempProfile.education) formData.append("education", JSON.stringify(tempProfile.education));
-
-            const res = await fetch(`/api/users`, {
-                method: 'PUT',
-                body: formData
-            });
-
-            const data = await res.json();
-            setServiceCall(false);
-
-            if (res.ok) {
-                setProfile(prev => ({ ...prev, ...tempProfile }));
-                setEditingHeader(false);
-                setEditingPersonalDetails(false);
-                setPreviewImage('');
-                mutated();
-
-                setRootContext(prevContext => ({
-                    ...prevContext,
-                    toast: {
-                        show: true,
-                        dismiss: true,
-                        type: "success",
-                        position: "Success",
-                        message: "Profile updated successfully"
-                    }
-                }));
-            } else {
-                setRootContext(prevContext => ({
-                    ...prevContext,
-                    toast: {
-                        show: true,
-                        dismiss: true,
-                        type: "error",
-                        position: "Failed",
-                        message: data.error || "Failed to update profile"
-                    }
-                }));
-            }
-        } catch (err) {
-            console.error("Update Error:", err);
-            setServiceCall(false);
-            setRootContext(prevContext => ({
-                ...prevContext,
-                toast: {
-                    show: true,
-                    dismiss: true,
-                    type: "error",
-                    position: "Failed",
-                    message: "Something went wrong while updating profile"
-                }
-            }));
-        }
-    };
-
-    const handleSavePersonalDetails = async () => {
-        setServiceCall(true);
-        try {
-            const formData = new FormData();
-            formData.append("id", id);
-            formData.append("mobile", tempProfile.mobile || "");
-            formData.append("gender", tempProfile.gender || "");
-            if (tempProfile.dateOfBirth) {
-                formData.append("dateOfBirth", tempProfile.dateOfBirth);
-            }
-            formData.append("company", tempProfile.company || "");
-            formData.append("position", tempProfile.position || "");
-
-            const res = await fetch(`/api/users`, {
-                method: 'PUT',
-                body: formData
-            });
-
-            const data = await res.json();
-            setServiceCall(false);
-
-            if (res.ok) {
-                setProfile(prev => ({ ...prev, ...tempProfile }));
-                setEditingPersonalDetails(false);
-                mutated();
-
-                setRootContext(prevContext => ({
-                    ...prevContext,
-                    toast: {
-                        show: true,
-                        dismiss: true,
-                        type: "success",
-                        position: "Success",
-                        message: "Personal details updated successfully"
-                    }
-                }));
-            } else {
-                setRootContext(prevContext => ({
-                    ...prevContext,
-                    toast: {
-                        show: true,
-                        dismiss: true,
-                        type: "error",
-                        position: "Failed",
-                        message: data.error || "Failed to update personal details"
-                    }
-                }));
-            }
-        } catch (err) {
-            console.error("Update Error:", err);
-            setServiceCall(false);
-            setRootContext(prevContext => ({
-                ...prevContext,
-                toast: {
-                    show: true,
-                    dismiss: true,
-                    type: "error",
-                    position: "Failed",
-                    message: "Something went wrong while updating personal details"
-                }
-            }));
-        }
-    };
-
-    const handleCancelEdit = () => {
-        setEditingHeader(false);
-        setEditingPersonalDetails(false);
-        setPreviewImage("");
-        setTempProfile(profile);
-        setCropping(false);
-        setCropImage(null);
-        setCompletedCrop(null);
-
-        // Clean up any temporary URLs
-        if (previewImage) {
-            URL.revokeObjectURL(previewImage);
-        }
-        if (cropImage) {
-            URL.revokeObjectURL(cropImage);
-        }
-    };
-
-    const handleInputChange = (field, value) => {
-        setTempProfile(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
-
-    // Toggle edit mode for personal details
-    const togglePersonalDetailsEdit = () => {
-        if (editingPersonalDetails) {
-            setEditingPersonalDetails(false);
-            setTempProfile(profile);
-        } else {
-            setEditingPersonalDetails(true);
-            setEditingHeader(false);
-        }
-    };
+    const jobLocation = candidate.jobDetails?.location || candidate.location;
 
     return (
-        <div className="bg-white min-h-screen mt-20">
-            {serviceCall && <Loading />}
-
-            {/* Card Content */}
-            <div className="max-w-5xl border border-gray-200 rounded-t-xl mx-auto relative shadow-sm">
-                <div className="p-6 flex flex-col sm:flex-row items-start gap-4 relative z-10">
-                    {/* Profile Image with Enhanced Cropping */}
-                    <div className="absolute -top-12 left-6 sm:left-6">
-                        <label
-                            htmlFor="profileImageInput"
-                            className={`${(editingHeader || editingPersonalDetails) && canEditProfile ? "cursor-pointer group" : "cursor-default"} relative block`}
-                        >
-                            <input
-                                id="profileImageInput"
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                disabled={!(editingHeader || editingPersonalDetails) || !canEditProfile}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                onChange={(editingHeader || editingPersonalDetails) && canEditProfile ? handleImageChange : undefined}
+        <div className="border rounded-xl shadow-sm p-4 flex flex-col lg:flex-row gap-4">
+            <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold flex-shrink-0 overflow-hidden">
+                        {candidateImage ? (
+                            <img
+                                src={candidateImage || companyLogo}
+                                alt="Company Logo"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
                             />
-                            <div className="relative">
-                                <img
-                                    src={profile.profileImage || "https://placehold.co/80x80/F0F0F0/000000?text=Logo"}
-                                    alt="Profile Avatar"
-                                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border-4 border-white object-cover shadow-lg"
-                                />
-                                {(editingHeader || editingPersonalDetails) && canEditProfile && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl text-white font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                        Change
-                                    </div>
-                                )}
-                            </div>
-                        </label>
+                        ) : null}
+                        <div className={`w-full h-full flex items-center justify-center ${candidateImage ? 'hidden' : 'flex'}`}>
+                            {candidate.applicantName?.charAt(0)?.toUpperCase() || 'A'}
+                        </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col gap-4 w-full ml-0 sm:ml-40">
-                        {/* Basic Info Section */}
-                        <div className="flex-1">
-                            {editingHeader ? (
-                                <div className="flex flex-col gap-3 text-gray-700">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
-                                        <input
-                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile.name || ""}
-                                            placeholder="Enter your full name"
-                                            onChange={(e) => handleInputChange('name', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Professional Title</label>
-                                        <input
-                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile.position || ""}
-                                            placeholder="Enter your professional position"
-                                            onChange={(e) => handleInputChange('position', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Email Address</label>
-                                        <input
-                                            type="email"
-                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile.email || ""}
-                                            placeholder="Enter your email address"
-                                            onChange={(e) => handleInputChange('email', e.target.value)}
-                                        />
-                                    </div>
-
-                                    {canEditProfile && (
-                                        <div className="flex gap-3 mt-2">
-                                            <button
-                                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                                                onClick={handleSaveHeader}
-                                            >
-                                                Save Changes
-                                            </button>
-                                            <button
-                                                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                                                onClick={handleCancelEdit}
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                                    <div>
-                                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
-                                        <p className="text-sm sm:text-base text-gray-600">{profile.position}</p>
-                                        <p className="text-xs sm:text-sm text-gray-500">{profile.email}</p>
-                                    </div>
-
-                                    {/* Only show edit button if user is applicant and owns this profile */}
-                                    {!editingHeader && canEditProfile && (
-                                        <button
-                                            onClick={() => {
-                                                setEditingHeader(true);
-                                                setEditingPersonalDetails(false);
-                                                setTempProfile(profile);
-                                            }}
-                                            className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0 flex items-center gap-1"
-                                        >
-                                            <PencilIcon className="w-4 h-4" />
-                                            <span className="text-sm">Edit Basic Info</span>
-                                        </button>
-                                    )}
-                                </div>
-                            )}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
+                            <h3 className="text-md font-semibold text-gray-800 break-words">
+                                {candidate.applicantName?.toUpperCase() || 'Applicant'}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                                {jobLocation && (
+                                    <span className="text-sm text-gray-600 break-words hidden sm:flex items-center gap-1">
+                                        <MapPinIcon className="w-4 h-4" />
+                                        {jobLocation}
+                                    </span>
+                                )}
+                                <FaCheckCircle className='w-4 h-4 text-blue-600' />
+                            </div>
                         </div>
 
-                        {/* Personal Details Section */}
-                        <div className="border-t pt-4 mt-4">
-                            <div className="flex justify-between items-center mb-3">
-                                <h3 className="text-lg font-semibold text-gray-800">Personal Details</h3>
-                                {!editingPersonalDetails && canEditProfile && (
-                                    <button
-                                        onClick={togglePersonalDetailsEdit}
-                                        className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
-                                    >
-                                        <PencilIcon className="w-4 h-4" />
-                                        <span className="text-sm">Edit</span>
-                                    </button>
-                                )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-3 text-sm">
+                            <div className="min-w-0">
+                                <span className="text-gray-600">Job: </span>
+                                <span className="font-medium break-words">{candidate.jobTitle}</span>
+                            </div>
+                            <div className="min-w-0">
+                                <span className="text-gray-600">Applied: </span>
+                                <span className="font-medium">{new Date(candidate.appliedAt).toLocaleDateString()}</span>
+                            </div>
+                            <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+                                <span className="text-gray-600">Email: </span>
+                                <span className="font-medium break-all">{candidate.applicantEmail}</span>
+                            </div>
+                        </div>
+
+                        {candidate.companyName && (
+                            <div className="mb-2 text-sm">
+                                <span className="text-gray-600">Company: </span>
+                                <span className="font-medium">{candidate.companyName}</span>
+                            </div>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-2">
+                                <FaGraduationCap title='Education' className='w-4 h-4 text-gray-600' />
+                                <FaHandshake title='Experience' className='w-4 h-4 text-gray-600' />
+                                <FaChartLine title='Performance' className='w-4 h-4 text-gray-600' />
+                                <FaMoneyBillAlt title='Salary' className='w-4 h-4 text-gray-600' />
                             </div>
 
-                            {editingPersonalDetails ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Mobile Number</label>
-                                        <input
-                                            type="text"
-                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            value={tempProfile.mobile || ''}
-                                            onChange={(e) => handleInputChange('mobile', e.target.value)}
-                                            placeholder="Enter mobile number"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Gender</label>
-                                        <select
-                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            value={tempProfile.gender || ''}
-                                            onChange={(e) => handleInputChange('gender', e.target.value)}
-                                        >
-                                            <option value="">Select Gender</option>
-                                            <option value="male">Male</option>
-                                            <option value="female">Female</option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
-                                        <input
-                                            type="date"
-                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            value={tempProfile.dateOfBirth ? tempProfile.dateOfBirth.split('T')[0] : ''}
-                                            onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Company</label>
-                                        <input
-                                            type="text"
-                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            value={tempProfile.company || ''}
-                                            onChange={(e) => handleInputChange('company', e.target.value)}
-                                            placeholder="Current company"
-                                        />
-                                    </div>
-                                    <div className="md:col-span-2 flex justify-end gap-3">
-                                        <button
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                                            onClick={handleSavePersonalDetails}
-                                        >
-                                            Save
-                                        </button>
-                                        <button
-                                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                                            onClick={togglePersonalDetailsEdit}
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
+                            <div className="border border-gray-300 px-2 py-1 rounded flex items-center gap-1">
+                                <div className="bg-yellow-800 text-white w-5 h-5 flex flex-col items-center justify-center rounded text-[7px]">
+                                    <span className="font-bold">{ratingValue.toFixed(1)}</span>
+                                    <span className="text-[5px]">rating</span>
                                 </div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
-                                    <div className="flex items-center gap-2">
-                                        <PhoneIcon className="w-4 h-4 text-gray-500" />
-                                        <span className="font-medium">Mobile:</span>
-                                        <span>{profile.mobile || 'Not provided'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <UserIcon className="w-4 h-4 text-gray-500" />
-                                        <span className="font-medium">Gender:</span>
-                                        <span>{profile.gender || 'Not provided'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <CakeIcon className="w-4 h-4 text-gray-500" />
-                                        <span className="font-medium">Date of Birth:</span>
-                                        <span>{profile.dateOfBirth ? formatDateTime(profile.dateOfBirth, "DD-MM-YYYY") : 'Not provided'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <BuildingOfficeIcon className="w-4 h-4 text-gray-500" />
-                                        <span className="font-medium">Company:</span>
-                                        <span>{profile.company || 'Not provided'}</span>
-                                    </div>
+                                <div className="flex gap-0.5">
+                                    {renderStars(ratingValue)}
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Tabs / Resume Section */}
-            <div className="bg-white border-b border-gray-200 max-w-5xl mx-auto px-4 py-6 rounded-b-md shadow-sm">
-                {rootContext?.user?.role === "recruiter" ? (
-                    <AboutMe profile={profile} setRootContext={setRootContext} mutated={mutated} />
-                ) : (
-                    <>
-                        {/* Desktop Tabs */}
-                        <div className="hidden sm:block">
-                            <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
-                            <div className="py-3">
-                                <ActiveComponent
-                                    profile={profile}
-                                    setRootContext={setRootContext}
-                                    mutated={mutated}
-                                    canEdit={canEditProfile} // Pass edit permission to components
-                                />
-                            </div>
-                        </div>
+            <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-stretch sm:items-center gap-2 flex-shrink-0">
+                <select
+                    className={`border rounded px-3 py-2 text-sm min-w-[140px] ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    value={status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    disabled={isUpdating}
+                >
+                    <option value="Applied">Applied</option>
+                    <option value="Interested">Interested</option>
+                    <option value="Shortlisted">Shortlisted</option>
+                    <option value="Selected">Selected</option>
+                    <option value="Not Interested">Not Interested</option>
+                </select>
 
-                        {/* Mobile Accordion */}
-                        <div className="sm:hidden">
-                            {tabs.map((tab, index) => {
-                                const Component = tab.component;
-                                const isOpen = accordionOpen === index;
-                                return (
-                                    <div key={tab.name} className="border-b border-gray-200">
-                                        <button
-                                            onClick={() => setAccordionOpen(isOpen ? null : index)}
-                                            className="w-full flex justify-between items-center py-2 px-2 bg-gray-50 text-left"
-                                        >
-                                            <span className="font-medium text-gray-700 text-sm">{tab.name}</span>
-                                            <ChevronDownIcon
-                                                className={`w-4 h-4 transform transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                                            />
-                                        </button>
-                                        {isOpen && (
-                                            <div className="p-2">
-                                                <Component
-                                                    profile={profile}
-                                                    setRootContext={setRootContext}
-                                                    mutated={mutated}
-                                                    canEdit={canEditProfile} // Pass edit permission to components
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => onOpenChatWithCandidate(candidate)}
+                        disabled={isNotChatEnabled || isUpdating}
+                        className={`flex-1 px-3 py-2 rounded text-sm flex items-center gap-2 justify-center min-w-[80px] border relative
+                            ${!isNotChatEnabled && !isUpdating
+                                ? 'text-gray-600 border-gray-300 hover:bg-gray-50'
+                                : 'text-gray-400 border-gray-200 cursor-not-allowed'}`}
+                    >
+                        <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4" />
+                        <span>Chat</span>
+                        {unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                {unreadCount}
+                            </span>
+                        )}
+                    </button>
+
+                    <button
+                        onClick={handleViewProfile}
+                        disabled={isUpdating}
+                        className={`flex-1 px-3 py-2 rounded text-sm flex items-center gap-2 justify-center min-w-[100px] border border-green-600 text-green-600 hover:bg-green-50 ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        <EyeIcon className="w-4 h-4" />
+                        <span>Profile</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Category icon mapping
+const categoryIcons = {
+    'channel-partners': FaUserTie,
+    'real-estate-sales': FaHome,
+    'tele-caller': FaPhoneAlt,
+    'crm-executive': FaHeadset,
+    'hr-manager': FaUsers,
+    'operations': FaCog,
+    'marketing': FaChartBar,
+    'web-development': FaCog,
+    'default': FaBuilding
+};
+
+const getCategoryIcon = (category) => {
+    const normalizedCategory = category?.toLowerCase().replace(/\s+/g, '-');
+    return categoryIcons[normalizedCategory] || categoryIcons.default;
+};
+
+// Helper function to generate stable unique keys
+const generateUniqueKey = (candidate, index) => {
+    if (candidate._id && candidate.applicantId && candidate.jobId) {
+        return `${candidate._id}-${candidate.applicantId}-${candidate.jobId}`;
+    }
+    if (candidate._id && candidate.applicantId) {
+        return `${candidate._id}-${candidate.applicantId}`;
+    }
+    if (candidate._id) {
+        return candidate._id.toString();
+    }
+    if (candidate.id && candidate.applicantId && candidate.jobId) {
+        return `${candidate.id}-${candidate.applicantId}-${candidate.jobId}`;
+    }
+    if (candidate.id) {
+        return candidate.id.toString();
+    }
+    return `candidate-${index}`;
+};
+
+// Remove duplicates from the data
+const removeDuplicateCandidates = (candidates) => {
+    const seen = new Set();
+    return candidates.filter(candidate => {
+        const key = generateUniqueKey(candidate, 0);
+        if (seen.has(key)) {
+            console.warn('Duplicate candidate found:', candidate);
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
+};
+
+// Main List Component with Notification Integration
+const ApplicationList = () => {
+    const { rootContext, setRootContext } = useContext(RootContext);
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [selectedCandidate, setSelectedCandidate] = useState(null);
+    const [openCategory, setOpenCategory] = useState('');
+    const [currentlyOpenChatId, setCurrentlyOpenChatId] = useState(null);
+    const [isChatLoading, setIsChatLoading] = useState(false);
+    const { data, error, isLoading } = useSWRFetch(`/api/companies`);
+    const [isMounted, setIsMounted] = useState(false);
+    const mutated = Mutated(`/api/companies`);
+    const pollingRef = useRef(null);
+
+    useEffect(() => {
+        setIsMounted(true);
+        return () => {
+            setIsMounted(false);
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+            }
+        };
+    }, []);
+
+
+    // Get company data with improved error handling
+    const getCompanyData = () => {
+        if (data && Array.isArray(data) && data.length > 0) {
+            const companyData = data[0];
+            return {
+                _id: companyData._id || 'unknown-company',
+                name: companyData.name || 'Company',
+                profileImage: companyData.profileImage || companyData.logo,
+                companyName: companyData.name || 'Company',
+                companyId: companyData._id || 'unknown-company',
+                // Add any additional fields that might be needed by Chat component
+                ...companyData
+            };
+        }
+        return {
+            _id: 'unknown-company',
+            name: 'Company',
+            profileImage: null,
+            companyName: 'Company',
+            companyId: 'unknown-company'
+        };
+    };
+
+    const company = getCompanyData();
+
+    const handleOpenChatWithCandidate = async (candidate, chatId = null) => {
+        setIsChatLoading(true);
+        try {
+            // Validate required fields
+            if (!candidate.applicantId || !candidate.jobId) {
+                console.error('Missing required candidate data:', candidate);
+                setRootContext(prevContext => ({
+                    ...prevContext,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        position: "Failed",
+                        message: "Cannot open chat: Missing candidate information"
+                    }
+                }));
+                return;
+            }
+
+            let targetChatId = chatId;
+            console.log("Opening chat with candidate:", candidate);
+
+            if (!targetChatId && data && data[0]?.chats) {
+                const chat = data[0].chats.find(chat =>
+                    chat.applicantId?.toString() === candidate.applicantId &&
+                    chat.jobId === candidate.jobId
+                );
+                targetChatId = chat?.chatId;
+            }
+
+            if (targetChatId) {
+                setCurrentlyOpenChatId(targetChatId.toString());
+            }
+
+            // IMPROVED: Better candidate data preparation
+            const candidateData = {
+                applicantId: candidate.applicantId,
+                _id: candidate.applicantId,
+                applicantName: candidate.applicantName || candidate.name || 'Candidate',
+                profileImage: candidate.profileImage || candidate.applicantProfile?.profileImage,
+                jobTitle: candidate.jobTitle,
+                jobId: candidate.jobId,
+                // Ensure all required fields for chat component
+                applicantProfile: {
+                    name: candidate.applicantName || candidate.name || 'Candidate',
+                    profileImage: candidate.profileImage || candidate.applicantProfile?.profileImage,
+                    position: candidate.jobTitle || 'Applicant'
+                }
+            };
+
+            console.log('Prepared candidate data for chat:', candidateData);
+            setSelectedCandidate(candidateData);
+            setIsChatOpen(true);
+
+        } catch (error) {
+            console.error('Error opening chat:', error);
+            setRootContext(prevContext => ({
+                ...prevContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Failed",
+                    message: "Failed to open chat"
+                }
+            }));
+        } finally {
+            setIsChatLoading(false);
+        }
+    };
+
+    const handleCloseChat = () => {
+        setIsChatOpen(false);
+        setSelectedCandidate(null);
+        setCurrentlyOpenChatId(null);
+    };
+
+    const getAppliedJobs = () => {
+        if (!data || !Array.isArray(data) || data.length === 0) return [];
+        const companyData = data[0];
+        const appliedJobs = companyData.appliedJobs || [];
+        return removeDuplicateCandidates(appliedJobs);
+    };
+
+    const appliedJobs = getAppliedJobs();
+
+    const jobsByCategory = appliedJobs.reduce((acc, job) => {
+        const category = job.category || 'Other';
+        if (!acc[category]) {
+            acc[category] = [];
+        }
+        acc[category].push(job);
+        return acc;
+    }, {});
+
+    const handleStatusChange = async (applicantId, jobId, newStatus) => {
+        try {
+            const response = await fetch('/api/jobs/status', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    applicantId,
+                    jobId,
+                    status: newStatus,
+                    companyId: company._id
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                mutated();
+                setRootContext(prevContext => ({
+                    ...prevContext,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "success",
+                        position: "Success",
+                        message: "Application status updated successfully"
+                    }
+                }));
+            } else {
+                throw new Error(result.error || 'Failed to update status');
+            }
+        } catch (error) {
+            console.error('Status update error:', error);
+            setRootContext(prevContext => ({
+                ...prevContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Failed",
+                    message: "Failed to update application status"
+                }
+            }));
+            throw error;
+        }
+    };
+
+    const handleSendMessage = async (message) => {
+        if (!selectedCandidate) {
+            console.error('No candidate selected for chat');
+            setRootContext(prevContext => ({
+                ...prevContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Failed",
+                    message: "No candidate selected for chat"
+                }
+            }));
+            return false;
+        }
+
+        try {
+            console.log('Sending message with data:', {
+                applicantId: selectedCandidate.applicantId,
+                companyId: company._id,
+                jobId: selectedCandidate.jobId,
+                jobTitle: selectedCandidate.jobTitle,
+                message: message,
+                senderType: 'company',
+                senderId: company._id,
+                senderName: company.name
+            });
+
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    applicantId: selectedCandidate.applicantId,
+                    companyId: company._id,
+                    jobId: selectedCandidate.jobId,
+                    jobTitle: selectedCandidate.jobTitle,
+                    message: message,
+                    senderType: 'company',
+                    senderId: company._id,
+                    senderName: company.name
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                mutated();
+                console.log('Message sent successfully:', result);
+                return true;
+            } else {
+                console.error('Chat API Error:', result.error);
+                setRootContext(prevContext => ({
+                    ...prevContext,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        position: "Failed",
+                        message: result.error || "Failed to send message"
+                    }
+                }));
+                return false;
+            }
+        } catch (error) {
+            console.error('Chat message error:', error);
+            setRootContext(prevContext => ({
+                ...prevContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Failed",
+                    message: "Failed to send message"
+                }
+            }));
+            return false;
+        }
+    };
+
+    const toggleCategory = (category) => {
+        setOpenCategory(openCategory === category ? '' : category);
+    };
+
+    // Get unread count for a specific candidate
+    const getUnreadCountForCandidate = (candidate) => {
+        if (!data || !data.length || !data[0].chats) return 0;
+
+        const chat = data[0].chats.find(chat =>
+            chat.applicantId?.toString() === candidate.applicantId &&
+            chat.jobId === candidate.jobId
+        );
+
+        if (!chat || !chat.messages) return 0;
+
+        // Count unread messages from applicant
+        return chat.messages.filter(message =>
+            message.senderType === 'applicant' && !message.read
+        ).length;
+    };
+
+    const getTotalUnreadCount = () => {
+        if (!data || !data.length || !data[0].chats) return 0;
+
+        let totalUnread = 0;
+        data[0].chats.forEach(chat => {
+            if (chat.messages) {
+                const unreadMessages = chat.messages.filter(message =>
+                    message.senderType === 'applicant' && !message.read
+                );
+                totalUnread += unreadMessages.length;
+            }
+        });
+
+        return totalUnread;
+    };
+
+    if (!isMounted) return null;
+
+    if (isLoading) {
+        return (
+            <div className="w-full sm:w-[80%] mx-auto p-8 text-center">
+                <div className="animate-pulse">Loading applications...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="w-full sm:w-[80%] mx-auto p-8 text-center text-red-600">
+                Error loading applications: {error.message}
+            </div>
+        );
+    }
+
+    const totalUnreadCount = getTotalUnreadCount();
+
+    return (
+        <div className="w-full sm:w-[80%] mx-auto">
+            {/* Header */}
+            <div className="mb-6 p-4 bg-white rounded-lg shadow-sm border">
+                <h1 className="text-2xl font-bold text-gray-800">Job Applications</h1>
+                <p className="text-gray-600 mt-2">
+                    Manage applications for {company?.name || 'your company'}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                    <div className="bg-blue-50 px-3 py-2 rounded-lg">
+                        <span className="font-semibold text-blue-800">Total Applications:</span>
+                        <span className="ml-2 text-blue-600">{appliedJobs.length}</span>
+                    </div>
+                    <div className="bg-green-50 px-3 py-2 rounded-lg">
+                        <span className="font-semibold text-green-800">Categories:</span>
+                        <span className="ml-2 text-green-600">{Object.keys(jobsByCategory).length}</span>
+                    </div>
+                    {totalUnreadCount > 0 && (
+                        <div className="bg-orange-50 px-3 py-2 rounded-lg">
+                            <span className="font-semibold text-orange-800">Unread Messages:</span>
+                            <span className="ml-2 text-orange-600">{totalUnreadCount}</span>
                         </div>
-                    </>
-                )}
+                    )}
+                </div>
             </div>
 
-            {/* Enhanced Crop Modal with ReactCrop */}
-            {cropping && (
-                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 sm:p-4">
-                    <div className="bg-white rounded-lg w-full max-w-6xl h-full max-h-[95vh] overflow-y-auto flex flex-col">
-                        {/* Header */}
-                        <div className="flex justify-between items-center p-3 sm:p-4 border-b bg-blue-50 shrink-0">
-                            <h3 className="text-lg font-semibold text-blue-900">Crop Profile Picture</h3>
-                            <button
-                                onClick={handleCropCancel}
-                                className="text-blue-700 hover:text-blue-900 transition-colors"
-                            >
-                                <XMarkIcon className="w-6 h-6" />
-                            </button>
-                        </div>
+            {/* Applications by Category */}
+            {appliedJobs.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-lg border">
+                    <div className="text-gray-500 text-lg mb-4">No applications received yet</div>
+                    <div className="text-gray-400 text-sm">
+                        Applications will appear here when candidates apply to your job posts
+                    </div>
+                </div>
+            ) : (
+                <div className="flex flex-col gap-4">
+                    {Object.entries(jobsByCategory).map(([category, jobs]) => {
+                        const isOpen = openCategory === category;
+                        const CategoryIcon = getCategoryIcon(category);
 
-                        {/* Main Content - Responsive layout */}
-                        <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto scroll-y-auto">
-                            {/* Mobile: Preview on top */}
-                            <div className="lg:hidden flex flex-col border-b bg-blue-50 shrink-0">
-                                {/* Preview Section - Top on Mobile */}
-                                <div className="p-3 sm:p-4 border-b bg-blue-100">
-                                    <h4 className="text-sm font-medium text-blue-900 mb-2">Preview</h4>
-                                    <div className="bg-white rounded-lg p-3 flex justify-center items-center border border-blue-300 min-h-[80px]">
-                                        <canvas
-                                            ref={previewCanvasRef}
-                                            className="max-w-full max-h-32 object-contain rounded"
-                                        />
-                                    </div>
+                        return (
+                            <div key={category} className="flex flex-col gap-2">
+                                <div
+                                    className={`flex w-full cursor-pointer gap-5 justify-between text-left px-4 py-3 sm:text-xl rounded font-semibold border items-center ${isOpen ? 'bg-blue-400 text-white' : 'bg-blue-600 text-white hover:bg-blue-500'
+                                        }`}
+                                    onClick={() => toggleCategory(category)}
+                                >
+                                    <button className='capitalize flex items-center gap-2'>
+                                        <CategoryIcon className="w-5 h-5" />
+                                        {category} ({jobs.length})
+                                    </button>
+                                    {isOpen ? (
+                                        <ChevronUpIcon className="w-6 h-6 text-white" />
+                                    ) : (
+                                        <ChevronDownIcon className="w-6 h-6 text-white" />
+                                    )}
                                 </div>
 
-                                {/* Mobile Controls Header */}
-                                <div className="p-2 sm:p-3 border-b bg-blue-50">
-                                    <h4 className="text-sm font-medium text-blue-900">Adjustments</h4>
-                                </div>
-                            </div>
-
-                            {/* Crop Area - Main content */}
-                            <div className="flex-1 flex flex-col min-h-0">
-                                <div className="p-2 sm:p-4 border-b lg:border-b-0 lg:border-r bg-blue-50 shrink-0 hidden lg:block">
-                                    <h4 className="text-sm font-medium text-blue-900 mb-2">Crop Area</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        <span className="text-xs text-blue-700">
-                                            Drag to adjust crop area
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Crop Image Container - Fixed height to ensure visibility */}
-                                <div className="flex-1 p-2 sm:p-4 flex items-center justify-center bg-gray-900 min-h-[200px] sm:min-h-[300px] lg:min-h-[400px] overflow-y-auto scroll-y-auto">
-                                    <div className="relative max-w-full max-h-full w-full h-full flex items-center justify-center">
-                                        {cropImage && (
-                                            <ReactCrop
-                                                crop={crop}
-                                                onChange={(_, percentCrop) => setCrop(percentCrop)}
-                                                onComplete={(c) => setCompletedCrop(c)}
-                                                aspect={aspect || undefined}
-                                                keepSelection={true}
-                                                className="max-h-[50vh] sm:max-h-[55vh] lg:max-h-[60vh] max-w-full"
-                                                ruleOfThirds
-                                                style={{
-                                                    border: '2px solid #3b82f6',
-                                                    maxHeight: '50vh',
-                                                    maxWidth: '100%'
-                                                }}
-                                                renderSelectionAddon={() => (
-                                                    <div
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: 0,
-                                                            left: 0,
-                                                            right: 0,
-                                                            bottom: 0,
-                                                            border: '2px solid #3b82f6',
-                                                            boxShadow: '0 0 0 9999em rgba(59, 130, 246, 0.3)',
-                                                        }}
-                                                    />
-                                                )}
-                                            >
-                                                <img
-                                                    ref={imgRef}
-                                                    src={cropImage}
-                                                    style={{
-                                                        transform: `scale(${flip.horizontal ? -1 : 1}, ${flip.vertical ? -1 : 1}) rotate(${rotation}deg)`,
-                                                        maxHeight: '50vh',
-                                                        maxWidth: '100%',
-                                                        height: 'auto',
-                                                        display: 'block'
-                                                    }}
-                                                    onLoad={handleImageLoad}
-                                                    alt="Crop preview"
-                                                    className="max-h-[50vh] object-contain"
-                                                />
-                                            </ReactCrop>
-                                        )}
+                                <div
+                                    className={`transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+                                        }`}
+                                >
+                                    <div className="grid grid-cols-1 gap-4 p-2">
+                                        {jobs.map((candidate, index) => (
+                                            <ApplicationCard
+                                                key={generateUniqueKey(candidate, index)}
+                                                candidate={candidate}
+                                                onOpenChatWithCandidate={() => handleOpenChatWithCandidate(candidate)}
+                                                onStatusChange={handleStatusChange}
+                                                unreadCount={getUnreadCountForCandidate(candidate)}
+                                            />
+                                        ))}
                                     </div>
                                 </div>
                             </div>
+                        );
+                    })}
+                </div>
+            )}
 
-                            {/* Preview and Controls - Right on desktop, scrollable on mobile */}
-                            <div className="w-full lg:w-80 xl:w-96 flex flex-col border-t lg:border-t-0 lg:border-l bg-blue-50">
-                                {/* Desktop Preview Section */}
-                                <div className="hidden lg:block p-3 sm:p-4 border-b bg-blue-100 shrink-0">
-                                    <h4 className="text-sm font-medium text-blue-900 mb-2">Preview</h4>
-                                    <div className="bg-white rounded-lg p-3 flex justify-center items-center border border-blue-300 min-h-[80px]">
-                                        <canvas
-                                            ref={previewCanvasRef}
-                                            className="max-w-full max-h-32 object-contain rounded"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Controls Section - Scrollable with fixed height */}
-                                <div className="flex-1 overflow-y-auto scroll-y-auto p-3 sm:p-4 space-y-4 sm:space-y-6 min-h-0">
-                                    {/* Aspect Ratio Selection */}
-                                    <div>
-                                        <label className="text-sm font-medium text-blue-900 mb-2 block">
-                                            Aspect Ratio
-                                        </label>
-                                        <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
-                                            {ASPECT_RATIOS.map((ratio) => (
-                                                <button
-                                                    key={ratio.value}
-                                                    onClick={() => toggleAspect(ratio.value)}
-                                                    className={`px-2 py-2 text-xs sm:text-sm rounded transition-colors ${aspect === ratio.value
-                                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                                        : 'bg-blue-200 text-blue-900 hover:bg-blue-300'
-                                                        }`}
-                                                >
-                                                    {ratio.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Quick Actions */}
-                                    <div>
-                                        <label className="text-sm font-medium text-blue-900 mb-2 block">
-                                            Quick Actions
-                                        </label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                onClick={setFullCrop}
-                                                className="px-2 py-2 text-xs sm:text-sm bg-blue-200 text-blue-900 rounded hover:bg-blue-300 transition-colors flex items-center justify-center gap-1"
-                                            >
-                                                <ArrowsPointingOutIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                                                <span>Full Image</span>
-                                            </button>
-                                            <button
-                                                onClick={resetCropSettings}
-                                                className="px-2 py-2 text-xs sm:text-sm bg-blue-200 text-blue-900 rounded hover:bg-blue-300 transition-colors flex items-center justify-center gap-1"
-                                            >
-                                                <ArrowPathIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                                                <span>Reset All</span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Transform Controls */}
-                                    <div className="space-y-3 sm:space-y-4">
-                                        {/* Rotation Slider */}
-                                        <div>
-                                            <label className="flex justify-between text-sm text-blue-900 mb-1">
-                                                <span className="font-medium">Rotation</span>
-                                                <span className="text-blue-700">{rotation}°</span>
-                                            </label>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => setRotation(prev => Math.max(-180, prev - 1))}
-                                                    className="w-8 h-8 flex items-center justify-center bg-blue-200 rounded hover:bg-blue-300 transition-colors text-blue-900"
-                                                >
-                                                    <span className="text-sm font-bold">-</span>
-                                                </button>
-                                                <input
-                                                    type="range"
-                                                    min={-180}
-                                                    max={180}
-                                                    step={1}
-                                                    value={rotation}
-                                                    onChange={(e) => setRotation(Number(e.target.value))}
-                                                    className="flex-1 h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer slider-thumb-blue"
-                                                />
-                                                <button
-                                                    onClick={() => setRotation(prev => Math.min(180, prev + 1))}
-                                                    className="w-8 h-8 flex items-center justify-center bg-blue-200 rounded hover:bg-blue-300 transition-colors text-blue-900"
-                                                >
-                                                    <span className="text-sm font-bold">+</span>
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Flip Controls */}
-                                        <div>
-                                            <label className="text-sm font-medium text-blue-900 mb-2 block">
-                                                Flip Image
-                                            </label>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <button
-                                                    onClick={() => toggleFlip('horizontal')}
-                                                    className={`px-2 py-2 text-xs sm:text-sm rounded transition-colors flex items-center justify-center gap-1 ${flip.horizontal
-                                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                                        : 'bg-blue-200 text-blue-900 hover:bg-blue-300'
-                                                        }`}
-                                                >
-                                                    <span>↔ Horizontal</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => toggleFlip('vertical')}
-                                                    className={`px-2 py-2 text-xs sm:text-sm rounded transition-colors flex items-center justify-center gap-1 ${flip.vertical
-                                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                                        : 'bg-blue-200 text-blue-900 hover:bg-blue-300'
-                                                        }`}
-                                                >
-                                                    <span>↕ Vertical</span>
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Current Crop Info */}
-                                        <div className="bg-blue-100 rounded-lg p-3 border border-blue-300">
-                                            <h5 className="text-xs font-medium text-blue-900 mb-1">Crop Details</h5>
-                                            <div className="text-xs text-blue-700 space-y-1">
-                                                <div className="flex justify-between">
-                                                    <span>Width:</span>
-                                                    <span>{Math.round(crop.width)}%</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Height:</span>
-                                                    <span>{Math.round(crop.height)}%</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Position X:</span>
-                                                    <span>{Math.round(crop.x)}%</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Position Y:</span>
-                                                    <span>{Math.round(crop.y)}%</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Action Buttons - ALWAYS VISIBLE and fixed at bottom */}
-                                <div className="p-3 sm:p-4 border-t bg-blue-100 shrink-0 mt-auto">
-                                    <div className="flex flex-col sm:flex-row gap-2">
-                                        <button
-                                            onClick={handleCropCancel}
-                                            className="flex-1 px-4 py-3 bg-blue-200 text-blue-900 rounded-lg hover:bg-blue-300 transition-colors font-medium text-sm"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={handleCropSave}
-                                            className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
-                                        >
-                                            Apply Crop
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            {/* Chat Loading Overlay */}
+            {isChatLoading && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p className="text-gray-700">Opening chat...</p>
                     </div>
                 </div>
             )}
 
-            {/* Add custom styles for blue slider */}
-            <style jsx>{`
-                .slider-thumb-blue::-webkit-slider-thumb {
-                    appearance: none;
-                    height: 18px;
-                    width: 18px;
-                    border-radius: 50%;
-                    background: #2563eb;
-                    cursor: pointer;
-                    border: 2px solid #ffffff;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                }
-                .slider-thumb-blue::-moz-range-thumb {
-                    height: 18px;
-                    width: 18px;
-                    border-radius: 50%;
-                    background: #2563eb;
-                    cursor: pointer;
-                    border: 2px solid #ffffff;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                }
-                .slider-thumb-blue::-webkit-slider-track {
-                    height: 8px;
-                    background: #dbeafe;
-                    border-radius: 4px;
-                }
-                .slider-thumb-blue::-moz-range-track {
-                    height: 8px;
-                    background: #dbeafe;
-                    border-radius: 4px;
-                    border: none;
-                }
-            `}</style>
+            {/* Chat Component */}
+            {isChatOpen && selectedCandidate && (
+                <Chat
+                    candidate={selectedCandidate}
+                    company={company}
+                    onClose={handleCloseChat}
+                    onSendMessage={handleSendMessage}
+                    userRole="company"
+                />
+            )}
         </div>
     );
-}
+};
 
-export default ProfilePage;
+export default ApplicationList;
