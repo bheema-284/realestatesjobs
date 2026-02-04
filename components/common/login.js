@@ -29,41 +29,112 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Create flattened array of all users (main users + recruiters)
-  const allUsers = [
-    ...(users || []).map(u => ({
-      ...u,
-      name: u.name || "",
-      email: u.email || "",
-      mobile: u.mobile || "",
-      password: u.password || "",
-      isRecruiter: false,
-      userType: "main"
-    })),
-    ...(users || []).flatMap(c =>
-      (c.recruiters || []).map(r => ({
-        ...r,
-        name: r.name || "",
-        email: r.email || "",
-        mobile: r.mobile || "",
-        password: r.password || "",
-        isRecruiter: true,
-        userType: "recruiter",
-        companyId: c._id,
-        companyName: c.name,
-        companyProfileImage: c.profileImage,
-        mainUserRole: c.role
-      }))
-    )
-  ];
+  // Helper function to find user details
+  const findUserByEmail = (email) => {
+    if (!users || !Array.isArray(users)) return null;
 
-  // Superadmin credentials
-  const SUPERADMIN_CREDENTIALS = {
-    email: "superadmin@realestatejobs.co.in",
-    password: "Superadmin@2025"
+    const searchEmail = email.toLowerCase();
+
+    // First, search in main users
+    const mainUser = users.find(user =>
+      user.email && user.email.toLowerCase() === searchEmail
+    );
+
+    if (mainUser) {
+      // If it's a recruiter within a company
+      if (mainUser.role === "recruiter" && mainUser.companyId) {
+        const company = users.find(u => u._id === mainUser.companyId);
+        return {
+          ...mainUser,
+          companyDetails: company ? {
+            name: company.name,
+            profileImage: company.profileImage,
+            email: company.email,
+            mobile: company.mobile,
+            location: company.location
+          } : null
+        };
+      }
+      return mainUser;
+    }
+
+    // If not found in main users, check recruiters in companies
+    for (const company of users) {
+      if (company.recruiters && Array.isArray(company.recruiters)) {
+        const recruiter = company.recruiters.find(r =>
+          r.email && r.email.toLowerCase() === searchEmail
+        );
+
+        if (recruiter) {
+          return {
+            ...recruiter,
+            role: "recruiter",
+            isRecruiter: true,
+            companyId: company._id,
+            companyName: company.name,
+            companyProfileImage: company.profileImage,
+            companyDetails: {
+              name: company.name,
+              profileImage: company.profileImage,
+              email: company.email,
+              mobile: company.mobile,
+              location: company.location
+            },
+            mainUserRole: company.role
+          };
+        }
+      }
+    }
+
+    return null;
   };
 
-  console.log("allUsers", allUsers);
+  // Authenticate user function
+  const authenticateUser = (email, password) => {
+    // Check for superadmin first
+    const SUPERADMIN_CREDENTIALS = {
+      email: "superadmin@realestatejobs.co.in",
+      password: "Superadmin@2025"
+    };
+
+    if (email.toLowerCase() === SUPERADMIN_CREDENTIALS.email.toLowerCase() &&
+      password === SUPERADMIN_CREDENTIALS.password) {
+      return {
+        success: true,
+        user: {
+          _id: "superadmin-" + Date.now(),
+          role: "superadmin",
+          email: email,
+          name: "Super Administrator",
+          isSuperAdmin: true
+        }
+      };
+    }
+
+    // Find user in the database
+    const userDetail = findUserByEmail(email);
+
+    if (!userDetail) {
+      throw new Error('User not found. Please check your email address.');
+    }
+
+    // IMPORTANT: In a real app, you should compare hashed passwords
+    // Since we have plain passwords in the data, we compare directly
+    // Note: This is for demo purposes only - in production, use proper password hashing
+    if (userDetail.password !== password) {
+      // If this is a recruiter, check if they have password field
+      if (userDetail.role === "recruiter" && userDetail.password !== password) {
+        throw new Error('Invalid password. Please try again.');
+      }
+      // For main users, the password should match
+      throw new Error('Invalid password. Please try again.');
+    }
+
+    return {
+      success: true,
+      user: userDetail
+    };
+  };
 
   const handleChange = (e, field) => {
     const updated = { ...formData };
@@ -83,55 +154,6 @@ const SignIn = () => {
     setFormData(updated);
   };
 
-  // Function to check if it's superadmin login
-  const isSuperAdminLogin = (email, password) => {
-    return email.toLowerCase() === SUPERADMIN_CREDENTIALS.email.toLowerCase() &&
-      password === SUPERADMIN_CREDENTIALS.password;
-  };
-
-  // Function to find user in the flattened allUsers array
-  const findUserByEmail = (email) => {
-    if (!allUsers || !Array.isArray(allUsers)) return null;
-
-    const searchEmail = email.toLowerCase();
-
-    // Find user in the flattened allUsers array
-    const userDetail = allUsers.find((user) =>
-      user.email && user.email.toLowerCase() === searchEmail
-    );
-
-    return userDetail || null;
-  };
-
-  // Simple authentication function that checks against users data
-  const authenticateUser = (email, password) => {
-    // Check for superadmin first
-    if (isSuperAdminLogin(email, password)) {
-      return {
-        success: true,
-        user: {
-          role: "superadmin",
-          email: email,
-          name: "Super Administrator"
-        },
-        token: "superadmin-token-" + Date.now()
-      };
-    }
-
-    // Find user in the allUsers data
-    const userDetail = findUserByEmail(email);
-
-    if (!userDetail) {
-      throw new Error('User not found. Please check your email address.');
-    }
-
-    return {
-      success: true,
-      user: userDetail,
-      token: "user-token-" + Date.now() + "-" + (userDetail._id || userDetail.id)
-    };
-  };
-
   const onSave = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -142,21 +164,21 @@ const SignIn = () => {
         throw new Error('Please fill in all fields');
       }
 
-      // Authenticate user against users data
+      // Authenticate user
       const authResult = authenticateUser(formData.email, formData.password);
 
       // Prepare user session data
+      const userDetail = authResult.user;
+
       let userSessionData;
 
-      if (authResult.user?.role === "superadmin") {
+      if (userDetail.role === "superadmin") {
         // Superadmin login
         userSessionData = {
-          name: "Super Administrator",
-          email: formData.email,
-          mobile: "",
+          _id: userDetail._id,
+          name: userDetail.name,
+          email: userDetail.email,
           role: "superadmin",
-          token: authResult.token,
-          id: "superadmin-" + Date.now(),
           isSuperAdmin: true,
           permissions: {
             canPostJobs: true,
@@ -170,16 +192,16 @@ const SignIn = () => {
           }
         };
       } else {
-        // Regular user or recruiter login
-        const userDetail = authResult.user;
-
+        // Regular user login
         userSessionData = {
-          name: userDetail.name || formData.email.split("@")[0],
-          email: formData.email,
+          _id: userDetail._id,
+          name: userDetail.name,
+          email: userDetail.email,
           mobile: userDetail.mobile || "",
-          role: userDetail.role || (userDetail.isRecruiter ? "recruiter" : "user"),
-          token: authResult.token,
-          id: userDetail._id || userDetail.id,
+          role: userDetail.role || (userDetail.isRecruiter ? "recruiter" : userDetail.role),
+          position: userDetail.position || "",
+          profileImage: userDetail.profileImage || "",
+          company: userDetail.company || "",
           ...(userDetail.isRecruiter && {
             companyId: userDetail.companyId,
             companyName: userDetail.companyName,
@@ -191,11 +213,20 @@ const SignIn = () => {
               canManageRecruiters: false
             },
             isRecruiter: true,
-            mainUserRole: userDetail.mainUserRole,
-            recruiterId: userDetail._id || userDetail.id
-          })
+            mainUserRole: userDetail.mainUserRole || "company"
+          }),
+          // Add other relevant user data from your database
+          ...(userDetail.location && { location: userDetail.location }),
+          ...(userDetail.experience && { experience: userDetail.experience }),
+          ...(userDetail.education && { education: userDetail.education }),
+          ...(userDetail.skills && { skills: userDetail.skills }),
+          ...(userDetail.summary && { summary: userDetail.summary }),
+          ...(userDetail.dateOfBirth && { dateOfBirth: userDetail.dateOfBirth }),
+          ...(userDetail.gender && { gender: userDetail.gender })
         };
       }
+
+      console.log("User session data prepared:", userSessionData);
 
       // Success - Create user session
       const resp = {
@@ -205,7 +236,7 @@ const SignIn = () => {
         remember: formData.remember,
       };
 
-      // Set appropriate success message based on user type
+      // Set success message
       let successMessage = "Welcome back!";
       let successTitle = "Login Successful";
 
@@ -215,15 +246,20 @@ const SignIn = () => {
       } else if (userSessionData.isRecruiter) {
         successMessage = `Welcome back, ${userSessionData.name}! (Recruiter Access)`;
         successTitle = "Recruiter Login Successful";
-      } else {
+      } else if (userSessionData.role === "applicant") {
         successMessage = `Welcome back, ${userSessionData.name}!`;
-        successTitle = "Login Successful";
+        successTitle = "Applicant Login Successful";
+      } else if (userSessionData.role === "company") {
+        successMessage = `Welcome back, ${userSessionData.name}!`;
+        successTitle = "Company Login Successful";
       }
 
+      // Update context
       setRootContext(prev => ({
         ...prev,
         authenticated: true,
         user: userSessionData,
+        loader: false,
         toast: {
           show: true,
           dismiss: true,
@@ -233,25 +269,33 @@ const SignIn = () => {
         },
       }));
 
-      // Store user details
-      if (formData.remember) {
-        localStorage.setItem("user_details", JSON.stringify(resp.user));
-      } else {
-        sessionStorage.setItem("user_details", JSON.stringify(resp.user));
-      }
-      localStorage.setItem("user_details", JSON.stringify(resp.user));
+      // Store user details based on remember preference
+      const storage = formData.remember ? localStorage : sessionStorage;
+      storage.setItem("user_details", JSON.stringify(userSessionData));
 
-      // Store auth token
-      localStorage.setItem("auth_token", authResult.token);
+      // Always store in localStorage as backup
+      localStorage.setItem("user_details", JSON.stringify(userSessionData));
+      localStorage.setItem("auth_token", `token-${Date.now()}-${userSessionData._id}`);
 
       // Redirect based on role and current path
-      if (pathname === "/login") {
-        router.push('/');
-      } else {
-        router.back();
-      }
+      setTimeout(() => {
+        if (pathname === "/login") {
+          if (userSessionData.role === "superadmin") {
+            router.push('/admin/dashboard');
+          } else if (userSessionData.role === "company" || userSessionData.role === "recruiter") {
+            router.push('/company/dashboard');
+          } else if (userSessionData.role === "applicant") {
+            router.push('/applicant/dashboard');
+          } else {
+            router.push('/');
+          }
+        } else {
+          router.back();
+        }
+      }, 1000);
 
     } catch (error) {
+      console.error("Login error:", error);
       setRootContext((prev) => ({
         ...prev,
         toast: {

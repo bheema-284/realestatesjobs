@@ -21,6 +21,7 @@ function LayoutContent({ children }) {
 
     const {
         rootContext,
+        setRootContext, // Add this to update context
         logOut,
         markNotificationAsRead,
         markAllNotificationsAsRead,
@@ -32,6 +33,57 @@ function LayoutContent({ children }) {
         updateNotifications,
         refreshUserData
     } = useContext(RootContext);
+
+    // Load user from storage on component mount
+    useEffect(() => {
+        const loadUserFromStorage = () => {
+            try {
+                // Check localStorage first, then sessionStorage
+                let userData = localStorage.getItem("user_details");
+
+                if (!userData) {
+                    userData = sessionStorage.getItem("user_details");
+                }
+
+                if (userData) {
+                    const parsedUser = JSON.parse(userData);
+
+                    // Check if we have auth token
+                    const authToken = localStorage.getItem("auth_token");
+
+                    if (parsedUser && authToken) {
+                        // Update context with user data
+                        setRootContext(prev => ({
+                            ...prev,
+                            authenticated: true,
+                            user: parsedUser,
+                            loader: false
+                        }));
+
+                        console.log("User loaded from storage:", parsedUser);
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading user from storage:", error);
+                // Clear invalid data
+                localStorage.removeItem("user_details");
+                sessionStorage.removeItem("user_details");
+                localStorage.removeItem("auth_token");
+            }
+        };
+
+        // Only load if not already authenticated
+        if (!rootContext.authenticated) {
+            loadUserFromStorage();
+        }
+
+        // Hide loader after some time
+        const timer = setTimeout(() => {
+            setShowLoader(false);
+        }, 1500);
+
+        return () => clearTimeout(timer);
+    }, [rootContext.authenticated, setRootContext]);
 
     useEffect(() => {
         if (!rootContext.loader) {
@@ -126,14 +178,6 @@ function LayoutContent({ children }) {
         }
     }, [rootContext, pathName, router]);
 
-    useEffect(() => {
-        setShowLoader(true);
-        const timer = setTimeout(() => {
-            setShowLoader(false);
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, [pathName]);
-
     // Check if sidebar should be shown
     const shouldShowSidebar = () => {
         const role = rootContext?.user?.role;
@@ -157,7 +201,6 @@ function LayoutContent({ children }) {
 
         return !noSidebarRoutes.includes(pathName);
     };
-
 
     return (
         <>
