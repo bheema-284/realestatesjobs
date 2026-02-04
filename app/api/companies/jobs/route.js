@@ -6,138 +6,115 @@ import { ObjectId } from 'mongodb';
 
 /* -------------------- JOI SCHEMAS -------------------- */
 const jobSchema = Joi.object({
-    companyId: Joi.string().required(),
+    // Job basic info (from frontend)
     jobTitle: Joi.string().min(3).max(100).required(),
-    jobDescription: Joi.string().min(5).max(10000).required(),
-    employmentTypes: Joi.array().items(Joi.string().valid('full-time', 'part-time')).min(1).required(),
-    workingSchedule: Joi.object({
-        dayShift: Joi.boolean().default(false),
-        nightShift: Joi.boolean().default(false),
-        weekendAvailability: Joi.boolean().default(false),
-        custom: Joi.string().allow('').optional()
-    }).required(),
-    salaryType: Joi.string().valid('fixed', 'commission', 'hybrid').default('fixed'),
-    salaryAmount: Joi.string().allow('').optional(),
-    salaryFrequency: Joi.string().valid('Monthly', 'Yearly', 'Commission Based', 'Performance Based').default('Monthly'),
-    salaryNegotiable: Joi.boolean().default(false),
-    salaryRange: Joi.string().required(),
-    skills: Joi.string().optional(),
-    location: Joi.string().min(2).max(100).required(),
-    experience: Joi.string().required(),
     categorySlug: Joi.string().valid(
         'channel-partners', 'hr-and-operations', 'real-estate-sales',
         'tele-caller', 'digital-marketing', 'web-development',
         'crm-executive', 'accounts-and-auditing', 'architects', 'legal'
     ).required(),
 
-    // Common fields for all categories
-    qualification: Joi.string().allow('').optional(),
+    // Common fields from frontend
+    location: Joi.string().min(2).max(100).required(),
+    salary: Joi.string().min(2).max(100).required(),
+    jobRoleType: Joi.string().required(),
+    employmentTypes: Joi.array().items(Joi.string().valid('full-time', 'part-time')).min(1).required(),
+    qualification: Joi.array().items(Joi.string()).default([]),
+    experience: Joi.string().required(),
+    skills: Joi.array().items(Joi.string()).default([]),
+    languageRequirements: Joi.array().items(Joi.string().valid(
+        'english', 'hindi', 'telugu', 'tamil', 'kannada',
+        'malayalam', 'marathi', 'bengali', 'gujarati', 'punjabi',
+        'odia', 'urdu', 'sanskrit', 'assamese', 'maithili',
+        'kashmiri', 'sindhi', 'konkani', 'nepali', 'manipuri',
+        'bodo', 'dogri'
+    )).default([]),
+    propertyTypes: Joi.array().items(Joi.string().valid(
+        'residential', 'commercial', 'industrial', 'plots',
+        'luxury', 'affordable'
+    )).default([]),
+    jobDescription: Joi.string().min(5).max(10000).required(),
+
+    // Tele Caller specific
+    commissionPercentage: Joi.string().allow('').optional(),
+    incentives: Joi.string().allow('').optional(),
+    salesTargets: Joi.string().allow('').optional(),
     additionalBenefits: Joi.array().items(Joi.string()).default([]),
 
     // Real Estate Sales specific
-    jobRoleType: Joi.string().valid(
-        'field-sales', 'inside-sales', 'senior-sales', 'team-lead',
-        'relationship-manager', 'inbound', 'outbound', 'customer-service',
-        'lead-generation', 'follow-up', ''
-    ).allow('').optional(),
-    commissionStructure: Joi.string().allow('').optional(),
     salesTargetAmount: Joi.string().allow('').optional(),
-    commissionPercentage: Joi.string().allow('').optional(),
-
-    // Digital Marketing specific
-    specialization: Joi.string().valid(
-        'seo', 'social-media', 'content-marketing', 'email-marketing',
-        'ppc', 'real-estate-marketing', ''
-    ).allow('').optional(),
-    tools: Joi.string().allow('').optional(),
-
-    // Web Development specific
-    techStack: Joi.string().valid(
-        'react', 'angular', 'vue', 'node', 'php', 'wordpress',
-        'python', 'java', ''
-    ).allow('').optional(),
-    workMode: Joi.string().valid('remote', 'hybrid', 'onsite', '').allow('').optional(),
-
-    // Accounts specific
-    accountsQualification: Joi.string().valid(
-        'ca', 'cma', 'mcom', 'bcom', 'mba-finance', 'inter-ca', ''
-    ).allow('').optional(),
-    accountingSoftware: Joi.string().valid(
-        'tally', 'sap', 'quickbooks', 'zoho', 'busy', 'microsoft-dynamics', ''
-    ).allow('').optional(),
-
-    // Architects specific
-    architectureType: Joi.string().valid(
-        'residential', 'commercial', 'interior', 'landscape', 'urban', ''
-    ).allow('').optional(),
-    designSoftware: Joi.string().valid(
-        'autocad', 'revit', 'sketchup', '3ds-max', 'lumion', 'v-ray', 'photoshop', ''
-    ).allow('').optional(),
-
-    // Legal specific
-    legalSpecialization: Joi.string().valid(
-        'real-estate-law', 'corporate-law', 'property-law', 'contract-law',
-        'compliance', 'due-diligence', 'litigation', ''
-    ).allow('').optional(),
-    legalQualification: Joi.string().valid(
-        'llb', 'llm', 'cs', 'ca', 'mba-law', ''
-    ).allow('').optional(),
-
-    // Channel Partners specific
-    partnerType: Joi.string().valid(
-        'individual-broker', 'brokerage-firm', 'property-consultant',
-        'real-estate-agent', 'corporate-partner', ''
-    ).allow('').optional(),
-    partnerCommission: Joi.string().valid(
-        '1-2%', '2-3%', '3-5%', '5-7%', 'negotiable', ''
-    ).allow('').optional(),
-
-    // HR specific
-    hrSpecialization: Joi.string().valid(
-        'recruitment', 'operations', 'payroll', 'employee-relations',
-        'training', 'hr-business-partner', ''
-    ).allow('').optional(),
-    hrQualification: Joi.string().valid(
-        'mba-hr', 'msw', 'mhrdm', 'bachelors-hr', 'diploma-hr', ''
-    ).allow('').optional(),
-
-    // CRM specific
-    crmSoftware: Joi.string().valid(
-        'salesforce', 'zoho-crm', 'hubspot', 'dynamics-crm', 'sugar-crm', 'freshworks', ''
-    ).allow('').optional(),
-    customerSegment: Joi.string().valid(
-        'nri', 'investors', 'end-users', 'channel-partners', 'corporate', 'all', ''
-    ).allow('').optional(),
-
-    // Real Estate common fields
-    incentives: Joi.string().allow('').optional(),
-    propertyTypes: Joi.array().items(
-        Joi.string().valid(
-            'residential', 'commercial', 'industrial', 'plots',
-            'luxury', 'affordable', 'villas', 'apartments',
-            'farmhouses', 'redevelopment'
-        )
-    ).default([]),
     targetAreas: Joi.string().allow('').optional(),
-    languageRequirements: Joi.array().items(
-        Joi.string().valid(
-            'english', 'hindi', 'telugu', 'tamil', 'kannada',
-            'malayalam', 'marathi', 'bengali', 'gujarati', 'punjabi'
-        )
-    ).default([]),
-    vehicleRequirement: Joi.boolean().default(false),
-    targetAudience: Joi.string().allow('').optional(),
-    salesTargets: Joi.string().allow('').optional(),
     leadProvided: Joi.boolean().default(false),
     trainingProvided: Joi.boolean().default(false),
-    certificationRequired: Joi.boolean().default(false),
-    hiringMultiple: Joi.boolean().default(false),
+    vehicleRequirement: Joi.boolean().default(false),
 
-    // System fields
-    status: Joi.string().valid('active', 'inactive', 'closed', 'draft').default('active'),
+    // Digital Marketing specific
+    specialization: Joi.string().allow('').optional(),
+    tools: Joi.string().allow('').optional(),
+    workMode: Joi.string().allow('').optional(),
+
+    // Web Development specific
+    techStack: Joi.string().allow('').optional(),
+    projectType: Joi.string().allow('').optional(),
+
+    // Accounts & Auditing specific
+    accountsQualification: Joi.string().allow('').optional(),
+    accountingSoftware: Joi.string().allow('').optional(),
+    industryExperience: Joi.array().items(Joi.string()).default([]),
+
+    // Architects specific
+    architectureType: Joi.string().allow('').optional(),
+    designSoftware: Joi.string().allow('').optional(),
+    projectScale: Joi.string().allow('').optional(),
+    portfolioRequired: Joi.boolean().default(false),
+
+    // Legal specific
+    legalSpecialization: Joi.string().allow('').optional(),
+    legalQualification: Joi.string().allow('').optional(),
+    caseTypes: Joi.array().items(Joi.string()).default([]),
+
+    // Channel Partners specific
+    partnerType: Joi.string().allow('').optional(),
+    partnerCommission: Joi.string().allow('').optional(),
+    networkSize: Joi.string().allow('').optional(),
+    exclusivePartnership: Joi.boolean().default(false),
+
+    // HR & Operations specific
+    hrSpecialization: Joi.string().allow('').optional(),
+    hrQualification: Joi.string().allow('').optional(),
+    industryKnowledge: Joi.array().items(Joi.string()).default([]),
+
+    // CRM Executive specific
+    crmSoftware: Joi.string().allow('').optional(),
+    customerSegment: Joi.string().allow('').optional(),
+    dataManagement: Joi.boolean().default(false),
+    clientRetention: Joi.boolean().default(false),
+
+    // System fields (mapped from frontend)
+    salaryType: Joi.string().valid('fixed', 'commission', 'hybrid').default('fixed'),
+    salaryFrequency: Joi.string().valid('Monthly', 'Yearly', 'Commission Based', 'Performance Based').default('Monthly'),
+    salaryNegotiable: Joi.boolean().default(false),
+    hiringMultiple: Joi.boolean().default(false),
+    workingSchedule: Joi.object({
+        dayShift: Joi.boolean().default(false),
+        nightShift: Joi.boolean().default(false),
+        weekendAvailability: Joi.boolean().default(false),
+        custom: Joi.string().allow('').optional()
+    }).default({
+        dayShift: false,
+        nightShift: false,
+        weekendAvailability: false,
+        custom: ''
+    }),
+
+    // Company/User info from frontend
+    companyId: Joi.string().required(),
     postedBy: Joi.string().required(),
     postedByRole: Joi.string().valid('company', 'superadmin', 'recruiter').required(),
     companyName: Joi.string().required(),
+
+    // System fields
+    status: Joi.string().valid('active', 'inactive', 'closed', 'draft').default('active'),
     applications: Joi.array().default([]),
     views: Joi.number().default(0)
 });
@@ -147,92 +124,87 @@ const jobUpdateSchema = Joi.object({
     companyId: Joi.string().required(),
 }).unknown(true);
 
+/* -------------------- CATEGORY-SPECIFIC VALIDATION -------------------- */
+const getCategoryValidation = (categorySlug) => {
+    const baseValidation = {
+        jobTitle: Joi.string().required(),
+        location: Joi.string().required(),
+        salary: Joi.string().required(),
+        experience: Joi.string().required(),
+        jobDescription: Joi.string().required()
+    };
+
+    switch (categorySlug) {
+        case 'tele-caller':
+            return {
+                ...baseValidation,
+                commissionPercentage: Joi.string().required()
+            };
+        case 'real-estate-sales':
+            return {
+                ...baseValidation,
+                commissionPercentage: Joi.string().required(),
+                jobRoleType: Joi.string().required()
+            };
+        case 'digital-marketing':
+            return {
+                ...baseValidation,
+                specialization: Joi.string().required()
+            };
+        case 'web-development':
+            return {
+                ...baseValidation,
+                techStack: Joi.string().required(),
+                workMode: Joi.string().required()
+            };
+        case 'accounts-and-auditing':
+            return {
+                ...baseValidation,
+                accountsQualification: Joi.string().required(),
+                accountingSoftware: Joi.string().required()
+            };
+        case 'architects':
+            return {
+                ...baseValidation,
+                architectureType: Joi.string().required(),
+                designSoftware: Joi.string().required()
+            };
+        case 'legal':
+            return {
+                ...baseValidation,
+                legalSpecialization: Joi.string().required(),
+                legalQualification: Joi.string().required()
+            };
+        case 'channel-partners':
+            return {
+                ...baseValidation,
+                partnerType: Joi.string().required(),
+                partnerCommission: Joi.string().required()
+            };
+        case 'hr-and-operations':
+            return {
+                ...baseValidation,
+                hrSpecialization: Joi.string().required(),
+                hrQualification: Joi.string().required()
+            };
+        case 'crm-executive':
+            return {
+                ...baseValidation,
+                crmSoftware: Joi.string().required(),
+                customerSegment: Joi.string().required()
+            };
+        default:
+            return baseValidation;
+    }
+};
+
 /* -------------------- POST (CREATE JOB) -------------------- */
 export async function POST(req) {
     try {
         const body = await req.json();
 
-        // Add category-specific validation
-        let categoryValidation = {};
-
         // Validate based on category
-        switch (body.categorySlug) {
-            case 'tele-caller':
-                categoryValidation = {
-                    jobTitle: Joi.string().required(),
-                    qualification: Joi.string().required(),
-                    jobRoleType: Joi.string().required()
-                };
-                break;
-            case 'real-estate-sales':
-                categoryValidation = {
-                    jobTitle: Joi.string().required(),
-                    jobRoleType: Joi.string().required(),
-                    commissionPercentage: Joi.string().required()
-                };
-                break;
-            case 'digital-marketing':
-                categoryValidation = {
-                    jobTitle: Joi.string().required(),
-                    specialization: Joi.string().required()
-                };
-                break;
-            case 'web-development':
-                categoryValidation = {
-                    jobTitle: Joi.string().required(),
-                    techStack: Joi.string().required(),
-                    workMode: Joi.string().required()
-                };
-                break;
-            case 'accounts-and-auditing':
-                categoryValidation = {
-                    jobTitle: Joi.string().required(),
-                    accountsQualification: Joi.string().required(),
-                    accountingSoftware: Joi.string().required()
-                };
-                break;
-            case 'architects':
-                categoryValidation = {
-                    jobTitle: Joi.string().required(),
-                    architectureType: Joi.string().required(),
-                    designSoftware: Joi.string().required()
-                };
-                break;
-            case 'legal':
-                categoryValidation = {
-                    jobTitle: Joi.string().required(),
-                    legalSpecialization: Joi.string().required(),
-                    legalQualification: Joi.string().required()
-                };
-                break;
-            case 'channel-partners':
-                categoryValidation = {
-                    jobTitle: Joi.string().required(),
-                    partnerType: Joi.string().required(),
-                    partnerCommission: Joi.string().required()
-                };
-                break;
-            case 'hr-and-operations':
-                categoryValidation = {
-                    jobTitle: Joi.string().required(),
-                    hrSpecialization: Joi.string().required(),
-                    hrQualification: Joi.string().required()
-                };
-                break;
-            case 'crm-executive':
-                categoryValidation = {
-                    jobTitle: Joi.string().required(),
-                    crmSoftware: Joi.string().required(),
-                    customerSegment: Joi.string().required()
-                };
-                break;
-            default:
-                categoryValidation = {
-                    jobTitle: Joi.string().required()
-                };
-        }
-
-        // Merge base schema with category-specific validation
+        const categoryValidation = getCategoryValidation(body.categorySlug);
         const categorySchema = jobSchema.append(categoryValidation);
 
         const { error, value } = categorySchema.validate(body);
@@ -277,23 +249,100 @@ export async function POST(req) {
         // Create MongoDB ObjectId for the job
         const jobObjectId = new ObjectId();
 
-        // Create job object with MongoDB ObjectId
-        const newJob = {
-            ...value,
-            _id: jobObjectId, // MongoDB ObjectId as _id
-            id: jobObjectId.toString(), // Also store string representation as id for compatibility
+        // Map frontend fields to backend structure
+        const jobData = {
+            // Basic info
+            jobTitle: value.jobTitle,
+            categorySlug: value.categorySlug,
+
+            // Common fields
+            location: value.location,
+            experience: value.experience,
+            qualification: value.qualification || [],
+            skills: value.skills || [],
+            languageRequirements: value.languageRequirements || [],
+            propertyTypes: value.propertyTypes || [],
+            jobDescription: value.jobDescription,
+
+            // Salary mapping (from frontend salary field)
+            salaryType: value.salaryType || 'fixed',
+            salaryAmount: value.salary || '', // Map from frontend's salary field
+            salaryFrequency: value.salaryFrequency || 'Monthly',
+            salaryNegotiable: value.salaryNegotiable || false,
+            salaryRange: value.salary || '', // Use salary as range for display
+
+            // Employment info
+            employmentTypes: value.employmentTypes,
+            jobRoleType: value.jobRoleType,
+
+            // Category-specific fields
+            commissionPercentage: value.commissionPercentage || '',
+            incentives: value.incentives || '',
+            salesTargets: value.salesTargets || '',
+            additionalBenefits: value.additionalBenefits || [],
+            salesTargetAmount: value.salesTargetAmount || '',
+            targetAreas: value.targetAreas || '',
+            leadProvided: value.leadProvided || false,
+            trainingProvided: value.trainingProvided || false,
+            vehicleRequirement: value.vehicleRequirement || false,
+            specialization: value.specialization || '',
+            tools: value.tools || '',
+            workMode: value.workMode || '',
+            techStack: value.techStack || '',
+            projectType: value.projectType || '',
+            accountsQualification: value.accountsQualification || '',
+            accountingSoftware: value.accountingSoftware || '',
+            industryExperience: value.industryExperience || [],
+            architectureType: value.architectureType || '',
+            designSoftware: value.designSoftware || '',
+            projectScale: value.projectScale || '',
+            portfolioRequired: value.portfolioRequired || false,
+            legalSpecialization: value.legalSpecialization || '',
+            legalQualification: value.legalQualification || '',
+            caseTypes: value.caseTypes || [],
+            partnerType: value.partnerType || '',
+            partnerCommission: value.partnerCommission || '',
+            networkSize: value.networkSize || '',
+            exclusivePartnership: value.exclusivePartnership || false,
+            hrSpecialization: value.hrSpecialization || '',
+            hrQualification: value.hrQualification || '',
+            industryKnowledge: value.industryKnowledge || [],
+            crmSoftware: value.crmSoftware || '',
+            customerSegment: value.customerSegment || '',
+            dataManagement: value.dataManagement || false,
+            clientRetention: value.clientRetention || false,
+
+            // Working schedule
+            workingSchedule: value.workingSchedule || {
+                dayShift: false,
+                nightShift: false,
+                weekendAvailability: false,
+                custom: ''
+            },
+
+            // System fields
+            companyId: value.companyId,
+            postedBy: value.postedBy,
+            postedByRole: value.postedByRole,
+            companyName: value.companyName,
+            status: value.status || 'active',
+            hiringMultiple: value.hiringMultiple || false,
+
+            // Timestamps and IDs
+            _id: jobObjectId,
+            id: jobObjectId.toString(),
             postedOn: new Date().toISOString(),
             createdAt: new Date(),
             updatedAt: new Date(),
-            applications: [], // Initialize empty applications array
-            views: 0 // Initialize views count
+            applications: [],
+            views: 0
         };
 
         // Push into jobs array
         const result = await usersCollection.updateOne(
             { _id: company._id },
             {
-                $push: { jobs: newJob },
+                $push: { jobs: jobData },
                 $set: { updatedAt: new Date() }
             }
         );
@@ -308,7 +357,7 @@ export async function POST(req) {
         return NextResponse.json({
             success: true,
             message: 'Job created successfully',
-            job: newJob
+            job: jobData
         }, { status: 200 });
 
     } catch (err) {
@@ -338,24 +387,20 @@ export async function PUT(req) {
 
         // Add category-specific validation for update if category is being changed
         if (updateData.categorySlug) {
-            let categoryValidation = {};
+            const categoryValidation = getCategoryValidation(updateData.categorySlug);
+            const categorySchema = Joi.object(categoryValidation);
 
-            // Same validation logic as POST
-            switch (updateData.categorySlug) {
-                case 'tele-caller':
-                    if (updateData.jobTitle !== undefined) {
-                        categoryValidation.jobTitle = Joi.string().required();
-                    }
-                    if (updateData.qualification !== undefined) {
-                        categoryValidation.qualification = Joi.string().required();
-                    }
-                    break;
-                // Add other categories as needed...
-            }
+            // Only validate fields that are present in updateData
+            const fieldsToValidate = {};
+            Object.keys(categoryValidation).forEach(key => {
+                if (updateData[key] !== undefined) {
+                    fieldsToValidate[key] = categoryValidation[key];
+                }
+            });
 
-            if (Object.keys(categoryValidation).length > 0) {
-                const categorySchema = Joi.object(categoryValidation);
-                const { error: catError } = categorySchema.validate(updateData);
+            if (Object.keys(fieldsToValidate).length > 0) {
+                const validationSchema = Joi.object(fieldsToValidate);
+                const { error: catError } = validationSchema.validate(updateData);
                 if (catError) {
                     return NextResponse.json({
                         success: false,
@@ -372,10 +417,17 @@ export async function PUT(req) {
         // Convert job ID to ObjectId if it's a valid ObjectId string, otherwise use as string
         const jobIdFilter = ObjectId.isValid(id) ? new ObjectId(id) : id;
 
+        // Map update fields
         const setFields = {};
         for (const key in updateData) {
             if (updateData[key] !== undefined) {
-                setFields[`jobs.$.${key}`] = updateData[key];
+                // Handle special mapping for salary
+                if (key === 'salary') {
+                    setFields[`jobs.$.salaryAmount`] = updateData[key];
+                    setFields[`jobs.$.salaryRange`] = updateData[key];
+                } else {
+                    setFields[`jobs.$.${key}`] = updateData[key];
+                }
             }
         }
         setFields['jobs.$.updatedAt'] = new Date();
@@ -429,6 +481,132 @@ export async function PUT(req) {
 
     } catch (err) {
         console.error('❌ PUT Job Error:', err);
+        return NextResponse.json({
+            success: false,
+            error: err.message
+        }, { status: 500 });
+    }
+}
+
+/* -------------------- GET (FETCH JOBS) -------------------- */
+export async function GET(req) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const companyId = searchParams.get('companyId');
+        const jobId = searchParams.get('id');
+        const category = searchParams.get('category');
+
+        if (!companyId) {
+            return NextResponse.json({
+                success: false,
+                error: 'Company ID is required'
+            }, { status: 400 });
+        }
+
+        const client = await clientPromise;
+        const db = client.db(process.env.MONGODB_DBNAME);
+        const usersCollection = db.collection('rej_users');
+
+        // Find company
+        const company = await usersCollection.findOne({
+            $or: [
+                { _id: new ObjectId(companyId) },
+                { companyId: new ObjectId(companyId) }
+            ]
+        });
+
+        if (!company) {
+            return NextResponse.json({
+                success: false,
+                error: 'Company not found'
+            }, { status: 404 });
+        }
+
+        let jobs = company.jobs || [];
+
+        // Filter by job ID if provided
+        if (jobId) {
+            jobs = jobs.filter(job =>
+                (job._id && job._id.toString() === jobId) || job.id === jobId
+            );
+        }
+
+        // Filter by category if provided
+        if (category) {
+            jobs = jobs.filter(job => job.categorySlug === category);
+        }
+
+        return NextResponse.json({
+            success: true,
+            jobs: jobs,
+            total: jobs.length
+        });
+
+    } catch (err) {
+        console.error('❌ GET Jobs Error:', err);
+        return NextResponse.json({
+            success: false,
+            error: err.message
+        }, { status: 500 });
+    }
+}
+
+/* -------------------- DELETE (REMOVE JOB) -------------------- */
+export async function DELETE(req) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const jobId = searchParams.get('id');
+        const companyId = searchParams.get('companyId');
+
+        if (!jobId || !companyId) {
+            return NextResponse.json({
+                success: false,
+                error: 'Job ID and Company ID are required'
+            }, { status: 400 });
+        }
+
+        const client = await clientPromise;
+        const db = client.db(process.env.MONGODB_DBNAME);
+        const usersCollection = db.collection('rej_users');
+
+        // Convert job ID
+        const jobIdFilter = ObjectId.isValid(jobId) ? new ObjectId(jobId) : jobId;
+
+        // Pull job from array
+        const result = await usersCollection.updateOne(
+            {
+                $or: [
+                    { _id: new ObjectId(companyId) },
+                    { companyId: new ObjectId(companyId) }
+                ]
+            },
+            {
+                $pull: {
+                    jobs: {
+                        $or: [
+                            { _id: jobIdFilter },
+                            { id: jobId }
+                        ]
+                    }
+                },
+                $set: { updatedAt: new Date() }
+            }
+        );
+
+        if (result.modifiedCount === 0) {
+            return NextResponse.json({
+                success: false,
+                error: 'Job not found or delete failed'
+            }, { status: 404 });
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Job deleted successfully'
+        });
+
+    } catch (err) {
+        console.error('❌ DELETE Job Error:', err);
         return NextResponse.json({
             success: false,
             error: err.message

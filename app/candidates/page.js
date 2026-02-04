@@ -69,6 +69,10 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange, u
         candidate.companyDetails?.profileImage ||
         candidate.companyProfileImage;
 
+    const candidateImage = candidate.applicantProfile || candidate.applicantProfile?.profileImage ||
+        candidate.applicantProfile?.profileImage ||
+        candidate.profileImage;
+
     const jobLocation = candidate.jobDetails?.location || candidate.location;
 
     return (
@@ -76,9 +80,9 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange, u
             <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-3">
                     <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold flex-shrink-0 overflow-hidden">
-                        {companyLogo ? (
+                        {candidateImage ? (
                             <img
-                                src={companyLogo}
+                                src={candidateImage || companyLogo}
                                 alt="Company Logo"
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
@@ -87,15 +91,15 @@ const ApplicationCard = ({ candidate, onOpenChatWithCandidate, onStatusChange, u
                                 }}
                             />
                         ) : null}
-                        <div className={`w-full h-full flex items-center justify-center ${companyLogo ? 'hidden' : 'flex'}`}>
-                            {candidate.comapnyName?.charAt(0)?.toUpperCase() || 'A'}
+                        <div className={`w-full h-full flex items-center justify-center ${candidateImage ? 'hidden' : 'flex'}`}>
+                            {candidate.applicantName?.charAt(0)?.toUpperCase() || 'A'}
                         </div>
                     </div>
 
                     <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
                             <h3 className="text-md font-semibold text-gray-800 break-words">
-                                {candidate.companyName?.toUpperCase() || 'Applicant'}
+                                {candidate.applicantName?.toUpperCase() || 'Applicant'}
                             </h3>
                             <div className="flex items-center gap-2">
                                 {jobLocation && (
@@ -272,7 +276,7 @@ const ApplicationList = () => {
             }
         };
     }, []);
-    
+
 
     // Get company data with improved error handling
     const getCompanyData = () => {

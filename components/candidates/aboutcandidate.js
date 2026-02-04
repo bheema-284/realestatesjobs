@@ -15,9 +15,10 @@ import { Mutated } from '../config/useswrfetch';
 import { useParams } from 'next/navigation';
 import Loading from '../common/loading';
 import CompanyLandingPage from '../company/companyprofile';
+import { ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/outline';
 
 const tabs = [
-    { name: 'About Me', component: AboutMe },
+    { name: 'About Applicant', component: AboutMe },
     { name: 'My Applications', component: Applications },
     { name: 'My Projects', component: Projects },
     { name: 'My Premium Services', component: Services },
@@ -64,7 +65,9 @@ function CandidateProfilePage({ userData }) {
     const [zoom, setZoom] = useState(1);
     const [flip, setFlip] = useState({ horizontal: false, vertical: false });
     const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
-
+    const [status, setStatus] = useState(userData?.status || 'Applied');
+    const [isUpdating, setIsUpdating] = useState(false);
+    const isNotChatEnabled = status === 'Not Interested';
     const imgRef = useRef(null);
     const previewCanvasRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -434,6 +437,77 @@ function CandidateProfilePage({ userData }) {
         }));
     };
 
+    const handleOpenChatWithCandidate = async (candidate, chatId = null) => {
+        setIsChatLoading(true);
+        try {
+            // Validate required fields
+            if (!candidate.applicantId || !candidate.jobId) {
+                console.error('Missing required candidate data:', candidate);
+                setRootContext(prevContext => ({
+                    ...prevContext,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        position: "Failed",
+                        message: "Cannot open chat: Missing candidate information"
+                    }
+                }));
+                return;
+            }
+
+            let targetChatId = chatId;
+            console.log("Opening chat with candidate:", candidate);
+
+            if (!targetChatId && data && data[0]?.chats) {
+                const chat = data[0].chats.find(chat =>
+                    chat.applicantId?.toString() === candidate.applicantId &&
+                    chat.jobId === candidate.jobId
+                );
+                targetChatId = chat?.chatId;
+            }
+
+            if (targetChatId) {
+                setCurrentlyOpenChatId(targetChatId.toString());
+            }
+
+            // IMPROVED: Better candidate data preparation
+            const candidateData = {
+                applicantId: candidate.applicantId,
+                _id: candidate.applicantId,
+                applicantName: candidate.applicantName || candidate.name || 'Candidate',
+                profileImage: candidate.profileImage || candidate.applicantProfile?.profileImage,
+                jobTitle: candidate.jobTitle,
+                jobId: candidate.jobId,
+                // Ensure all required fields for chat component
+                applicantProfile: {
+                    name: candidate.applicantName || candidate.name || 'Candidate',
+                    profileImage: candidate.profileImage || candidate.applicantProfile?.profileImage,
+                    position: candidate.jobTitle || 'Applicant'
+                }
+            };
+
+            console.log('Prepared candidate data for chat:', candidateData);
+            setSelectedCandidate(candidateData);
+            setIsChatOpen(true);
+
+        } catch (error) {
+            console.error('Error opening chat:', error);
+            setRootContext(prevContext => ({
+                ...prevContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Failed",
+                    message: "Failed to open chat"
+                }
+            }));
+        } finally {
+            setIsChatLoading(false);
+        }
+    };
+
     return (
         <div className="bg-white min-h-screen mt-20">
             {serviceCall && <Loading />}
@@ -563,6 +637,39 @@ function CandidateProfilePage({ userData }) {
                                 <PencilIcon className="w-5 h-5" />
                             </button>
                         )}
+                    </div>
+                    <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-stretch sm:items-center gap-2 flex-shrink-0">
+                        <select
+                            className={`border rounded px-3 py-2 text-sm min-w-[140px] ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            value={status}
+                            onChange={(e) => handleStatusChange(e.target.value)}
+                            disabled={isUpdating}
+                        >
+                            <option value="Applied">Applied</option>
+                            <option value="Interested">Interested</option>
+                            <option value="Shortlisted">Shortlisted</option>
+                            <option value="Selected">Selected</option>
+                            <option value="Not Interested">Not Interested</option>
+                        </select>
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => handleOpenChatWithCandidate(userData)}
+                                disabled={isNotChatEnabled || isUpdating}
+                                className={`flex-1 px-3 py-2 rounded text-sm flex items-center gap-2 justify-center min-w-[80px] border relative
+                            ${!isNotChatEnabled && !isUpdating
+                                        ? 'text-gray-600 border-gray-300 hover:bg-gray-50'
+                                        : 'text-gray-400 border-gray-200 cursor-not-allowed'}`}
+                            >
+                                <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4" />
+                                <span>Chat</span>
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                        {unreadCount}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
