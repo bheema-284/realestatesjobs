@@ -39,7 +39,7 @@ const languageDisplayNames = {
     'sindhi': 'سنڌي',
     'konkani': 'कोंकणी',
     'nepali': 'नेपाली',
-    'manipuri': 'मৈतৈलোন्',
+    'manipuri': 'मैतैलোন्',
     'bodo': 'बर',
     'dogri': 'डोगरी'
 };
@@ -662,6 +662,114 @@ const JobPreview = ({ formData, jobCategories }) => {
     );
 };
 
+// Helper function to safely access nested properties
+const getSafeValue = (obj, path, defaultValue = '') => {
+    if (!obj) return defaultValue;
+
+    const keys = path.split('.');
+    let current = obj;
+
+    for (const key of keys) {
+        if (current[key] === undefined || current[key] === null) {
+            return defaultValue;
+        }
+        current = current[key];
+    }
+
+    return current;
+};
+
+// Helper function to map API data to form data
+const mapApiDataToFormData = (apiData) => {
+    if (!apiData) return null;
+
+    return {
+        // Basic job info
+        jobTitle: getSafeValue(apiData, 'jobTitle', ''),
+        location: getSafeValue(apiData, 'location', ''),
+        salary: getSafeValue(apiData, 'salary', ''),
+        jobRoleType: getSafeValue(apiData, 'jobRoleType', ''),
+        employmentTypes: getSafeValue(apiData, 'employmentTypes', []),
+        qualification: getSafeValue(apiData, 'qualification', []),
+        experience: getSafeValue(apiData, 'experience', ''),
+        skills: getSafeValue(apiData, 'skills', []),
+        languageRequirements: getSafeValue(apiData, 'languageRequirements', []),
+        propertyTypes: getSafeValue(apiData, 'propertyTypes', []),
+        jobDescription: getSafeValue(apiData, 'jobDescription', ''),
+
+        // Category slug
+        categorySlug: getSafeValue(apiData, 'categorySlug', ''),
+
+        // Tele Caller specific fields
+        commissionPercentage: getSafeValue(apiData, 'commissionPercentage', ''),
+        incentives: getSafeValue(apiData, 'incentives', ''),
+        salesTargets: getSafeValue(apiData, 'salesTargets', ''),
+        additionalBenefits: getSafeValue(apiData, 'additionalBenefits', []),
+
+        // Real Estate Sales specific fields
+        salesTargetAmount: getSafeValue(apiData, 'salesTargetAmount', ''),
+        targetAreas: getSafeValue(apiData, 'targetAreas', ''),
+        leadProvided: getSafeValue(apiData, 'leadProvided', false),
+        trainingProvided: getSafeValue(apiData, 'trainingProvided', false),
+        vehicleRequirement: getSafeValue(apiData, 'vehicleRequirement', false),
+
+        // Digital Marketing specific fields
+        specialization: getSafeValue(apiData, 'specialization', ''),
+        tools: getSafeValue(apiData, 'tools', ''),
+        workMode: getSafeValue(apiData, 'workMode', ''),
+
+        // Web Development specific fields
+        techStack: getSafeValue(apiData, 'techStack', ''),
+        projectType: getSafeValue(apiData, 'projectType', ''),
+
+        // Accounts & Auditing specific fields
+        accountsQualification: getSafeValue(apiData, 'accountsQualification', ''),
+        accountingSoftware: getSafeValue(apiData, 'accountingSoftware', ''),
+        industryExperience: getSafeValue(apiData, 'industryExperience', []),
+
+        // Architects specific fields
+        architectureType: getSafeValue(apiData, 'architectureType', ''),
+        designSoftware: getSafeValue(apiData, 'designSoftware', ''),
+        projectScale: getSafeValue(apiData, 'projectScale', ''),
+        portfolioRequired: getSafeValue(apiData, 'portfolioRequired', false),
+
+        // Legal specific fields
+        legalSpecialization: getSafeValue(apiData, 'legalSpecialization', ''),
+        legalQualification: getSafeValue(apiData, 'legalQualification', ''),
+        caseTypes: getSafeValue(apiData, 'caseTypes', []),
+
+        // Channel Partners specific fields
+        partnerType: getSafeValue(apiData, 'partnerType', ''),
+        partnerCommission: getSafeValue(apiData, 'partnerCommission', ''),
+        networkSize: getSafeValue(apiData, 'networkSize', ''),
+        exclusivePartnership: getSafeValue(apiData, 'exclusivePartnership', false),
+
+        // HR & Operations specific fields
+        hrSpecialization: getSafeValue(apiData, 'hrSpecialization', ''),
+        hrQualification: getSafeValue(apiData, 'hrQualification', ''),
+        industryKnowledge: getSafeValue(apiData, 'industryKnowledge', []),
+
+        // CRM Executive specific fields
+        crmSoftware: getSafeValue(apiData, 'crmSoftware', ''),
+        customerSegment: getSafeValue(apiData, 'customerSegment', ''),
+        dataManagement: getSafeValue(apiData, 'dataManagement', false),
+        clientRetention: getSafeValue(apiData, 'clientRetention', false),
+
+        // Other required fields for API
+        salaryType: getSafeValue(apiData, 'salaryType', 'fixed'),
+        salaryFrequency: getSafeValue(apiData, 'salaryFrequency', 'Monthly'),
+        salaryNegotiable: getSafeValue(apiData, 'salaryNegotiable', false),
+        hiringMultiple: getSafeValue(apiData, 'hiringMultiple', false),
+        workingSchedule: getSafeValue(apiData, 'workingSchedule', {
+            dayShift: false,
+            nightShift: false,
+            weekendAvailability: false,
+            custom: '',
+        }),
+        status: getSafeValue(apiData, 'status', 'active')
+    };
+};
+
 export default function JobPostingModal({ title, editData, mode, isOpen, setIsOpen, userProfile, onJobSaved, mutated }) {
     const { setRootContext } = useContext(RootContext);
     const [user, setUser] = useState(null);
@@ -670,8 +778,10 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
     const [showPreview, setShowPreview] = useState(false);
     const [customQualification, setCustomQualification] = useState('');
     const [showCustomQualInput, setShowCustomQualInput] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     console.log("mode", mode);
+    console.log("editData received:", editData);
 
     useEffect(() => {
         // Get user details from localStorage on client side only
@@ -679,73 +789,78 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
         setUser(user_details || null);
     }, []);
 
-    // Single state object for all form fields
-    const [formData, setFormData] = useState({
-        // Job Title (which is now job category)
-        jobTitle: '',
+    // Single state object for all form fields with proper initialization
+    const [formData, setFormData] = useState(() => {
+        // Initialize with default values
+        const defaultFormData = {
+            // Job Title
+            jobTitle: '',
 
-        // Common fields
-        location: '',
-        salary: '',
-        jobRoleType: '',
-        employmentTypes: [],
-        qualification: [],
-        experience: '',
-        skills: [],
-        languageRequirements: [],
-        propertyTypes: [],
-        jobDescription: '',
+            // Common fields
+            location: '',
+            salary: '',
+            jobRoleType: '',
+            employmentTypes: [],
+            qualification: [],
+            experience: '',
+            skills: [],
+            languageRequirements: [],
+            propertyTypes: [],
+            jobDescription: '',
 
-        // Category-specific fields will be added dynamically
-        commissionPercentage: '',
-        incentives: '',
-        salesTargets: '',
-        additionalBenefits: [],
-        salesTargetAmount: '',
-        targetAreas: '',
-        leadProvided: false,
-        trainingProvided: false,
-        vehicleRequirement: false,
-        specialization: '',
-        tools: '',
-        workMode: '',
-        techStack: '',
-        projectType: '',
-        accountsQualification: '',
-        accountingSoftware: '',
-        industryExperience: [],
-        architectureType: '',
-        designSoftware: '',
-        projectScale: '',
-        portfolioRequired: false,
-        legalSpecialization: '',
-        legalQualification: '',
-        caseTypes: [],
-        partnerType: '',
-        partnerCommission: '',
-        networkSize: '',
-        exclusivePartnership: false,
-        hrSpecialization: '',
-        hrQualification: '',
-        industryKnowledge: [],
-        crmSoftware: '',
-        customerSegment: '',
-        dataManagement: false,
-        clientRetention: false,
+            // Category-specific fields will be added dynamically
+            commissionPercentage: '',
+            incentives: '',
+            salesTargets: '',
+            additionalBenefits: [],
+            salesTargetAmount: '',
+            targetAreas: '',
+            leadProvided: false,
+            trainingProvided: false,
+            vehicleRequirement: false,
+            specialization: '',
+            tools: '',
+            workMode: '',
+            techStack: '',
+            projectType: '',
+            accountsQualification: '',
+            accountingSoftware: '',
+            industryExperience: [],
+            architectureType: '',
+            designSoftware: '',
+            projectScale: '',
+            portfolioRequired: false,
+            legalSpecialization: '',
+            legalQualification: '',
+            caseTypes: [],
+            partnerType: '',
+            partnerCommission: '',
+            networkSize: '',
+            exclusivePartnership: false,
+            hrSpecialization: '',
+            hrQualification: '',
+            industryKnowledge: [],
+            crmSoftware: '',
+            customerSegment: '',
+            dataManagement: false,
+            clientRetention: false,
 
-        // Other required fields for API
-        salaryType: 'fixed',
-        salaryFrequency: 'Monthly',
-        salaryNegotiable: false,
-        hiringMultiple: false,
-        workingSchedule: {
-            dayShift: false,
-            nightShift: false,
-            weekendAvailability: false,
-            custom: '',
-        },
-        categorySlug: '',
-        status: 'active'
+            // Other required fields for API
+            salaryType: 'fixed',
+            salaryFrequency: 'Monthly',
+            salaryNegotiable: false,
+            hiringMultiple: false,
+            workingSchedule: {
+                dayShift: false,
+                nightShift: false,
+                weekendAvailability: false,
+                custom: '',
+            },
+            categorySlug: '',
+            status: 'active'
+        };
+
+        return defaultFormData;
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -915,80 +1030,60 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
         setCustomQualification('');
         setShowCustomQualInput(false);
         setIsSubmitting(false);
+        setIsLoading(false);
     }
 
+    // Effect to load edit data when modal opens
     useEffect(() => {
-        if (editData) {
-            // Map editData to formData
-            const mappedData = {
-                jobTitle: editData.jobTitle || editData.title || '',
-                location: editData.location || '',
-                salary: editData.salary || '',
-                jobRoleType: editData.jobRoleType || '',
-                employmentTypes: editData.employmentTypes || [],
-                qualification: editData.qualification || [],
-                experience: editData.experience || '',
-                skills: editData.skills || [],
-                languageRequirements: editData.languageRequirements || [],
-                propertyTypes: editData.propertyTypes || [],
-                jobDescription: editData.jobDescription || '',
-                commissionPercentage: editData.commissionPercentage || '',
-                incentives: editData.incentives || '',
-                salesTargets: editData.salesTargets || '',
-                additionalBenefits: editData.additionalBenefits || [],
-                salesTargetAmount: editData.salesTargetAmount || '',
-                targetAreas: editData.targetAreas || '',
-                leadProvided: editData.leadProvided || false,
-                trainingProvided: editData.trainingProvided || false,
-                vehicleRequirement: editData.vehicleRequirement || false,
-                specialization: editData.specialization || '',
-                tools: editData.tools || '',
-                workMode: editData.workMode || '',
-                techStack: editData.techStack || '',
-                projectType: editData.projectType || '',
-                accountsQualification: editData.accountsQualification || '',
-                accountingSoftware: editData.accountingSoftware || '',
-                industryExperience: editData.industryExperience || [],
-                architectureType: editData.architectureType || '',
-                designSoftware: editData.designSoftware || '',
-                projectScale: editData.projectScale || '',
-                portfolioRequired: editData.portfolioRequired || false,
-                legalSpecialization: editData.legalSpecialization || '',
-                legalQualification: editData.legalQualification || '',
-                caseTypes: editData.caseTypes || [],
-                partnerType: editData.partnerType || '',
-                partnerCommission: editData.partnerCommission || '',
-                networkSize: editData.networkSize || '',
-                exclusivePartnership: editData.exclusivePartnership || false,
-                hrSpecialization: editData.hrSpecialization || '',
-                hrQualification: editData.hrQualification || '',
-                industryKnowledge: editData.industryKnowledge || [],
-                crmSoftware: editData.crmSoftware || '',
-                customerSegment: editData.customerSegment || '',
-                dataManagement: editData.dataManagement || false,
-                clientRetention: editData.clientRetention || false,
-                salaryType: editData.salaryType || 'fixed',
-                salaryFrequency: editData.salaryFrequency || 'Monthly',
-                salaryNegotiable: editData.salaryNegotiable || false,
-                hiringMultiple: editData.hiringMultiple || false,
-                workingSchedule: editData.workingSchedule || {
-                    dayShift: false,
-                    nightShift: false,
-                    weekendAvailability: false,
-                    custom: '',
-                },
-                categorySlug: editData.categorySlug || '',
-                status: editData.status || 'active'
-            };
-            setFormData(mappedData);
-            setSelectedCategory(editData.categorySlug || '');
-        } else {
+        if (isOpen && editData && mode !== 'create') {
+            setIsLoading(true);
+
+            try {
+                // Safely map API data to form data
+                const mappedData = mapApiDataToFormData(editData);
+
+                if (mappedData) {
+                    setFormData(mappedData);
+                    setSelectedCategory(mappedData.categorySlug || '');
+
+                    // Also set job title from category if empty
+                    if (!mappedData.jobTitle && mappedData.categorySlug) {
+                        const selectedCategoryObj = jobCategories.find(cat => cat.slug === mappedData.categorySlug);
+                        if (selectedCategoryObj) {
+                            setFormData(prev => ({ ...prev, jobTitle: selectedCategoryObj.name }));
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error mapping edit data:', error);
+                // Show error toast
+                setRootContext(prev => ({
+                    ...prev,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        position: "Error",
+                        message: "Failed to load job data"
+                    }
+                }));
+            } finally {
+                setIsLoading(false);
+            }
+        } else if (isOpen && mode === 'create') {
             // Set default location to company location for new jobs
             if (userProfile?.location) {
                 setFormData(prev => ({ ...prev, location: userProfile.location }));
             }
         }
-    }, [editData, userProfile]);
+    }, [isOpen, editData, mode, userProfile]);
+
+    // Effect to reset form when modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            resetForm();
+        }
+    }, [isOpen]);
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -1026,6 +1121,8 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
 
     // Render field based on type
     const renderField = (fieldName, fieldConfig) => {
+        const fieldValue = formData[fieldName] || '';
+
         switch (fieldConfig.type) {
             case 'text':
                 return (
@@ -1036,7 +1133,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                         <input
                             type="text"
                             id={fieldName}
-                            value={formData[fieldName] || ''}
+                            value={fieldValue}
                             onChange={(e) => handleInputChange(fieldName, e.target.value)}
                             className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                             placeholder={fieldConfig.placeholder || ''}
@@ -1053,7 +1150,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                         </label>
                         <select
                             id={fieldName}
-                            value={formData[fieldName] || ''}
+                            value={fieldValue}
                             onChange={(e) => handleInputChange(fieldName, e.target.value)}
                             className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                             required={fieldConfig.label.includes('*')}
@@ -1074,7 +1171,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                         </label>
 
                         {/* Selected qualifications */}
-                        {formData.qualification.length > 0 && (
+                        {formData.qualification && formData.qualification.length > 0 && (
                             <div className="mb-3">
                                 <div className="flex flex-wrap gap-2">
                                     {formData.qualification.map((qual, index) => (
@@ -1637,287 +1734,315 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                         </div>
                                     </div>
 
-                                    <div className="mt-2">
-                                        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                                            {/* Job Title (auto-filled from category) */}
-                                            <div className='bg-blue-300 border border-blue-400 p-2 rounded-lg'>
-                                                <label htmlFor="jobTitle" className="block text-sm font-medium text-blue-700 mb-2">
-                                                    Job Title *
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id="jobTitle"
-                                                    value={formData.jobTitle}
-                                                    onChange={(e) => handleInputChange('jobTitle', e.target.value)}
-                                                    className="w-full p-2.5 sm:p-3 border text-blue-800 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                    placeholder="Job title will auto-fill based on category"
-                                                    required
-                                                />
-                                                <p className="text-xs text-blue-500 mt-1">
-                                                    This is auto-filled from the selected category. You can edit it if needed.
-                                                </p>
-                                            </div>
-
-                                            {/* Common fields in correct sequence */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                                                {/* Location */}
-                                                {renderField('location', jobCategoryFields.common.location)}
-
-                                                {/* Fixed Salary */}
-                                                {renderField('salary', {
-                                                    type: 'text',
-                                                    label: 'Fixed Salary *',
-                                                    placeholder: 'e.g. ₹ 3 LPA, ₹ 25,000/month'
-                                                })}
-
-                                                {/* Job Role Type */}
-                                                {renderField('jobRoleType', jobCategoryFields.common.jobRoleType)}
-
-                                                {/* Employment Types */}
-                                                <div className="md:col-span-2">
-                                                    {renderField('employmentTypes', jobCategoryFields.common.employmentTypes)}
+                                    {isLoading ? (
+                                        <div className="flex justify-center items-center py-20">
+                                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                                            <span className="ml-3 text-gray-600">Loading job data...</span>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-2">
+                                            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                                                {/* Job Category Selection */}
+                                                <div>
+                                                    <label htmlFor="categorySlug" className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Job Category *
+                                                    </label>
+                                                    <select
+                                                        id="categorySlug"
+                                                        value={formData.categorySlug}
+                                                        onChange={(e) => handleInputChange('categorySlug', e.target.value)}
+                                                        className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                        required
+                                                    >
+                                                        <option value="">Select a job category</option>
+                                                        {jobCategories.map((category) => (
+                                                            <option key={category.slug} value={category.slug}>
+                                                                {category.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
                                                 </div>
 
-                                                {/* Educational Qualification */}
-                                                {renderField('qualification', jobCategoryFields.common.qualification)}
-
-                                                {/* Experience */}
-                                                {renderField('experience', jobCategoryFields.common.experience)}
-
-                                                {/* Skills (custom implementation) */}
-                                                <div className="md:col-span-2">
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Required Skills
+                                                {/* Job Title (auto-filled from category) */}
+                                                <div className='bg-blue-50 border border-blue-200 p-3 rounded-lg'>
+                                                    <label htmlFor="jobTitle" className="block text-sm font-medium text-blue-700 mb-2">
+                                                        Job Title *
                                                     </label>
-                                                    <div className="flex flex-col sm:flex-row gap-2 mb-3">
-                                                        <input
-                                                            type="text"
-                                                            value={skillInput}
-                                                            onChange={(e) => setSkillInput(e.target.value)}
-                                                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                                                            className="flex-1 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            placeholder="Add custom skill"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={addSkill}
-                                                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm sm:text-base whitespace-nowrap"
-                                                        >
-                                                            Add Skill
-                                                        </button>
+                                                    <input
+                                                        type="text"
+                                                        id="jobTitle"
+                                                        value={formData.jobTitle}
+                                                        onChange={(e) => handleInputChange('jobTitle', e.target.value)}
+                                                        className="w-full p-2.5 sm:p-3 border text-blue-800 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                        placeholder="Job title will auto-fill based on category"
+                                                        required
+                                                    />
+                                                    <p className="text-xs text-blue-500 mt-1">
+                                                        This is auto-filled from the selected category. You can edit it if needed.
+                                                    </p>
+                                                </div>
+
+                                                {/* Common fields in correct sequence */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                                    {/* Location */}
+                                                    {renderField('location', jobCategoryFields.common.location)}
+
+                                                    {/* Fixed Salary */}
+                                                    {renderField('salary', {
+                                                        type: 'text',
+                                                        label: 'Fixed Salary *',
+                                                        placeholder: 'e.g. ₹ 3 LPA, ₹ 25,000/month'
+                                                    })}
+
+                                                    {/* Job Role Type */}
+                                                    {renderField('jobRoleType', jobCategoryFields.common.jobRoleType)}
+
+                                                    {/* Employment Types */}
+                                                    <div className="md:col-span-2">
+                                                        {renderField('employmentTypes', jobCategoryFields.common.employmentTypes)}
                                                     </div>
 
-                                                    <div className="mb-3">
-                                                        <p className="text-sm text-gray-600 mb-2">
-                                                            Common Skills for {formData.categorySlug ?
-                                                                jobCategories.find(cat => cat.slug === formData.categorySlug)?.name || 'Real Estate'
-                                                                : 'Real Estate'}:
-                                                        </p>
+                                                    {/* Educational Qualification */}
+                                                    {renderField('qualification', jobCategoryFields.common.qualification)}
+
+                                                    {/* Experience */}
+                                                    {renderField('experience', jobCategoryFields.common.experience)}
+
+                                                    {/* Skills (custom implementation) */}
+                                                    <div className="md:col-span-2">
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                            Required Skills
+                                                        </label>
+                                                        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                                                            <input
+                                                                type="text"
+                                                                value={skillInput}
+                                                                onChange={(e) => setSkillInput(e.target.value)}
+                                                                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                                                                className="flex-1 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                placeholder="Add custom skill"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={addSkill}
+                                                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm sm:text-base whitespace-nowrap"
+                                                            >
+                                                                Add Skill
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="mb-3">
+                                                            <p className="text-sm text-gray-600 mb-2">
+                                                                Common Skills for {formData.categorySlug ?
+                                                                    jobCategories.find(cat => cat.slug === formData.categorySlug)?.name || 'Real Estate'
+                                                                    : 'Real Estate'}:
+                                                            </p>
+                                                            <div className="flex flex-wrap gap-1 sm:gap-2">
+                                                                {getCurrentCategorySkills().map(skill => (
+                                                                    <button
+                                                                        key={skill}
+                                                                        type="button"
+                                                                        onClick={() => addCommonSkill(skill)}
+                                                                        className={`px-2 py-1 rounded-full text-xs sm:text-sm whitespace-nowrap flex items-center gap-1 ${formData.skills.includes(skill)
+                                                                            ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                                                                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                                                            }`}
+                                                                        disabled={formData.skills.includes(skill)}
+                                                                    >
+                                                                        {formData.skills.includes(skill) ? (
+                                                                            <>
+                                                                                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                                                                                    <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+                                                                                </svg>
+                                                                                {skill}
+                                                                            </>
+                                                                        ) : (
+                                                                            `+ ${skill}`
+                                                                        )}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
                                                         <div className="flex flex-wrap gap-1 sm:gap-2">
-                                                            {getCurrentCategorySkills().map(skill => (
-                                                                <button
+                                                            {formData.skills?.map(skill => (
+                                                                <span
                                                                     key={skill}
-                                                                    type="button"
-                                                                    onClick={() => addCommonSkill(skill)}
-                                                                    className={`px-2 py-1 rounded-full text-xs sm:text-sm whitespace-nowrap flex items-center gap-1 ${formData.skills.includes(skill)
-                                                                        ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                                                                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                                                                        }`}
-                                                                    disabled={formData.skills.includes(skill)}
+                                                                    className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs sm:text-sm flex items-center gap-1"
                                                                 >
-                                                                    {formData.skills.includes(skill) ? (
-                                                                        <>
-                                                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
-                                                                                <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                                                                            </svg>
-                                                                            {skill}
-                                                                        </>
-                                                                    ) : (
-                                                                        `+ ${skill}`
-                                                                    )}
-                                                                </button>
+                                                                    {skill}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeSkill(skill)}
+                                                                        className="text-red-500 hover:text-red-700 text-xs"
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                </span>
                                                             ))}
                                                         </div>
                                                     </div>
-
-                                                    <div className="flex flex-wrap gap-1 sm:gap-2">
-                                                        {formData.skills.map(skill => (
-                                                            <span
-                                                                key={skill}
-                                                                className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs sm:text-sm flex items-center gap-1"
-                                                            >
-                                                                {skill}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeSkill(skill)}
-                                                                    className="text-red-500 hover:text-red-700 text-xs"
-                                                                >
-                                                                    ×
-                                                                </button>
-                                                            </span>
-                                                        ))}
-                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Category-specific fields */}
-                                            {formData.categorySlug && (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                                                    {Object.entries(categoryFields).map(([fieldName, fieldConfig]) => {
-                                                        // Skip common fields that are already rendered above
-                                                        const commonFieldNames = [
-                                                            'location', 'salary', 'jobRoleType', 'employmentTypes',
-                                                            'qualification', 'experience', 'skills', 'jobDescription'
-                                                        ];
+                                                {/* Category-specific fields - Only show if category is selected */}
+                                                {formData.categorySlug && (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                                        {Object.entries(categoryFields).map(([fieldName, fieldConfig]) => {
+                                                            // Skip common fields that are already rendered above
+                                                            const commonFieldNames = [
+                                                                'location', 'salary', 'jobRoleType', 'employmentTypes',
+                                                                'qualification', 'experience', 'skills', 'jobDescription'
+                                                            ];
 
-                                                        if (commonFieldNames.includes(fieldName)) {
-                                                            return null;
-                                                        }
+                                                            if (commonFieldNames.includes(fieldName)) {
+                                                                return null;
+                                                            }
 
-                                                        return (
-                                                            <div key={fieldName} className={fieldConfig.type === 'editor' ? 'md:col-span-2' : ''}>
-                                                                {renderField(fieldName, fieldConfig)}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-
-                                            {/* Language Requirements */}
-                                            <div className="md:col-span-2">
-                                                <div className="flex flex-col gap-3">
-                                                    <label className="text-gray-700 font-medium text-sm sm:text-base">
-                                                        Language Requirements
-                                                    </label>
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                                                        {languageOptions.map((option) => (
-                                                            <div
-                                                                key={option.id}
-                                                                className={`relative flex cursor-pointer rounded-lg px-3 py-2 shadow-sm border text-sm
-                                                                ${formData.languageRequirements?.includes(option.id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
-                                                                hover:border-blue-500 hover:shadow-md transition-all duration-200`}
-                                                                onClick={() => handleCheckboxGroupChange('languageRequirements', option.id)}
-                                                            >
-                                                                <div className="flex w-full items-center justify-between">
-                                                                    <div className="flex items-center">
-                                                                        <div>
-                                                                            <p className="font-medium">
-                                                                                {option.name}
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                    {formData.languageRequirements?.includes(option.id) && (
-                                                                        <div className="flex-shrink-0 text-white">
-                                                                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                                                                                <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                                                                            </svg>
-                                                                        </div>
-                                                                    )}
+                                                            return (
+                                                                <div key={fieldName} className={fieldConfig.type === 'editor' ? 'md:col-span-2' : ''}>
+                                                                    {renderField(fieldName, fieldConfig)}
                                                                 </div>
-                                                            </div>
-                                                        ))}
+                                                            );
+                                                        })}
                                                     </div>
-                                                </div>
-                                            </div>
+                                                )}
 
-                                            {/* Property Types */}
-                                            <div className="md:col-span-2">
-                                                <div className="flex flex-col gap-3">
-                                                    <label className="text-gray-700 font-medium text-sm sm:text-base">
-                                                        Property Types
-                                                    </label>
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                                        {propertyTypeOptions.map((option) => (
-                                                            <div
-                                                                key={option.id}
-                                                                className={`relative flex cursor-pointer rounded-lg px-3 py-2 shadow-sm border text-sm
-                                                                ${formData.propertyTypes?.includes(option.id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
-                                                                hover:border-blue-500 hover:shadow-md transition-all duration-200`}
-                                                                onClick={() => handleCheckboxGroupChange('propertyTypes', option.id)}
-                                                            >
-                                                                <div className="flex w-full items-center justify-between">
-                                                                    <div className="flex items-center">
-                                                                        <div>
-                                                                            <p className="font-medium">
-                                                                                {option.name}
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                    {formData.propertyTypes?.includes(option.id) && (
-                                                                        <div className="flex-shrink-0 text-white">
-                                                                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                                                                                <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                                                                            </svg>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Job Description */}
-                                            <div className="md:col-span-2">
-                                                <div className="flex flex-col gap-3">
-                                                    <div>
+                                                {/* Language Requirements */}
+                                                <div className="md:col-span-2">
+                                                    <div className="flex flex-col gap-3">
                                                         <label className="text-gray-700 font-medium text-sm sm:text-base">
-                                                            Job Description *
+                                                            Language Requirements
                                                         </label>
-                                                        <p className="text-xs text-gray-500 mt-1">Provide detailed job responsibilities and requirements</p>
-                                                    </div>
-                                                    <div className="relative">
-                                                        <DynamicTiptapEditor
-                                                            ref={tiptapEditorRef}
-                                                            initialContent={formData.jobDescription}
-                                                            onContentChange={handleDescriptionChange}
-                                                            className="mt-0"
-                                                        />
-                                                        <div className="absolute bottom-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded-md border border-gray-200 shadow-sm">
-                                                            {wordCount} words
+                                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                                            {languageOptions.map((option) => (
+                                                                <div
+                                                                    key={option.id}
+                                                                    className={`relative flex cursor-pointer rounded-lg px-3 py-2 shadow-sm border text-sm
+                                                                    ${formData.languageRequirements?.includes(option.id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
+                                                                    hover:border-blue-500 hover:shadow-md transition-all duration-200`}
+                                                                    onClick={() => handleCheckboxGroupChange('languageRequirements', option.id)}
+                                                                >
+                                                                    <div className="flex w-full items-center justify-between">
+                                                                        <div className="flex items-center">
+                                                                            <div>
+                                                                                <p className="font-medium">
+                                                                                    {option.name}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                        {formData.languageRequirements?.includes(option.id) && (
+                                                                            <div className="flex-shrink-0 text-white">
+                                                                                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                                                                                    <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+                                                                                </svg>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Action Buttons */}
-                                            <div className="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row justify-between gap-3 sm:space-x-3">
-                                                <div className="order-3 sm:order-1">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowPreview(true)}
-                                                        className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 sm:px-6 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                                                    >
-                                                        <EyeIcon className="h-4 w-4 mr-2" />
-                                                        Preview Job
-                                                    </button>
+                                                {/* Property Types */}
+                                                <div className="md:col-span-2">
+                                                    <div className="flex flex-col gap-3">
+                                                        <label className="text-gray-700 font-medium text-sm sm:text-base">
+                                                            Property Types
+                                                        </label>
+                                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                            {propertyTypeOptions.map((option) => (
+                                                                <div
+                                                                    key={option.id}
+                                                                    className={`relative flex cursor-pointer rounded-lg px-3 py-2 shadow-sm border text-sm
+                                                                    ${formData.propertyTypes?.includes(option.id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
+                                                                    hover:border-blue-500 hover:shadow-md transition-all duration-200`}
+                                                                    onClick={() => handleCheckboxGroupChange('propertyTypes', option.id)}
+                                                                >
+                                                                    <div className="flex w-full items-center justify-between">
+                                                                        <div className="flex items-center">
+                                                                            <div>
+                                                                                <p className="font-medium">
+                                                                                    {option.name}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                        {formData.propertyTypes?.includes(option.id) && (
+                                                                            <div className="flex-shrink-0 text-white">
+                                                                                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                                                                                    <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+                                                                                </svg>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-col-reverse sm:flex-row gap-3 order-2 sm:order-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={closeModal}
-                                                        className="inline-flex justify-center rounded-md border hover:text-gray-800 border-gray-300 bg-red-300 text-white px-4 sm:px-6 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                                                    >
-                                                        Discard
-                                                    </button>
-                                                    <button
-                                                        type="submit"
-                                                        disabled={isSubmitting}
-                                                        className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 sm:px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    >
-                                                        {isSubmitting ? (
-                                                            <>
-                                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                                                                {mode !== "create" ? 'Updating...' : 'Posting...'}
-                                                            </>
-                                                        ) : (
-                                                            mode !== "create" ? 'Update Job' : 'Post Job'
-                                                        )}
-                                                    </button>
+
+                                                {/* Job Description */}
+                                                <div className="md:col-span-2">
+                                                    <div className="flex flex-col gap-3">
+                                                        <div>
+                                                            <label className="text-gray-700 font-medium text-sm sm:text-base">
+                                                                Job Description *
+                                                            </label>
+                                                            <p className="text-xs text-gray-500 mt-1">Provide detailed job responsibilities and requirements</p>
+                                                        </div>
+                                                        <div className="relative">
+                                                            <DynamicTiptapEditor
+                                                                ref={tiptapEditorRef}
+                                                                initialContent={formData.jobDescription}
+                                                                onContentChange={handleDescriptionChange}
+                                                                className="mt-0"
+                                                            />
+                                                            <div className="absolute bottom-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded-md border border-gray-200 shadow-sm">
+                                                                {wordCount} words
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </form>
-                                    </div>
+
+                                                {/* Action Buttons */}
+                                                <div className="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row justify-between gap-3 sm:space-x-3">
+                                                    <div className="order-3 sm:order-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowPreview(true)}
+                                                            className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 sm:px-6 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                                        >
+                                                            <EyeIcon className="h-4 w-4 mr-2" />
+                                                            Preview Job
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex flex-col-reverse sm:flex-row gap-3 order-2 sm:order-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={closeModal}
+                                                            className="inline-flex justify-center rounded-md border hover:text-gray-800 border-gray-300 bg-red-300 text-white px-4 sm:px-6 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                                        >
+                                                            Discard
+                                                        </button>
+                                                        <button
+                                                            type="submit"
+                                                            disabled={isSubmitting || isLoading}
+                                                            className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 sm:px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {isSubmitting ? (
+                                                                <>
+                                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                                                    {mode !== "create" ? 'Updating...' : 'Posting...'}
+                                                                </>
+                                                            ) : (
+                                                                mode !== "create" ? 'Update Job' : 'Post Job'
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    )}
                                 </Dialog.Panel>
                             </Transition.Child>
                         </div>

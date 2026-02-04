@@ -555,13 +555,15 @@ export async function GET(req) {
 export async function DELETE(req) {
     try {
         const { searchParams } = new URL(req.url);
-        const jobId = searchParams.get('id');
+        // Accept both 'id' and 'jobId' parameters for flexibility
+        const jobId = searchParams.get('id') || searchParams.get('jobId');
         const companyId = searchParams.get('companyId');
 
-        if (!jobId || !companyId) {
+        if (!companyId || !jobId) {
             return NextResponse.json({
                 success: false,
-                error: 'Job ID and Company ID are required'
+                error: 'Job ID and Company ID are required',
+                receivedParams: { jobId, companyId }
             }, { status: 400 });
         }
 
@@ -593,6 +595,13 @@ export async function DELETE(req) {
             }
         );
 
+        if (result.matchedCount === 0) {
+            return NextResponse.json({
+                success: false,
+                error: 'Company not found'
+            }, { status: 404 });
+        }
+
         if (result.modifiedCount === 0) {
             return NextResponse.json({
                 success: false,
@@ -609,7 +618,8 @@ export async function DELETE(req) {
         console.error('❌ DELETE Job Error:', err);
         return NextResponse.json({
             success: false,
-            error: err.message
+            error: err.message,
+            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
         }, { status: 500 });
     }
 }

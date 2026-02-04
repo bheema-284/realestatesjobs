@@ -37,6 +37,7 @@ export default function AboutMe({ profile, canEdit }) {
     });
     const [uploadingExpDoc, setUploadingExpDoc] = useState(null);
     const [expDocumentPreview, setExpDocumentPreview] = useState({ show: false, file: null, index: null });
+    const [expDocumentView, setExpDocumentView] = useState({ show: false, url: '', fileName: '', type: 'experience', index: null });
 
     // State for Education section
     const [education, setEducation] = useState([]);
@@ -51,6 +52,7 @@ export default function AboutMe({ profile, canEdit }) {
     });
     const [uploadingEduDoc, setUploadingEduDoc] = useState(null);
     const [eduDocumentPreview, setEduDocumentPreview] = useState({ show: false, file: null, index: null });
+    const [eduDocumentView, setEduDocumentView] = useState({ show: false, url: '', fileName: '', type: 'education', index: null });
 
     const { rootContext, setRootContext } = useContext(RootContext);
     const [isAddingOrEditing, setIsAddingOrEditing] = useState(false);
@@ -369,6 +371,35 @@ export default function AboutMe({ profile, canEdit }) {
         setEduDocumentPreview({ show: false, file: null, index: null });
     };
 
+    // View document in modal
+    const handleViewExperienceDocument = (url, index) => {
+        const experienceItem = experience[index];
+        setExpDocumentView({
+            show: true,
+            url: url,
+            fileName: experienceItem?.documentFile?.name || `${experienceItem.company}_document.pdf`,
+            type: 'experience',
+            index: index
+        });
+    };
+
+    const handleViewEducationDocument = (url, index) => {
+        const educationItem = education[index];
+        setEduDocumentView({
+            show: true,
+            url: url,
+            fileName: educationItem?.documentFile?.name || `${educationItem.degree}_document.pdf`,
+            type: 'education',
+            index: index
+        });
+    };
+
+    // Close document view modal
+    const handleCloseDocumentView = () => {
+        setExpDocumentView({ show: false, url: '', fileName: '', type: 'experience', index: null });
+        setEduDocumentView({ show: false, url: '', fileName: '', type: 'education', index: null });
+    };
+
     // Delete entire experience entry
     const handleRemoveExperience = async (index) => {
         if (!isApplicant) return;
@@ -553,7 +584,7 @@ export default function AboutMe({ profile, canEdit }) {
         }
     };
 
-    // Document Preview Modal Component
+    // Document Preview Modal Component (for new uploads)
     const DocumentPreviewModal = ({
         isOpen,
         onClose,
@@ -643,6 +674,173 @@ export default function AboutMe({ profile, canEdit }) {
                                 ) : (
                                     "Save Document"
                                 )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Document View Modal Component (for viewing uploaded documents)
+    const DocumentViewModal = ({
+        isOpen,
+        onClose,
+        url,
+        fileName,
+        type,
+        index
+    }) => {
+        useEffect(() => {
+            if (isOpen) {
+                document.body.style.overflow = "hidden";
+            } else {
+                document.body.style.overflow = "auto";
+            }
+
+            // Cleanup function
+            return () => {
+                document.body.style.overflow = "auto";
+            };
+        }, [isOpen]);
+
+        if (!isOpen || !url) return null;
+
+        const isPDF = url.toLowerCase().endsWith('.pdf') ||
+            url.includes('application/pdf') ||
+            url.includes('.pdf?');
+
+        const isWord = url.toLowerCase().endsWith('.doc') ||
+            url.toLowerCase().endsWith('.docx') ||
+            url.includes('application/msword') ||
+            url.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+        // Extract filename from URL or use provided fileName
+        const getFileName = () => {
+            if (fileName) return fileName;
+            try {
+                const urlObj = new URL(url);
+                const pathParts = urlObj.pathname.split('/');
+                return pathParts[pathParts.length - 1] || 'document';
+            } catch {
+                return 'document';
+            }
+        };
+
+        const displayFileName = getFileName();
+
+        return (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+                <div className="bg-white rounded-xl w-full sm:w-[96%] md:w-[86%] lg:w-[76%] xl:w-[66%] h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+                    <div className="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50">
+                        <div className="flex items-center gap-2">
+                            <DocumentIcon className="w-5 h-5 text-blue-600" />
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-800 truncate max-w-[70%]">
+                                {displayFileName}
+                            </h3>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <a
+                                href={url}
+                                download={displayFileName}
+                                className="p-2 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors"
+                                title="Download document"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </a>
+                            <button
+                                onClick={onClose}
+                                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                            >
+                                <XMarkIcon className="w-5 h-5 text-gray-700" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-auto p-3 sm:p-4 bg-white">
+                        {isPDF ? (
+                            <iframe
+                                src={`${url}#toolbar=0&navpanes=0&scrollbar=0`}
+                                className="w-full h-full border rounded-lg"
+                                title="Document Preview"
+                                onError={(e) => {
+                                    console.error('PDF load error:', e);
+                                    e.target.innerHTML = `
+                                        <div class="flex flex-col items-center justify-center h-full p-8 text-center">
+                                            <DocumentIcon class="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                            <p class="text-gray-700 font-medium text-sm sm:text-base">
+                                                Could not load PDF preview
+                                            </p>
+                                            <p class="text-xs sm:text-sm text-gray-500 mt-2">
+                                                Please download the file to view it.
+                                            </p>
+                                            <a href="${url}" download="${displayFileName}" 
+                                               class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                                Download PDF
+                                            </a>
+                                        </div>
+                                    `;
+                                }}
+                            />
+                        ) : isWord ? (
+                            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                                    <svg className="w-12 h-12 text-blue-600" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <h4 className="text-lg font-semibold text-gray-800 mb-2">Word Document Preview</h4>
+                                <p className="text-gray-600 mb-4 max-w-md">
+                                    Word documents cannot be previewed in the browser. Please download the file to view it.
+                                </p>
+                                <div className="space-y-3">
+                                    <a
+                                        href={url}
+                                        download={displayFileName}
+                                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        </svg>
+                                        Download Word Document
+                                    </a>
+                                    <p className="text-xs text-gray-500">
+                                        File: {displayFileName}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                                <DocumentIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                <h4 className="text-lg font-semibold text-gray-800 mb-2">Document Preview</h4>
+                                <p className="text-gray-600 mb-4">
+                                    This file type cannot be previewed in the browser.
+                                </p>
+                                <a
+                                    href={url}
+                                    download={displayFileName}
+                                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                >
+                                    Download File
+                                </a>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 sm:gap-0 p-3 sm:p-4 border-t bg-gray-50">
+                        <div className="text-xs sm:text-sm text-gray-600 truncate">
+                            <p><strong>Type:</strong> {type === "experience" ? "Experience Document" : "Education Document"}</p>
+                            <p><strong>File:</strong> {displayFileName}</p>
+                        </div>
+
+                        <div className="flex justify-end gap-2 sm:gap-3">
+                            <button
+                                onClick={onClose}
+                                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-xs sm:text-sm font-medium hover:bg-gray-300 transition-colors duration-200"
+                            >
+                                Close Preview
                             </button>
                         </div>
                     </div>
@@ -858,7 +1056,7 @@ export default function AboutMe({ profile, canEdit }) {
         <div className="sm:px-4 sm:py-8 space-y-8 md:space-y-10 text-gray-700">
             {serviceCall && <Loader />}
 
-            {/* Document Preview Modals */}
+            {/* Document Preview Modals (for new uploads) */}
             <DocumentPreviewModal
                 isOpen={expDocumentPreview.show}
                 onClose={handleCancelExperienceDocument}
@@ -877,6 +1075,25 @@ export default function AboutMe({ profile, canEdit }) {
                 type="education"
                 index={eduDocumentPreview.index}
                 uploading={uploadingEduDoc === eduDocumentPreview.index}
+            />
+
+            {/* Document View Modals (for viewing uploaded documents) */}
+            <DocumentViewModal
+                isOpen={expDocumentView.show}
+                onClose={handleCloseDocumentView}
+                url={expDocumentView.url}
+                fileName={expDocumentView.fileName}
+                type={expDocumentView.type}
+                index={expDocumentView.index}
+            />
+
+            <DocumentViewModal
+                isOpen={eduDocumentView.show}
+                onClose={handleCloseDocumentView}
+                url={eduDocumentView.url}
+                fileName={eduDocumentView.fileName}
+                type={eduDocumentView.type}
+                index={eduDocumentView.index}
             />
 
             {/* Summary Section */}
@@ -1068,15 +1285,14 @@ export default function AboutMe({ profile, canEdit }) {
 
                                                             {tempExperience.documentUrl && (
                                                                 <div className="flex items-center gap-2">
-                                                                    <Link
-                                                                        href={tempExperience.documentUrl}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleViewExperienceDocument(tempExperience.documentUrl, index)}
                                                                         className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors duration-200"
                                                                     >
                                                                         <DocumentIcon className="w-4 h-4" />
                                                                         View Document
-                                                                    </Link>
+                                                                    </button>
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => handleRemoveExperienceDocument(index)}
@@ -1167,9 +1383,9 @@ export default function AboutMe({ profile, canEdit }) {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className='flex gap-5 sm:justify-between'>
+                                            <div className='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3'>
                                                 {exp.description && (
-                                                    <div className="mt-2">
+                                                    <div className="mt-2 flex-1">
                                                         <button
                                                             onClick={() => toggleDescription(index)}
                                                             className="text-sm text-blue-600 hover:underline focus:outline-none"
@@ -1185,19 +1401,14 @@ export default function AboutMe({ profile, canEdit }) {
                                                 )}
                                                 {/* Document display for non-editing mode */}
                                                 {exp.documentUrl && (
-                                                    <div className="mt-3">
-                                                        <Link
-                                                            href={`${exp.documentUrl.replace(
-                                                                "/upload/",
-                                                                "/upload/fl_attachment:original_document/"
-                                                            )}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
+                                                    <div className="mt-2 sm:mt-0">
+                                                        <button
+                                                            onClick={() => handleViewExperienceDocument(exp.documentUrl, index)}
                                                             className="inline-flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors duration-200"
                                                         >
                                                             <DocumentIcon className="w-4 h-4" />
                                                             View Document
-                                                        </Link>
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
@@ -1324,18 +1535,14 @@ export default function AboutMe({ profile, canEdit }) {
 
                                                         {tempEducation.documentUrl && (
                                                             <div className="flex items-center gap-2">
-                                                                <Link
-                                                                    href={`${tempEducation.documentUrl.replace(
-                                                                        "/upload/",
-                                                                        "/upload/fl_attachment:original_document/"
-                                                                    )}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleViewEducationDocument(tempEducation.documentUrl, index)}
                                                                     className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors duration-200"
                                                                 >
                                                                     <DocumentIcon className="w-4 h-4" />
                                                                     View Document
-                                                                </Link>
+                                                                </button>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => handleRemoveEducationDocument(index)}
@@ -1384,18 +1591,13 @@ export default function AboutMe({ profile, canEdit }) {
                                             {/* Document display for non-editing mode */}
                                             {edu.documentUrl && (
                                                 <div className="mt-2">
-                                                    <Link
-                                                        href={`${edu.documentUrl.replace(
-                                                            "/upload/",
-                                                            "/upload/fl_attachment:original_document/"
-                                                        )}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
+                                                    <button
+                                                        onClick={() => handleViewEducationDocument(edu.documentUrl, index)}
                                                         className="inline-flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors duration-200"
                                                     >
                                                         <DocumentIcon className="w-4 h-4" />
-                                                        View
-                                                    </Link>
+                                                        View Document
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>

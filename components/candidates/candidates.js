@@ -609,14 +609,26 @@ function ProfilePage() {
                                     )}
                                 </div>
                             ) : (
-                                <div className="space-y-4">
+                                <div className="space-y-4 mt-10">
                                     <div className="flex items-center gap-2">
                                         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
                                         {profile.gender && (
                                             profile.gender === 'male' ? (
-                                                <UserIcon className="w-5 h-5 text-blue-600" />
+                                                <Image
+                                                    src="/icons/men.png"
+                                                    width={20}
+                                                    height={20}
+                                                    alt="Male"
+                                                    className="text-center"
+                                                />
                                             ) : profile.gender === 'female' ? (
-                                                <UserIcon className="w-5 h-5 text-pink-600" />
+                                                <Image
+                                                    src="/icons/woman.png"
+                                                    width={20}
+                                                    height={20}
+                                                    alt="Female"
+                                                    className="text-center"
+                                                />
                                             ) : null
                                         )}
                                     </div>
@@ -654,9 +666,8 @@ function ProfilePage() {
                         </div>
 
                         {/* Right Column - Personal Details Section (excluding gender) */}
-                        <div className="flex-1 border-t sm:border-t-0 sm:border-l pt-4 sm:pt-0 sm:pl-6">
+                        <div className="flex-1 pt-4 sm:pt-0 sm:pl-6">
                             <div className="flex justify-between items-center mb-3">
-                                <h3 className="text-lg font-semibold text-gray-800">Personal Details</h3>
                                 {!editingPersonalDetails && canEditProfile && (
                                     <button
                                         onClick={togglePersonalDetailsEdit}
@@ -719,28 +730,19 @@ function ProfilePage() {
                                     {profile.mobile && (
                                         <div className="flex items-center gap-2">
                                             <PhoneIcon className="w-4 h-4 text-gray-500" />
-                                            <div>
-                                                <span className="font-medium">Mobile:</span>
-                                                <span className="ml-2">{profile.mobile}</span>
-                                            </div>
+                                            <p className="text-xs sm:text-sm text-gray-500">{profile.mobile}</p>
                                         </div>
                                     )}
                                     {profile.dateOfBirth && (
                                         <div className="flex items-center gap-2">
                                             <CakeIcon className="w-4 h-4 text-gray-500" />
-                                            <div>
-                                                <span className="font-medium">Date of Birth:</span>
-                                                <span className="ml-2">{formatDateTime(profile.dateOfBirth, "DD-MM-YYYY")}</span>
-                                            </div>
+                                            <p className="text-xs sm:text-sm text-gray-500">{formatDateTime(profile.dateOfBirth, "DD-MM-YYYY")}</p>
                                         </div>
                                     )}
                                     {profile.company && (
                                         <div className="flex items-center gap-2">
                                             <BuildingOfficeIcon className="w-4 h-4 text-gray-500" />
-                                            <div>
-                                                <span className="font-medium">Company:</span>
-                                                <span className="ml-2">{profile.company}</span>
-                                            </div>
+                                            <p className="text-xs sm:text-sm text-gray-500">{profile.company}</p>
                                         </div>
                                     )}
                                 </div>
