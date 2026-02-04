@@ -45,7 +45,7 @@ export default function ButtonTab({ tabs, activeTab, setActiveTab }) {
 
     return (
         <div
-            className="flex flex-row justify-between bg-white rounded-t-md relative overflow-scroll scroll-x-auto sm:overflow-hidden"
+            className="flex flex-row gap-1 bg-white rounded-t-md relative overflow-scroll scroll-x-auto sm:overflow-hidden"
             onMouseLeave={handleMouseLeave}
         >
             {/* Hover indicator (gray) */}

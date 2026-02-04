@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { PencilIcon, XMarkIcon } from '@heroicons/react/24/solid';
-import { ChevronDownIcon, ArrowPathIcon, ArrowsPointingOutIcon, CakeIcon, EnvelopeIcon, BriefcaseIcon, PhoneIcon, BuildingOfficeIcon } from '@heroicons/react/20/solid';
+import { PencilIcon, XMarkIcon, PhoneIcon, EnvelopeIcon, CakeIcon, BuildingOfficeIcon, BriefcaseIcon } from '@heroicons/react/24/solid';
+import { ChevronDownIcon, ArrowPathIcon, ArrowsPointingOutIcon } from '@heroicons/react/20/solid';
 import AboutMe from './aboutme';
 import Applications from './applications';
 import Projects from './projects';
@@ -11,10 +11,11 @@ import Services from './services';
 import Marketing from './marketing';
 import ButtonTab from '../common/buttontab';
 import RootContext from '../config/rootcontext';
-import { Mutated } from '../config/useswrfetch';
+import { Mutated, useSWRFetch } from '../config/useswrfetch';
 import { useParams } from 'next/navigation';
 import Loading from '../common/loading';
 import CompanyLandingPage from '../company/companyprofile';
+import { formatDateTime } from '../config/sitesettings';
 import Image from 'next/image';
 
 // Aspect ratio options
@@ -25,7 +26,7 @@ const ASPECT_RATIOS = [
     { label: "16:9", value: 16 / 9 },
 ];
 
-function CandidateProfilePage({ userData }) {
+function CandidateProfilePage() {
     const params = useParams();
     const { id, category } = params;
     const [activeTab, setActiveTab] = useState(0);
@@ -38,6 +39,7 @@ function CandidateProfilePage({ userData }) {
         mobile: '', gender: '', dateOfBirth: '', company: ''
     });
     const [editingHeader, setEditingHeader] = useState(false);
+    const [editingPersonalDetails, setEditingPersonalDetails] = useState(false); // Added this state
     const [accordionOpen, setAccordionOpen] = useState(null);
     const [previewImage, setPreviewImage] = useState('');
     const [serviceCall, setServiceCall] = useState(false);
@@ -66,6 +68,11 @@ function CandidateProfilePage({ userData }) {
 
     const { rootContext, setRootContext } = useContext(RootContext);
 
+    // Use users API
+    const { data: userData = [], error, isLoading } = useSWRFetch(id ? `/api/users?id=${id}` : null);
+    const mutated = Mutated(id ? `/api/users?id=${id}` : null);
+
+    // Determine tabs based on user role
     const tabs = rootContext.user?.role === "company"
         ? [
             { name: "About Applicant", component: AboutMe },
@@ -79,8 +86,13 @@ function CandidateProfilePage({ userData }) {
             { name: 'My Digital Marketing', component: Marketing }
         ];
 
-    // Use users API
-    const mutated = Mutated(id ? `/api/users?id=${id}` : null);
+    // Check if current user can edit this profile
+    const canEditProfile = rootContext?.user?.role === "applicant" && rootContext?.user?._id === id;
+
+    // Check if user is company or superadmin
+    const isCompany = rootContext?.user?.role === 'company' || rootContext?.user?.role === 'superadmin';
+    // For company users, we don't use the tabs, so set ActiveComponent based on role
+    const ActiveComponent = isCompany ? CompanyLandingPage : tabs[activeTab].component;
 
     useEffect(() => {
         if (userData) {
@@ -109,11 +121,6 @@ function CandidateProfilePage({ userData }) {
         };
     }, [previewImage, cropImage]);
 
-    // Check if user is company or superadmin
-    const isCompany = userData?.role === 'company' || userData?.role === 'superadmin';
-    // For company users, we don't use the tabs, so set ActiveComponent based on role
-    const ActiveComponent = isCompany ? CompanyLandingPage : tabs[activeTab].component;
-
     // Show loading while role is being determined
     if (roleLoading) {
         return (
@@ -128,6 +135,9 @@ function CandidateProfilePage({ userData }) {
 
     /** ─── Enhanced Image Upload + Crop ────────────────────── **/
     const handleImageChange = (e) => {
+        // Only allow image change if user can edit
+        if (!canEditProfile) return;
+
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -231,7 +241,7 @@ function CandidateProfilePage({ userData }) {
                 }
 
                 const previewUrl = URL.createObjectURL(blob);
-                const file = new File([blob], "tempProfile?.jpg", { type: "image/jpeg" });
+                const file = new File([blob], "profile.jpg", { type: "image/jpeg" });
 
                 setPreviewImage(previewUrl);
                 setTempProfile((prev) => ({ ...prev, imageFile: file, profileImage: previewUrl }));
@@ -355,17 +365,24 @@ function CandidateProfilePage({ userData }) {
         try {
             const formData = new FormData();
             formData.append("id", id);
-            formData.append("name", tempProfile?.name || "");
-            formData.append("email", tempProfile?.email || "");
-            formData.append("position", tempProfile?.position || "");
-            formData.append("role", userData?.role || "applicant");
-            if (tempProfile?.mobile) formData.append("mobile", tempProfile?.mobile);
-            if (tempProfile?.website) formData.append("website", tempProfile?.website);
-            if (tempProfile?.password) formData.append("password", tempProfile?.password);
-            if (tempProfile?.imageFile) formData.append("image", tempProfile?.imageFile);
-            if (tempProfile?.summary) formData.append("summary", tempProfile?.summary);
-            if (tempProfile?.experience) formData.append("experience", JSON.stringify(tempProfile?.experience));
-            if (tempProfile?.education) formData.append("education", JSON.stringify(tempProfile?.education));
+            formData.append("name", tempProfile.name || "");
+            formData.append("email", tempProfile.email || "");
+            formData.append("position", tempProfile.position || "");
+            formData.append("role", "applicant");
+
+            // Add personal details
+            formData.append("mobile", tempProfile.mobile || "");
+            formData.append("gender", tempProfile.gender || "");
+            if (tempProfile.dateOfBirth) {
+                formData.append("dateOfBirth", tempProfile.dateOfBirth);
+            }
+            formData.append("company", tempProfile.company || "");
+
+            if (tempProfile.password) formData.append("password", tempProfile.password);
+            if (tempProfile.imageFile) formData.append("image", tempProfile.imageFile);
+            if (tempProfile.summary) formData.append("summary", tempProfile.summary);
+            if (tempProfile.experience) formData.append("experience", JSON.stringify(tempProfile.experience));
+            if (tempProfile.education) formData.append("education", JSON.stringify(tempProfile.education));
 
             const res = await fetch(`/api/users`, {
                 method: 'PUT',
@@ -378,6 +395,7 @@ function CandidateProfilePage({ userData }) {
             if (res.ok) {
                 setProfile(prev => ({ ...prev, ...tempProfile }));
                 setEditingHeader(false);
+                setEditingPersonalDetails(false);
                 setPreviewImage('');
                 mutated();
 
@@ -419,10 +437,75 @@ function CandidateProfilePage({ userData }) {
         }
     };
 
+    const handleSavePersonalDetails = async () => {
+        setServiceCall(true);
+        try {
+            const formData = new FormData();
+            formData.append("id", id);
+            formData.append("mobile", tempProfile.mobile || "");
+            formData.append("gender", tempProfile.gender || "");
+            if (tempProfile.dateOfBirth) {
+                formData.append("dateOfBirth", tempProfile.dateOfBirth);
+            }
+            formData.append("company", tempProfile.company || "");
+            formData.append("position", tempProfile.position || "");
+
+            const res = await fetch(`/api/users`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            const data = await res.json();
+            setServiceCall(false);
+
+            if (res.ok) {
+                setProfile(prev => ({ ...prev, ...tempProfile }));
+                setEditingPersonalDetails(false);
+                mutated();
+
+                setRootContext(prevContext => ({
+                    ...prevContext,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "success",
+                        title: "Success",
+                        message: "Personal details updated successfully"
+                    }
+                }));
+            } else {
+                setRootContext(prevContext => ({
+                    ...prevContext,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "error",
+                        title: "Failed",
+                        message: data.error || "Failed to update personal details"
+                    }
+                }));
+            }
+        } catch (err) {
+            console.error("Update Error:", err);
+            setServiceCall(false);
+            setRootContext(prevContext => ({
+                ...prevContext,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    title: "Failed",
+                    message: "Something went wrong while updating personal details"
+                }
+            }));
+        }
+    };
+
     const handleCancelEdit = () => {
         setEditingHeader(false);
+        setEditingPersonalDetails(false);
         setPreviewImage("");
-        setTempProfile(userData);
+        setTempProfile(profile);
         setCropping(false);
         setCropImage(null);
         setCompletedCrop(null);
@@ -441,6 +524,17 @@ function CandidateProfilePage({ userData }) {
             ...prev,
             [field]: value
         }));
+    };
+
+    // Toggle edit mode for personal details
+    const togglePersonalDetailsEdit = () => {
+        if (editingPersonalDetails) {
+            setEditingPersonalDetails(false);
+            setTempProfile(profile);
+        } else {
+            setEditingPersonalDetails(true);
+            setEditingHeader(false);
+        }
     };
 
     return (
@@ -691,7 +785,12 @@ function CandidateProfilePage({ userData }) {
                         <div className="hidden sm:block">
                             <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                             <div className="py-3">
-                                <ActiveComponent profile={profile} setRootContext={setRootContext} mutated={mutated} />
+                                <ActiveComponent
+                                    profile={profile}
+                                    setRootContext={setRootContext}
+                                    mutated={mutated}
+                                    canEdit={canEditProfile} // Pass edit permission to components
+                                />
                             </div>
                         </div>
 
@@ -713,7 +812,12 @@ function CandidateProfilePage({ userData }) {
                                         </button>
                                         {isOpen && (
                                             <div className="p-2">
-                                                <Component profile={profile} setRootContext={setRootContext} mutated={mutated} />
+                                                <Component
+                                                    profile={profile}
+                                                    setRootContext={setRootContext}
+                                                    mutated={mutated}
+                                                    canEdit={canEditProfile} // Pass edit permission to components
+                                                />
                                             </div>
                                         )}
                                     </div>
