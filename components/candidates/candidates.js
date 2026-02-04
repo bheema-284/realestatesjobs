@@ -15,6 +15,7 @@ import { Mutated, useSWRFetch } from '../config/useswrfetch';
 import { useParams } from 'next/navigation';
 import Loading from '../common/loading';
 import { formatDateTime } from '../config/sitesettings';
+import Image from 'next/image';
 
 // Aspect ratio options
 const ASPECT_RATIOS = [
