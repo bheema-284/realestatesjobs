@@ -616,7 +616,7 @@ function ProfilePage() {
                                         {profile.gender && (
                                             profile.gender === 'male' ? (
                                                 <Image
-                                                    src="/icons/men.png"
+                                                    src="/icons/man.png"
                                                     width={20}
                                                     height={20}
                                                     alt="Male"

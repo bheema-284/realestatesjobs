@@ -3,9 +3,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { PencilIcon, PlusIcon, TrashIcon, DocumentArrowUpIcon, DocumentIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Mutated } from '../config/useswrfetch';
 import RootContext from '../config/rootcontext';
-import { formatDateTime } from '../config/sitesettings';
 import Loader from '../common/loader';
-import Link from 'next/link';
 
 const dummyLogos = [
     'https://placehold.co/48x48/F0F0F0/000000?text=Google',
