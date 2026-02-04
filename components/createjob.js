@@ -526,22 +526,36 @@ const propertyTypeOptions = [
 // Job Preview Component
 const JobPreview = ({ formData, jobCategories }) => {
     const getCategoryName = (slug) => {
-        const category = jobCategories.find(cat => cat.slug === slug);
+        const category = jobCategories?.find(cat => cat.slug === slug);
         return category ? category.name : 'N/A';
     };
 
     const formatHTML = (html) => {
-        if (!html) return '';
-        return { __html: html };
+        if (!html || typeof html !== 'string') return '';
+
+        // Sanitize HTML to prevent React errors
+        try {
+            // Remove any script tags and other potentially dangerous content
+            const cleanHtml = html
+                .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                .replace(/on\w+="[^"]*"/g, '')
+                .replace(/javascript:/gi, '')
+                .replace(/data:/gi, '');
+
+            return { __html: cleanHtml };
+        } catch (error) {
+            console.error('Error formatting HTML for preview:', error);
+            return { __html: '' };
+        }
     };
 
     const formatArray = (arr) => {
-        if (!arr || arr.length === 0) return 'None';
-        return Array.isArray(arr) ? arr.join(', ') : arr;
+        if (!arr || !Array.isArray(arr) || arr.length === 0) return 'None';
+        return arr.join(', ');
     };
 
     const formatCheckboxes = (arr) => {
-        if (!arr || arr.length === 0) return 'None';
+        if (!arr || !Array.isArray(arr) || arr.length === 0) return 'None';
         return arr.map(item => {
             if (typeof item === 'object') return item.name;
             return item;
@@ -549,7 +563,7 @@ const JobPreview = ({ formData, jobCategories }) => {
     };
 
     const formatLanguages = (langs) => {
-        if (!langs || langs.length === 0) return 'None';
+        if (!langs || !Array.isArray(langs) || langs.length === 0) return 'None';
         return langs.map(lang => languageDisplayNames[lang] || lang).join(', ');
     };
 
@@ -562,50 +576,50 @@ const JobPreview = ({ formData, jobCategories }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <h4 className="font-medium text-gray-700">Job Title</h4>
-                        <p className="text-gray-900">{formData.jobTitle || 'N/A'}</p>
+                        <p className="text-gray-900">{formData?.jobTitle || 'N/A'}</p>
                     </div>
                     <div>
                         <h4 className="font-medium text-gray-700">Category</h4>
-                        <p className="text-gray-900">{getCategoryName(formData.categorySlug)}</p>
+                        <p className="text-gray-900">{getCategoryName(formData?.categorySlug)}</p>
                     </div>
                     <div>
                         <h4 className="font-medium text-gray-700">Location</h4>
-                        <p className="text-gray-900">{formData.location || 'N/A'}</p>
+                        <p className="text-gray-900">{formData?.location || 'N/A'}</p>
                     </div>
                     <div>
                         <h4 className="font-medium text-gray-700">Salary</h4>
-                        <p className="text-gray-900">{formData.salary || 'N/A'}</p>
+                        <p className="text-gray-900">{formData?.salary || 'N/A'}</p>
                     </div>
                     <div>
                         <h4 className="font-medium text-gray-700">Experience</h4>
-                        <p className="text-gray-900">{formData.experience || 'N/A'}</p>
+                        <p className="text-gray-900">{formData?.experience || 'N/A'}</p>
                     </div>
                     <div>
                         <h4 className="font-medium text-gray-700">Job Role Type</h4>
-                        <p className="text-gray-900">{formData.jobRoleType || 'N/A'}</p>
+                        <p className="text-gray-900">{formData?.jobRoleType || 'N/A'}</p>
                     </div>
                 </div>
 
                 {/* Employment Type */}
                 <div>
                     <h4 className="font-medium text-gray-700">Employment Type</h4>
-                    <p className="text-gray-900">{formatArray(formData.employmentTypes)}</p>
+                    <p className="text-gray-900">{formatArray(formData?.employmentTypes)}</p>
                 </div>
 
                 {/* Education & Skills */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <h4 className="font-medium text-gray-700">Educational Qualification</h4>
-                        <p className="text-gray-900">{formatArray(formData.qualification)}</p>
+                        <p className="text-gray-900">{formatArray(formData?.qualification)}</p>
                     </div>
                     <div>
                         <h4 className="font-medium text-gray-700">Skills</h4>
                         <div className="flex flex-wrap gap-1">
-                            {formData.skills?.map((skill, index) => (
+                            {formData?.skills?.map((skill, index) => (
                                 <span key={index} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
                                     {skill}
                                 </span>
-                            ))}
+                            )) || 'None'}
                         </div>
                     </div>
                 </div>
@@ -614,16 +628,16 @@ const JobPreview = ({ formData, jobCategories }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <h4 className="font-medium text-gray-700">Language Requirements</h4>
-                        <p className="text-gray-900">{formatLanguages(formData.languageRequirements)}</p>
+                        <p className="text-gray-900">{formatLanguages(formData?.languageRequirements)}</p>
                     </div>
                     <div>
                         <h4 className="font-medium text-gray-700">Property Types</h4>
-                        <p className="text-gray-900">{formatArray(formData.propertyTypes)}</p>
+                        <p className="text-gray-900">{formatArray(formData?.propertyTypes)}</p>
                     </div>
                 </div>
 
                 {/* Category Specific Fields */}
-                {formData.categorySlug && (
+                {formData?.categorySlug && (
                     <div>
                         <h4 className="font-medium text-gray-700 mb-2">Category Specific Details</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -654,7 +668,7 @@ const JobPreview = ({ formData, jobCategories }) => {
                     <h4 className="font-medium text-gray-700 mb-2">Job Description</h4>
                     <div
                         className="prose prose-sm max-w-none text-gray-700 border border-gray-200 rounded-lg p-4"
-                        dangerouslySetInnerHTML={formatHTML(formData.jobDescription)}
+                        dangerouslySetInnerHTML={formatHTML(formData?.jobDescription)}
                     />
                 </div>
             </div>
@@ -779,6 +793,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
     const [customQualification, setCustomQualification] = useState('');
     const [showCustomQualInput, setShowCustomQualInput] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [previewError, setPreviewError] = useState(null);
 
     console.log("mode", mode);
     console.log("editData received:", editData);
@@ -793,8 +808,8 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
     const [formData, setFormData] = useState(() => {
         // Initialize with default values
         const defaultFormData = {
-            // Job Title
-            jobTitle: '',
+            // Job Title - use the title prop if provided, otherwise use category-based title
+            jobTitle: title || '',
 
             // Common fields
             location: '',
@@ -962,11 +977,12 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
         setIsOpen(false);
         resetForm();
         setShowPreview(false);
+        setPreviewError(null);
     }
 
     function resetForm() {
         setFormData({
-            jobTitle: '',
+            jobTitle: title || '',
             location: '',
             salary: '',
             jobRoleType: '',
@@ -1031,12 +1047,14 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
         setShowCustomQualInput(false);
         setIsSubmitting(false);
         setIsLoading(false);
+        setPreviewError(null);
     }
 
     // Effect to load edit data when modal opens
     useEffect(() => {
         if (isOpen && editData && mode !== 'create') {
             setIsLoading(true);
+            setPreviewError(null);
 
             try {
                 // Safely map API data to form data
@@ -1046,16 +1064,21 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                     setFormData(mappedData);
                     setSelectedCategory(mappedData.categorySlug || '');
 
-                    // Also set job title from category if empty
-                    if (!mappedData.jobTitle && mappedData.categorySlug) {
-                        const selectedCategoryObj = jobCategories.find(cat => cat.slug === mappedData.categorySlug);
-                        if (selectedCategoryObj) {
-                            setFormData(prev => ({ ...prev, jobTitle: selectedCategoryObj.name }));
+                    // Also set job title from title prop or category if empty
+                    if (!mappedData.jobTitle) {
+                        if (title) {
+                            setFormData(prev => ({ ...prev, jobTitle: title }));
+                        } else if (mappedData.categorySlug) {
+                            const selectedCategoryObj = jobCategories.find(cat => cat.slug === mappedData.categorySlug);
+                            if (selectedCategoryObj) {
+                                setFormData(prev => ({ ...prev, jobTitle: selectedCategoryObj.name }));
+                            }
                         }
                     }
                 }
             } catch (error) {
                 console.error('Error mapping edit data:', error);
+                setPreviewError('Failed to load job data');
                 // Show error toast
                 setRootContext(prev => ({
                     ...prev,
@@ -1075,8 +1098,12 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
             if (userProfile?.location) {
                 setFormData(prev => ({ ...prev, location: userProfile.location }));
             }
+            // Set job title from title prop if provided
+            if (title) {
+                setFormData(prev => ({ ...prev, jobTitle: title }));
+            }
         }
-    }, [isOpen, editData, mode, userProfile]);
+    }, [isOpen, editData, mode, userProfile, title]);
 
     // Effect to reset form when modal closes
     useEffect(() => {
@@ -1092,7 +1119,8 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
         if (field === 'categorySlug') {
             setSelectedCategory(value);
             const selectedCategoryObj = jobCategories.find(cat => cat.slug === value);
-            if (selectedCategoryObj) {
+            if (selectedCategoryObj && !title) {
+                // Only auto-update if title prop is not provided
                 setFormData(prev => ({ ...prev, jobTitle: selectedCategoryObj.name }));
             }
         }
@@ -1557,6 +1585,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                     }
                 }));
                 mutated && mutated();
+                onJobSaved && onJobSaved();
                 closeModal();
             } else {
                 // Handle API validation errors
@@ -1577,6 +1606,27 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
             }));
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    // Handle preview click
+    const handlePreviewClick = () => {
+        try {
+            setPreviewError(null);
+            setShowPreview(true);
+        } catch (error) {
+            console.error('Error showing preview:', error);
+            setPreviewError('Failed to load preview. Please check your data.');
+            setRootContext(prev => ({
+                ...prev,
+                toast: {
+                    show: true,
+                    dismiss: true,
+                    type: "error",
+                    position: "Preview Error",
+                    message: "Failed to load preview"
+                }
+            }));
         }
     };
 
@@ -1679,7 +1729,13 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                         />
                                     </div>
 
-                                    <JobPreview formData={formData} jobCategories={jobCategories} />
+                                    {previewError ? (
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                            <p className="text-red-700">{previewError}</p>
+                                        </div>
+                                    ) : (
+                                        <JobPreview formData={formData} jobCategories={jobCategories} />
+                                    )}
 
                                     <div className="mt-6 flex justify-end gap-3">
                                         <button
@@ -1699,7 +1755,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
 
             {/* Main Job Posting Modal */}
             <Transition appear show={isOpen} as={Fragment}>
-                <Dialog as="div" className="relative z-50" onClose={() => { }}>
+                <Dialog as="div" className="relative z-50" onClose={closeModal}>
                     <Transition.Child
                         as={Fragment}
                         enter="ease-out duration-300"
@@ -1742,44 +1798,47 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                     ) : (
                                         <div className="mt-2">
                                             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                                                {/* Job Category Selection */}
-                                                <div>
-                                                    <label htmlFor="categorySlug" className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Job Category *
-                                                    </label>
-                                                    <select
-                                                        id="categorySlug"
-                                                        value={formData.categorySlug}
-                                                        onChange={(e) => handleInputChange('categorySlug', e.target.value)}
-                                                        className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                        required
-                                                    >
-                                                        <option value="">Select a job category</option>
-                                                        {jobCategories.map((category) => (
-                                                            <option key={category.slug} value={category.slug}>
-                                                                {category.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-
-                                                {/* Job Title (auto-filled from category) */}
+                                                {/* Job Title (prefilled from props or auto-filled from category) */}
                                                 <div className='bg-blue-50 border border-blue-200 p-3 rounded-lg'>
-                                                    <label htmlFor="jobTitle" className="block text-sm font-medium text-blue-700 mb-2">
-                                                        Job Title *
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        id="jobTitle"
-                                                        value={formData.jobTitle}
-                                                        onChange={(e) => handleInputChange('jobTitle', e.target.value)}
-                                                        className="w-full p-2.5 sm:p-3 border text-blue-800 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                        placeholder="Job title will auto-fill based on category"
-                                                        required
-                                                    />
-                                                    <p className="text-xs text-blue-500 mt-1">
-                                                        This is auto-filled from the selected category. You can edit it if needed.
-                                                    </p>
+                                                    <div className="mb-3">
+                                                        <label htmlFor="jobTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                                                            Job Title *
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            id="jobTitle"
+                                                            value={formData.jobTitle}
+                                                            onChange={(e) => handleInputChange('jobTitle', e.target.value)}
+                                                            className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                            placeholder="Enter job title"
+                                                            required
+                                                        />
+                                                        {title && (
+                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                Prefilled from: {title}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    <div>
+                                                        <label htmlFor="categorySlug" className="block text-sm font-medium text-gray-700 mb-2">
+                                                            Job Category *
+                                                        </label>
+                                                        <select
+                                                            id="categorySlug"
+                                                            value={formData.categorySlug}
+                                                            onChange={(e) => handleInputChange('categorySlug', e.target.value)}
+                                                            className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                            required
+                                                        >
+                                                            <option value="">Select a job category</option>
+                                                            {jobCategories.map((category) => (
+                                                                <option key={category.slug} value={category.slug}>
+                                                                    {category.name}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
                                                 </div>
 
                                                 {/* Common fields in correct sequence */}
@@ -2009,7 +2068,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                     <div className="order-3 sm:order-1">
                                                         <button
                                                             type="button"
-                                                            onClick={() => setShowPreview(true)}
+                                                            onClick={handlePreviewClick}
                                                             className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 sm:px-6 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                                         >
                                                             <EyeIcon className="h-4 w-4 mr-2" />
