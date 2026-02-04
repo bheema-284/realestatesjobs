@@ -1812,33 +1812,8 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                             className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                             placeholder="Enter job title"
                                                             required
-                                                        />
-                                                        {title && (
-                                                            <p className="text-xs text-gray-500 mt-1">
-                                                                Prefilled from: {title}
-                                                            </p>
-                                                        )}
-                                                    </div>
-
-                                                    <div>
-                                                        <label htmlFor="categorySlug" className="block text-sm font-medium text-gray-700 mb-2">
-                                                            Job Category *
-                                                        </label>
-                                                        <select
-                                                            id="categorySlug"
-                                                            value={formData.categorySlug}
-                                                            onChange={(e) => handleInputChange('categorySlug', e.target.value)}
-                                                            className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                            required
-                                                        >
-                                                            <option value="">Select a job category</option>
-                                                            {jobCategories.map((category) => (
-                                                                <option key={category.slug} value={category.slug}>
-                                                                    {category.name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
+                                                        />                                                        
+                                                    </div>                                                  
                                                 </div>
 
                                                 {/* Common fields in correct sequence */}

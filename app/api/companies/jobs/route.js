@@ -374,38 +374,157 @@ export async function PUT(req) {
     try {
         const body = await req.json();
 
-        // First validate the base schema
-        const { error: baseError, value: baseValue } = jobUpdateSchema.validate(body);
-        if (baseError) {
+        // First validate the required fields
+        if (!body.id || !body.companyId) {
             return NextResponse.json({
                 success: false,
-                error: baseError.details[0].message
+                error: 'Job ID and Company ID are required'
             }, { status: 400 });
         }
 
-        const { id, companyId, ...updateData } = baseValue;
+        const { id, companyId, ...updateData } = body;
 
-        // Add category-specific validation for update if category is being changed
+        // Create an update schema that allows all job fields but requires id and companyId
+        const jobUpdateSchema = Joi.object({
+            // Required for update
+            id: Joi.string().required(),
+            companyId: Joi.string().required(),
+
+            // Job basic info
+            jobTitle: Joi.string().min(3).max(100),
+            categorySlug: Joi.string().valid(
+                'channel-partners', 'hr-and-operations', 'real-estate-sales',
+                'tele-caller', 'digital-marketing', 'web-development',
+                'crm-executive', 'accounts-and-auditing', 'architects', 'legal'
+            ),
+
+            // Common fields
+            location: Joi.string().min(2).max(100),
+            salary: Joi.string().min(2).max(100),
+            jobRoleType: Joi.string(),
+            employmentTypes: Joi.array().items(Joi.string().valid('full-time', 'part-time')).min(1),
+            qualification: Joi.array().items(Joi.string()).default([]),
+            experience: Joi.string(),
+            skills: Joi.array().items(Joi.string()).default([]),
+            languageRequirements: Joi.array().items(Joi.string().valid(
+                'english', 'hindi', 'telugu', 'tamil', 'kannada',
+                'malayalam', 'marathi', 'bengali', 'gujarati', 'punjabi',
+                'odia', 'urdu', 'sanskrit', 'assamese', 'maithili',
+                'kashmiri', 'sindhi', 'konkani', 'nepali', 'manipuri',
+                'bodo', 'dogri'
+            )).default([]),
+            propertyTypes: Joi.array().items(Joi.string().valid(
+                'residential', 'commercial', 'industrial', 'plots',
+                'luxury', 'affordable'
+            )).default([]),
+            jobDescription: Joi.string().min(5).max(10000),
+
+            // Tele Caller specific
+            commissionPercentage: Joi.string().allow(''),
+            incentives: Joi.string().allow(''),
+            salesTargets: Joi.string().allow(''),
+            additionalBenefits: Joi.array().items(Joi.string()).default([]),
+
+            // Real Estate Sales specific
+            salesTargetAmount: Joi.string().allow(''),
+            targetAreas: Joi.string().allow(''),
+            leadProvided: Joi.boolean(),
+            trainingProvided: Joi.boolean(),
+            vehicleRequirement: Joi.boolean(),
+
+            // Digital Marketing specific
+            specialization: Joi.string().allow(''),
+            tools: Joi.string().allow(''),
+            workMode: Joi.string().allow(''),
+
+            // Web Development specific
+            techStack: Joi.string().allow(''),
+            projectType: Joi.string().allow(''),
+
+            // Accounts & Auditing specific
+            accountsQualification: Joi.string().allow(''),
+            accountingSoftware: Joi.string().allow(''),
+            industryExperience: Joi.array().items(Joi.string()).default([]),
+
+            // Architects specific
+            architectureType: Joi.string().allow(''),
+            designSoftware: Joi.string().allow(''),
+            projectScale: Joi.string().allow(''),
+            portfolioRequired: Joi.boolean(),
+
+            // Legal specific
+            legalSpecialization: Joi.string().allow(''),
+            legalQualification: Joi.string().allow(''),
+            caseTypes: Joi.array().items(Joi.string()).default([]),
+
+            // Channel Partners specific
+            partnerType: Joi.string().allow(''),
+            partnerCommission: Joi.string().allow(''),
+            networkSize: Joi.string().allow(''),
+            exclusivePartnership: Joi.boolean(),
+
+            // HR & Operations specific
+            hrSpecialization: Joi.string().allow(''),
+            hrQualification: Joi.string().allow(''),
+            industryKnowledge: Joi.array().items(Joi.string()).default([]),
+
+            // CRM Executive specific
+            crmSoftware: Joi.string().allow(''),
+            customerSegment: Joi.string().allow(''),
+            dataManagement: Joi.boolean(),
+            clientRetention: Joi.boolean(),
+
+            // System fields
+            salaryType: Joi.string().valid('fixed', 'commission', 'hybrid'),
+            salaryFrequency: Joi.string().valid('Monthly', 'Yearly', 'Commission Based', 'Performance Based'),
+            salaryNegotiable: Joi.boolean(),
+            hiringMultiple: Joi.boolean(),
+            workingSchedule: Joi.object({
+                dayShift: Joi.boolean(),
+                nightShift: Joi.boolean(),
+                weekendAvailability: Joi.boolean(),
+                custom: Joi.string().allow('')
+            }),
+
+            // Company/User info
+            postedBy: Joi.string(),
+            postedByRole: Joi.string().valid('company', 'superadmin', 'recruiter'),
+            companyName: Joi.string(),
+
+            // System fields
+            status: Joi.string().valid('active', 'inactive', 'closed', 'draft')
+        });
+
+        // Validate the entire payload
+        const { error, value } = jobUpdateSchema.validate(body, { abortEarly: false });
+        if (error) {
+            console.error('Validation Error:', error.details);
+            return NextResponse.json({
+                success: false,
+                error: 'Validation failed',
+                details: error.details.map(detail => ({
+                    field: detail.path.join('.'),
+                    message: detail.message
+                }))
+            }, { status: 400 });
+        }
+
+        // Add category-specific validation if categorySlug is present in update data
         if (updateData.categorySlug) {
             const categoryValidation = getCategoryValidation(updateData.categorySlug);
-            const categorySchema = Joi.object(categoryValidation);
 
-            // Only validate fields that are present in updateData
-            const fieldsToValidate = {};
-            Object.keys(categoryValidation).forEach(key => {
-                if (updateData[key] !== undefined) {
-                    fieldsToValidate[key] = categoryValidation[key];
-                }
-            });
-
-            if (Object.keys(fieldsToValidate).length > 0) {
-                const validationSchema = Joi.object(fieldsToValidate);
-                const { error: catError } = validationSchema.validate(updateData);
-                if (catError) {
-                    return NextResponse.json({
-                        success: false,
-                        error: catError.details[0].message
-                    }, { status: 400 });
+            // Check required fields for the category
+            for (const [field, validation] of Object.entries(categoryValidation)) {
+                // Only validate if the field is required and present in updateData
+                if (validation._flags?.presence === 'required' && updateData[field] === undefined) {
+                    // If updating category, all required fields for that category must be present
+                    const { error: catError } = validation.validate(updateData[field]);
+                    if (catError) {
+                        return NextResponse.json({
+                            success: false,
+                            error: `Field "${field}" is required for category "${updateData.categorySlug}"`
+                        }, { status: 400 });
+                    }
                 }
             }
         }
@@ -421,6 +540,9 @@ export async function PUT(req) {
         const setFields = {};
         for (const key in updateData) {
             if (updateData[key] !== undefined) {
+                // Skip id and companyId as they're used for querying
+                if (key === 'id' || key === 'companyId') continue;
+
                 // Handle special mapping for salary
                 if (key === 'salary') {
                     setFields[`jobs.$.salaryAmount`] = updateData[key];
@@ -430,6 +552,8 @@ export async function PUT(req) {
                 }
             }
         }
+
+        // Always update timestamps
         setFields['jobs.$.updatedAt'] = new Date();
         setFields['updatedAt'] = new Date();
 
@@ -439,22 +563,38 @@ export async function PUT(req) {
                 { _id: new ObjectId(companyId) },
                 { companyId: new ObjectId(companyId) }
             ],
-            $or: [
-                { 'jobs._id': jobIdFilter },
-                { 'jobs.id': id }
-            ]
+            'jobs': {
+                $elemMatch: {
+                    $or: [
+                        { _id: jobIdFilter },
+                        { id: id }
+                    ]
+                }
+            }
         };
+
+        console.log('Update query:', JSON.stringify(query, null, 2));
+        console.log('Update fields:', JSON.stringify(setFields, null, 2));
 
         const result = await usersCollection.updateOne(
             query,
             { $set: setFields }
         );
 
+        console.log('Update result:', result);
+
+        if (result.matchedCount === 0) {
+            return NextResponse.json({
+                success: false,
+                error: 'Job not found'
+            }, { status: 404 });
+        }
+
         if (result.modifiedCount === 0) {
             return NextResponse.json({
                 success: false,
-                error: 'Job not found or update failed'
-            }, { status: 404 });
+                error: 'No changes made or update failed'
+            }, { status: 400 });
         }
 
         // Fetch the updated job
@@ -473,6 +613,13 @@ export async function PUT(req) {
             (job._id && job._id.toString() === id) || job.id === id
         );
 
+        if (!updatedJob) {
+            return NextResponse.json({
+                success: false,
+                error: 'Failed to retrieve updated job'
+            }, { status: 404 });
+        }
+
         return NextResponse.json({
             success: true,
             message: 'Job updated successfully',
@@ -483,7 +630,8 @@ export async function PUT(req) {
         console.error('❌ PUT Job Error:', err);
         return NextResponse.json({
             success: false,
-            error: err.message
+            error: err.message,
+            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
         }, { status: 500 });
     }
 }
