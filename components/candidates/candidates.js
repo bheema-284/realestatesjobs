@@ -610,7 +610,7 @@ function ProfilePage() {
                                     )}
                                 </div>
                             ) : (
-                                <div className="space-y-4 mt-10">
+                                <div className="space-y-4 mt-10 sm:mt-0">
                                     <div className="flex items-center gap-2">
                                         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
                                         {profile.gender && (

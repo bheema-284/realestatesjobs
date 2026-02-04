@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { PencilIcon, XMarkIcon } from '@heroicons/react/24/solid';
-import { ChevronDownIcon, ArrowPathIcon, ArrowsPointingOutIcon } from '@heroicons/react/20/solid';
+import { ChevronDownIcon, ArrowPathIcon, ArrowsPointingOutIcon, CakeIcon, EnvelopeIcon, BriefcaseIcon, PhoneIcon, BuildingOfficeIcon } from '@heroicons/react/20/solid';
 import AboutMe from './aboutme';
 import Applications from './applications';
 import Projects from './projects';
@@ -15,6 +15,7 @@ import { Mutated } from '../config/useswrfetch';
 import { useParams } from 'next/navigation';
 import Loading from '../common/loading';
 import CompanyLandingPage from '../company/companyprofile';
+import Image from 'next/image';
 
 // Aspect ratio options
 const ASPECT_RATIOS = [
@@ -30,9 +31,11 @@ function CandidateProfilePage({ userData }) {
     const [activeTab, setActiveTab] = useState(0);
     const [profile, setProfile] = useState({
         name: '', position: '', email: '', mobile: '', website: '', image: '', summary: '', experience: [], education: [],
+        mobile: '', gender: '', dateOfBirth: '', company: ''
     });
     const [tempProfile, setTempProfile] = useState({
         name: '', position: '', email: '', mobile: '', website: '', image: '', summary: '', experience: [], education: [],
+        mobile: '', gender: '', dateOfBirth: '', company: ''
     });
     const [editingHeader, setEditingHeader] = useState(false);
     const [accordionOpen, setAccordionOpen] = useState(null);
@@ -446,29 +449,29 @@ function CandidateProfilePage({ userData }) {
 
             {/* Card Content */}
             <div className="max-w-5xl border border-gray-200 rounded-t-xl mx-auto relative shadow-sm">
-                <div className="p-6 flex flex-col sm:flex-row items-center gap-4 relative z-10">
+                <div className="p-6 flex flex-col sm:flex-row items-start gap-4 relative z-10">
                     {/* Profile Image with Enhanced Cropping */}
                     <div className="absolute -top-12 left-6 sm:left-6">
                         <label
                             htmlFor="profileImageInput"
-                            className={`${editingHeader ? "cursor-pointer group" : "cursor-default"} relative block`}
+                            className={`${(editingHeader || editingPersonalDetails) && canEditProfile ? "cursor-pointer group" : "cursor-default"} relative block`}
                         >
                             <input
                                 id="profileImageInput"
                                 ref={fileInputRef}
                                 type="file"
                                 accept="image/*"
-                                disabled={!editingHeader}
+                                disabled={!(editingHeader || editingPersonalDetails) || !canEditProfile}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                onChange={editingHeader ? handleImageChange : undefined}
+                                onChange={(editingHeader || editingPersonalDetails) && canEditProfile ? handleImageChange : undefined}
                             />
                             <div className="relative">
                                 <img
-                                    src={tempProfile?.profileImage || "https://placehold.co/80x80/F0F0F0/000000?text=Logo"}
+                                    src={profile.profileImage || "https://placehold.co/80x80/F0F0F0/000000?text=Logo"}
                                     alt="Profile Avatar"
                                     className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border-4 border-white object-cover shadow-lg"
                                 />
-                                {editingHeader && (
+                                {(editingHeader || editingPersonalDetails) && canEditProfile && (
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl text-white font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                         Change
                                     </div>
@@ -477,7 +480,8 @@ function CandidateProfilePage({ userData }) {
                         </label>
                     </div>
 
-                    <div className="flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 w-full ml-0 sm:ml-40">
+                    <div className="flex-1 flex flex-col sm:flex-row gap-6 w-full ml-0 sm:ml-40">
+                        {/* Left Column - Basic Info Section */}
                         <div className="flex-1">
                             {editingHeader ? (
                                 <div className="flex flex-col gap-3 text-gray-700">
@@ -485,7 +489,7 @@ function CandidateProfilePage({ userData }) {
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
                                         <input
                                             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile?.name || ""}
+                                            value={tempProfile.name || ""}
                                             placeholder="Enter your full name"
                                             onChange={(e) => handleInputChange('name', e.target.value)}
                                         />
@@ -495,7 +499,7 @@ function CandidateProfilePage({ userData }) {
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Professional Title</label>
                                         <input
                                             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile?.position || ""}
+                                            value={tempProfile.position || ""}
                                             placeholder="Enter your professional position"
                                             onChange={(e) => handleInputChange('position', e.target.value)}
                                         />
@@ -506,69 +510,169 @@ function CandidateProfilePage({ userData }) {
                                         <input
                                             type="email"
                                             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile?.email || ""}
+                                            value={tempProfile.email || ""}
                                             placeholder="Enter your email address"
                                             onChange={(e) => handleInputChange('email', e.target.value)}
                                         />
                                     </div>
 
+                                    {canEditProfile && (
+                                        <div className="flex gap-3 mt-2">
+                                            <button
+                                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                                onClick={handleSaveHeader}
+                                            >
+                                                Save Changes
+                                            </button>
+                                            <button
+                                                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                                onClick={handleCancelEdit}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-4 mt-10 sm:mt-0">
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
+                                        {profile.gender && (
+                                            profile.gender === 'male' ? (
+                                                <Image
+                                                    src="/icons/man.png"
+                                                    width={20}
+                                                    height={20}
+                                                    alt="Male"
+                                                    className="text-center"
+                                                />
+                                            ) : profile.gender === 'female' ? (
+                                                <Image
+                                                    src="/icons/woman.png"
+                                                    width={20}
+                                                    height={20}
+                                                    alt="Female"
+                                                    className="text-center"
+                                                />
+                                            ) : null
+                                        )}
+                                    </div>
+
+                                    {profile.position && (
+                                        <div className="flex items-center gap-2">
+                                            <BriefcaseIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-sm sm:text-base text-gray-600">{profile.position}</p>
+                                        </div>
+                                    )}
+
+                                    {profile.email && (
+                                        <div className="flex items-center gap-2">
+                                            <EnvelopeIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-xs sm:text-sm text-gray-500">{profile.email}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Only show edit button if user is applicant and owns this profile */}
+                                    {!editingHeader && canEditProfile && (
+                                        <button
+                                            onClick={() => {
+                                                setEditingHeader(true);
+                                                setEditingPersonalDetails(false);
+                                                setTempProfile(profile);
+                                            }}
+                                            className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                                        >
+                                            <PencilIcon className="w-4 h-4" />
+                                            <span className="text-sm">Edit Basic Info</span>
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right Column - Personal Details Section (excluding gender) */}
+                        <div className="flex-1 pt-4 sm:pt-0 sm:pl-6">
+                            <div className="flex justify-between items-center mb-3">
+                                {!editingPersonalDetails && canEditProfile && (
+                                    <button
+                                        onClick={togglePersonalDetailsEdit}
+                                        className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                                    >
+                                        <PencilIcon className="w-4 h-4" />
+                                        <span className="text-sm">Edit</span>
+                                    </button>
+                                )}
+                            </div>
+
+                            {editingPersonalDetails ? (
+                                <div className="grid grid-cols-1 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Mobile Number</label>
                                         <input
-                                            type="number"
-                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile?.mobile || ""}
-                                            placeholder="Enter your mobile number"
+                                            type="text"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.mobile || ''}
                                             onChange={(e) => handleInputChange('mobile', e.target.value)}
+                                            placeholder="Enter mobile number"
                                         />
                                     </div>
-
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Website</label>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
+                                        <input
+                                            type="date"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.dateOfBirth ? tempProfile.dateOfBirth.split('T')[0] : ''}
+                                            onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Company</label>
                                         <input
                                             type="text"
-                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile?.website || ""}
-                                            placeholder="Enter your website"
-                                            onChange={(e) => handleInputChange('website', e.target.value)}
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.company || ''}
+                                            onChange={(e) => handleInputChange('company', e.target.value)}
+                                            placeholder="Current company"
                                         />
                                     </div>
-
-                                    <div className="flex gap-3 mt-2">
+                                    <div className="flex justify-end gap-3">
                                         <button
-                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                                            onClick={handleSaveHeader}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                            onClick={handleSavePersonalDetails}
                                         >
-                                            Save Changes
+                                            Save
                                         </button>
                                         <button
-                                            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                                            onClick={handleCancelEdit}
+                                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                            onClick={togglePersonalDetailsEdit}
                                         >
                                             Cancel
                                         </button>
                                     </div>
                                 </div>
                             ) : (
-                                <div>
-                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{tempProfile?.name}</h2>
-                                    <p className="text-sm sm:text-base text-gray-600">{tempProfile?.position}</p>
-                                    <p className="text-xs sm:text-sm text-gray-500">{tempProfile?.email}</p>
+                                <div className="space-y-4 text-gray-700">
+                                    {profile.mobile && (
+                                        <div className="flex items-center gap-2">
+                                            <PhoneIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-xs sm:text-sm text-gray-500">{profile.mobile}</p>
+                                        </div>
+                                    )}
+                                    {profile.dateOfBirth && (
+                                        <div className="flex items-center gap-2">
+                                            <CakeIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-xs sm:text-sm text-gray-500">{formatDateTime(profile.dateOfBirth, "DD-MM-YYYY")}</p>
+                                        </div>
+                                    )}
+                                    {profile.company && (
+                                        <div className="flex items-center gap-2">
+                                            <BuildingOfficeIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-xs sm:text-sm text-gray-500">{profile.company}</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
-
-                        {!editingHeader && rootContext?.user?.role !== "recruiter" && (
-                            <button
-                                onClick={() => {
-                                    setEditingHeader(true);
-                                    setTempProfile(userData);
-                                }}
-                                className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0"
-                            >
-                                <PencilIcon className="w-5 h-5" />
-                            </button>
-                        )}
                     </div>
                 </div>
             </div>
