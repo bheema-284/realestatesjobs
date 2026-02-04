@@ -766,8 +766,8 @@ export default function Jobs() {
     const tabName = currentCategory?.title || '';
 
     // Use SWR to fetch jobs data
-    const { data, isLoading, error: swrError } = useSWRFetch(`/api/companies/jobs`);
-    const mutated = Mutated(`/api/companies/jobs`);
+    const { data, isLoading, error: swrError } = useSWRFetch(`/api/companies/jobs?companyId=${companyId}`);
+    const mutated = Mutated(`/api/companies/jobs?companyId=${companyId}`);
 
     // Get jobs from SWR data - handle the correct data structure
     const jobList = data?.jobs || [];

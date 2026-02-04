@@ -555,8 +555,8 @@ function ProfilePage() {
                         </label>
                     </div>
 
-                    <div className="flex-1 flex flex-col gap-4 w-full ml-0 sm:ml-40">
-                        {/* Basic Info Section */}
+                    <div className="flex-1 flex flex-col sm:flex-row gap-6 w-full ml-0 sm:ml-40">
+                        {/* Left Column - Basic Info Section */}
                         <div className="flex-1">
                             {editingHeader ? (
                                 <div className="flex flex-col gap-3 text-gray-700">
@@ -609,12 +609,31 @@ function ProfilePage() {
                                     )}
                                 </div>
                             ) : (
-                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                                    <div>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2">
                                         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
-                                        <p className="text-sm sm:text-base text-gray-600">{profile.position}</p>
-                                        <p className="text-xs sm:text-sm text-gray-500">{profile.email}</p>
+                                        {profile.gender && (
+                                            profile.gender === 'male' ? (
+                                                <UserIcon className="w-5 h-5 text-blue-600" />
+                                            ) : profile.gender === 'female' ? (
+                                                <UserIcon className="w-5 h-5 text-pink-600" />
+                                            ) : null
+                                        )}
                                     </div>
+
+                                    {profile.position && (
+                                        <div className="flex items-center gap-2">
+                                            <BriefcaseIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-sm sm:text-base text-gray-600">{profile.position}</p>
+                                        </div>
+                                    )}
+
+                                    {profile.email && (
+                                        <div className="flex items-center gap-2">
+                                            <EnvelopeIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-xs sm:text-sm text-gray-500">{profile.email}</p>
+                                        </div>
+                                    )}
 
                                     {/* Only show edit button if user is applicant and owns this profile */}
                                     {!editingHeader && canEditProfile && (
@@ -624,7 +643,7 @@ function ProfilePage() {
                                                 setEditingPersonalDetails(false);
                                                 setTempProfile(profile);
                                             }}
-                                            className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0 flex items-center gap-1"
+                                            className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
                                         >
                                             <PencilIcon className="w-4 h-4" />
                                             <span className="text-sm">Edit Basic Info</span>
@@ -634,8 +653,8 @@ function ProfilePage() {
                             )}
                         </div>
 
-                        {/* Personal Details Section */}
-                        <div className="border-t pt-4 mt-4">
+                        {/* Right Column - Personal Details Section (excluding gender) */}
+                        <div className="flex-1 border-t sm:border-t-0 sm:border-l pt-4 sm:pt-0 sm:pl-6">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="text-lg font-semibold text-gray-800">Personal Details</h3>
                                 {!editingPersonalDetails && canEditProfile && (
@@ -650,7 +669,7 @@ function ProfilePage() {
                             </div>
 
                             {editingPersonalDetails ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Mobile Number</label>
                                         <input
@@ -660,19 +679,6 @@ function ProfilePage() {
                                             onChange={(e) => handleInputChange('mobile', e.target.value)}
                                             placeholder="Enter mobile number"
                                         />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Gender</label>
-                                        <select
-                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            value={tempProfile.gender || ''}
-                                            onChange={(e) => handleInputChange('gender', e.target.value)}
-                                        >
-                                            <option value="">Select Gender</option>
-                                            <option value="male">Male</option>
-                                            <option value="female">Female</option>
-                                            <option value="other">Other</option>
-                                        </select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
@@ -693,7 +699,7 @@ function ProfilePage() {
                                             placeholder="Current company"
                                         />
                                     </div>
-                                    <div className="md:col-span-2 flex justify-end gap-3">
+                                    <div className="flex justify-end gap-3">
                                         <button
                                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                                             onClick={handleSavePersonalDetails}
@@ -709,27 +715,34 @@ function ProfilePage() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
-                                    <div className="flex items-center gap-2">
-                                        <PhoneIcon className="w-4 h-4 text-gray-500" />
-                                        <span className="font-medium">Mobile:</span>
-                                        <span>{profile.mobile || 'Not provided'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <UserIcon className="w-4 h-4 text-gray-500" />
-                                        <span className="font-medium">Gender:</span>
-                                        <span>{profile.gender || 'Not provided'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <CakeIcon className="w-4 h-4 text-gray-500" />
-                                        <span className="font-medium">Date of Birth:</span>
-                                        <span>{profile.dateOfBirth ? formatDateTime(profile.dateOfBirth, "DD-MM-YYYY") : 'Not provided'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <BuildingOfficeIcon className="w-4 h-4 text-gray-500" />
-                                        <span className="font-medium">Company:</span>
-                                        <span>{profile.company || 'Not provided'}</span>
-                                    </div>
+                                <div className="space-y-4 text-gray-700">
+                                    {profile.mobile && (
+                                        <div className="flex items-center gap-2">
+                                            <PhoneIcon className="w-4 h-4 text-gray-500" />
+                                            <div>
+                                                <span className="font-medium">Mobile:</span>
+                                                <span className="ml-2">{profile.mobile}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {profile.dateOfBirth && (
+                                        <div className="flex items-center gap-2">
+                                            <CakeIcon className="w-4 h-4 text-gray-500" />
+                                            <div>
+                                                <span className="font-medium">Date of Birth:</span>
+                                                <span className="ml-2">{formatDateTime(profile.dateOfBirth, "DD-MM-YYYY")}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {profile.company && (
+                                        <div className="flex items-center gap-2">
+                                            <BuildingOfficeIcon className="w-4 h-4 text-gray-500" />
+                                            <div>
+                                                <span className="font-medium">Company:</span>
+                                                <span className="ml-2">{profile.company}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
