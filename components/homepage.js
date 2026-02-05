@@ -169,33 +169,49 @@ export default function HomePage() {
 
 
     // Process company data from API
+    const InitialsLogo = ({ initials, size = 80, bgColor = "F0F0F0", textColor = "1e40af", companyName }) => {
+        const logoUrl = `https://placehold.co/${size}x${size}/${bgColor}/${textColor}?text=${initials}&font=montserrat&font-size=24`;
+
+        return (
+            <div className="flex flex-col items-center">
+                <div className={`w-${size / 4} h-${size / 4} rounded-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 mb-2 shadow-sm`}>
+                    <img
+                        src={logoUrl}
+                        alt={companyName}
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+                <span className="text-xs text-gray-600 text-center max-w-[100px] truncate">{companyName}</span>
+            </div>
+        );
+    };
+
+    // Usage in your companies map
     const companies = companyData ? companyData.map((company, index) => {
-        // Function to get initials from company name
         const getCompanyInitials = (companyName) => {
             if (!companyName) return 'CO';
-
-            const words = companyName.split(' ');
-
-            if (words.length === 1) {
-                // For single word names, take first 2-3 characters
-                return companyName.substring(0, 3).toUpperCase();
-            } else {
-                // For multiple words, take first letters of first two words
-                return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
-            }
+            const words = companyName.split(' ').filter(word => word.length > 0);
+            if (words.length === 0) return 'CO';
+            if (words.length === 1) return companyName.substring(0, 2).toUpperCase();
+            return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
         };
 
         const initials = getCompanyInitials(company.name);
 
         return {
-            id: company._id || 2000 + (index + 1),
-            name: company.name || "",
-            logo: (!company.profileImage || company.profileImage === "")
-                ? `https://placehold.co/48x48/F0F0F0/000000?text=${initials}`
-                : company.profileImage
+            id: company._id || `company-${index}`,
+            name: company.name || "Unknown Company",
+            logo: <InitialsLogo
+                initials={initials}
+                companyName={company.name}
+                size={80}
+                bgColor="F0F0F0"
+                textColor="1e40af"
+            />,
+            isInitialsLogo: true,
+            initials: initials
         };
     }) : [];
-
     // Combine recruiters and companies into a single array
     const topRecruiters = [...recruiters, ...companies];
 
