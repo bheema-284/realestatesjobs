@@ -534,7 +534,7 @@ function CandidateProfilePage() {
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
                                         <div className="flex gap-3">
                                             <input
-                                                className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                                 value={tempProfile.name || ""}
                                                 placeholder="Enter your full name"
                                                 onChange={(e) => handleInputChange('name', e.target.value)}
@@ -596,7 +596,7 @@ function CandidateProfilePage() {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Professional Title</label>
                                         <input
-                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                             value={tempProfile.position || ""}
                                             placeholder="Enter your professional position"
                                             onChange={(e) => handleInputChange('position', e.target.value)}
@@ -607,7 +607,7 @@ function CandidateProfilePage() {
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Email Address</label>
                                         <input
                                             type="email"
-                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                             value={tempProfile.email || ""}
                                             placeholder="Enter your email address"
                                             onChange={(e) => handleInputChange('email', e.target.value)}
