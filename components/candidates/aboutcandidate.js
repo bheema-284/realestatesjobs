@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { PencilIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, XMarkIcon, PhoneIcon, EnvelopeIcon, CakeIcon, BuildingOfficeIcon, BriefcaseIcon } from '@heroicons/react/24/solid';
 import { ChevronDownIcon, ArrowPathIcon, ArrowsPointingOutIcon } from '@heroicons/react/20/solid';
 import AboutMe from './aboutme';
 import Applications from './applications';
@@ -11,18 +11,12 @@ import Services from './services';
 import Marketing from './marketing';
 import ButtonTab from '../common/buttontab';
 import RootContext from '../config/rootcontext';
-import { Mutated } from '../config/useswrfetch';
+import { Mutated, useSWRFetch } from '../config/useswrfetch';
 import { useParams } from 'next/navigation';
 import Loading from '../common/loading';
 import CompanyLandingPage from '../company/companyprofile';
-
-const tabs = [
-    { name: 'About Me', component: AboutMe },
-    { name: 'My Applications', component: Applications },
-    { name: 'My Projects', component: Projects },
-    { name: 'My Premium Services', component: Services },
-    { name: 'My Digital Marketing', component: Marketing },
-];
+import { formatDateTime } from '../config/sitesettings';
+import Image from 'next/image';
 
 // Aspect ratio options
 const ASPECT_RATIOS = [
@@ -32,17 +26,19 @@ const ASPECT_RATIOS = [
     { label: "16:9", value: 16 / 9 },
 ];
 
-function CandidateProfilePage({ userData }) {
+function CandidateProfilePage() {
     const params = useParams();
     const { id, category } = params;
     const [activeTab, setActiveTab] = useState(0);
     const [profile, setProfile] = useState({
         name: '', position: '', email: '', mobile: '', website: '', image: '', summary: '', experience: [], education: [],
+        mobile: '', gender: '', dateOfBirth: '', company: ''
     });
     const [tempProfile, setTempProfile] = useState({
         name: '', position: '', email: '', mobile: '', website: '', image: '', summary: '', experience: [], education: [],
+        mobile: '', gender: '', dateOfBirth: '', company: ''
     });
-    const [editingHeader, setEditingHeader] = useState(false);
+    const [editingMode, setEditingMode] = useState(false); // Combined edit mode for both sections
     const [accordionOpen, setAccordionOpen] = useState(null);
     const [previewImage, setPreviewImage] = useState('');
     const [serviceCall, setServiceCall] = useState(false);
@@ -70,8 +66,30 @@ function CandidateProfilePage({ userData }) {
     const fileInputRef = useRef(null);
 
     const { rootContext, setRootContext } = useContext(RootContext);
+
     // Use users API
+    const { data: userData = [], error, isLoading } = useSWRFetch(id ? `/api/users?id=${id}` : null);
     const mutated = Mutated(id ? `/api/users?id=${id}` : null);
+
+    // Determine tabs based on user role
+    const tabs = rootContext.user?.role === "company"
+        ? [
+            { name: "About Applicant", component: AboutMe },
+            { name: 'Applicant Projects', component: Projects }
+        ]
+        : [
+            { name: "About Me", component: AboutMe },
+            { name: 'My Applications', component: Applications },
+            { name: 'My Projects', component: Projects },
+            { name: 'My Premium Services', component: Services },
+            { name: 'My Digital Marketing', component: Marketing }
+        ];
+
+    // Check if user is company or superadmin
+    const isCompany = rootContext?.user?.role === 'company' || rootContext?.user?.role === 'superadmin';
+
+    // For company users, we don't use the tabs, so set ActiveComponent based on role
+    const ActiveComponent = isCompany ? CompanyLandingPage : tabs[activeTab].component;
 
     useEffect(() => {
         if (userData) {
@@ -99,11 +117,6 @@ function CandidateProfilePage({ userData }) {
             }
         };
     }, [previewImage, cropImage]);
-
-    // Check if user is company or superadmin
-    const isCompany = userData?.role === 'company' || userData?.role === 'superadmin';
-    // For company users, we don't use the tabs, so set ActiveComponent based on role
-    const ActiveComponent = isCompany ? CompanyLandingPage : tabs[activeTab].component;
 
     // Show loading while role is being determined
     if (roleLoading) {
@@ -222,7 +235,7 @@ function CandidateProfilePage({ userData }) {
                 }
 
                 const previewUrl = URL.createObjectURL(blob);
-                const file = new File([blob], "tempProfile?.jpg", { type: "image/jpeg" });
+                const file = new File([blob], "profile.jpg", { type: "image/jpeg" });
 
                 setPreviewImage(previewUrl);
                 setTempProfile((prev) => ({ ...prev, imageFile: file, profileImage: previewUrl }));
@@ -340,23 +353,33 @@ function CandidateProfilePage({ userData }) {
         }
     };
 
-    // Save profile with image upload
-    const handleSaveHeader = async () => {
+    // Save all profile data including both sections
+    const handleSaveAll = async () => {
         setServiceCall(true);
         try {
             const formData = new FormData();
             formData.append("id", id);
-            formData.append("name", tempProfile?.name || "");
-            formData.append("email", tempProfile?.email || "");
-            formData.append("position", tempProfile?.position || "");
-            formData.append("role", userData?.role || "applicant");
-            if (tempProfile?.mobile) formData.append("mobile", tempProfile?.mobile);
-            if (tempProfile?.website) formData.append("website", tempProfile?.website);
-            if (tempProfile?.password) formData.append("password", tempProfile?.password);
-            if (tempProfile?.imageFile) formData.append("image", tempProfile?.imageFile);
-            if (tempProfile?.summary) formData.append("summary", tempProfile?.summary);
-            if (tempProfile?.experience) formData.append("experience", JSON.stringify(tempProfile?.experience));
-            if (tempProfile?.education) formData.append("education", JSON.stringify(tempProfile?.education));
+
+            // Basic info section
+            formData.append("name", tempProfile.name || "");
+            formData.append("email", tempProfile.email || "");
+            formData.append("position", tempProfile.position || "");
+            formData.append("role", "applicant");
+
+            // Personal details section (including gender)
+            formData.append("mobile", tempProfile.mobile || "");
+            formData.append("gender", tempProfile.gender || "");
+            if (tempProfile.dateOfBirth) {
+                formData.append("dateOfBirth", tempProfile.dateOfBirth);
+            }
+            formData.append("company", tempProfile.company || "");
+
+            // Other fields
+            if (tempProfile.password) formData.append("password", tempProfile.password);
+            if (tempProfile.imageFile) formData.append("image", tempProfile.imageFile);
+            if (tempProfile.summary) formData.append("summary", tempProfile.summary);
+            if (tempProfile.experience) formData.append("experience", JSON.stringify(tempProfile.experience));
+            if (tempProfile.education) formData.append("education", JSON.stringify(tempProfile.education));
 
             const res = await fetch(`/api/users`, {
                 method: 'PUT',
@@ -368,7 +391,7 @@ function CandidateProfilePage({ userData }) {
 
             if (res.ok) {
                 setProfile(prev => ({ ...prev, ...tempProfile }));
-                setEditingHeader(false);
+                setEditingMode(false);
                 setPreviewImage('');
                 mutated();
 
@@ -411,9 +434,9 @@ function CandidateProfilePage({ userData }) {
     };
 
     const handleCancelEdit = () => {
-        setEditingHeader(false);
+        setEditingMode(false);
         setPreviewImage("");
-        setTempProfile(userData);
+        setTempProfile(profile);
         setCropping(false);
         setCropImage(null);
         setCompletedCrop(null);
@@ -434,35 +457,44 @@ function CandidateProfilePage({ userData }) {
         }));
     };
 
+    const toggleEditMode = () => {
+        if (editingMode) {
+            setEditingMode(false);
+            setTempProfile(profile);
+        } else {
+            setEditingMode(true);
+        }
+    };
+
     return (
         <div className="bg-white min-h-screen mt-20">
             {serviceCall && <Loading />}
 
             {/* Card Content */}
             <div className="max-w-5xl border border-gray-200 rounded-t-xl mx-auto relative shadow-sm">
-                <div className="p-6 flex flex-col sm:flex-row items-center gap-4 relative z-10">
+                <div className="p-6 flex flex-col sm:flex-row items-start gap-4 relative z-10">
                     {/* Profile Image with Enhanced Cropping */}
                     <div className="absolute -top-12 left-6 sm:left-6">
                         <label
                             htmlFor="profileImageInput"
-                            className={`${editingHeader ? "cursor-pointer group" : "cursor-default"} relative block`}
+                            className={`${editingMode ? "cursor-pointer group" : "cursor-default"} relative block`}
                         >
                             <input
                                 id="profileImageInput"
                                 ref={fileInputRef}
                                 type="file"
                                 accept="image/*"
-                                disabled={!editingHeader}
+                                disabled={!editingMode}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                onChange={editingHeader ? handleImageChange : undefined}
+                                onChange={editingMode ? handleImageChange : undefined}
                             />
                             <div className="relative">
                                 <img
-                                    src={tempProfile?.profileImage || "https://placehold.co/80x80/F0F0F0/000000?text=Logo"}
+                                    src={profile.profileImage || "https://placehold.co/80x80/F0F0F0/000000?text=Logo"}
                                     alt="Profile Avatar"
                                     className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border-4 border-white object-cover shadow-lg"
                                 />
-                                {editingHeader && (
+                                {editingMode && (
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl text-white font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                         Change
                                     </div>
@@ -471,15 +503,16 @@ function CandidateProfilePage({ userData }) {
                         </label>
                     </div>
 
-                    <div className="flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 w-full ml-0 sm:ml-40">
+                    <div className="flex-1 flex flex-col sm:flex-row gap-6 w-full ml-0 sm:ml-40">
+                        {/* Left Column - Basic Info Section */}
                         <div className="flex-1">
-                            {editingHeader ? (
+                            {editingMode ? (
                                 <div className="flex flex-col gap-3 text-gray-700">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
                                         <input
                                             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile?.name || ""}
+                                            value={tempProfile.name || ""}
                                             placeholder="Enter your full name"
                                             onChange={(e) => handleInputChange('name', e.target.value)}
                                         />
@@ -489,7 +522,7 @@ function CandidateProfilePage({ userData }) {
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Professional Title</label>
                                         <input
                                             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile?.position || ""}
+                                            value={tempProfile.position || ""}
                                             placeholder="Enter your professional position"
                                             onChange={(e) => handleInputChange('position', e.target.value)}
                                         />
@@ -500,67 +533,150 @@ function CandidateProfilePage({ userData }) {
                                         <input
                                             type="email"
                                             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile?.email || ""}
+                                            value={tempProfile.email || ""}
                                             placeholder="Enter your email address"
                                             onChange={(e) => handleInputChange('email', e.target.value)}
                                         />
                                     </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Mobile Number</label>
-                                        <input
-                                            type="number"
-                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile?.mobile || ""}
-                                            placeholder="Enter your mobile number"
-                                            onChange={(e) => handleInputChange('mobile', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Website</label>
-                                        <input
-                                            type="text"
-                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile?.website || ""}
-                                            placeholder="Enter your website"
-                                            onChange={(e) => handleInputChange('website', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="flex gap-3 mt-2">
-                                        <button
-                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                                            onClick={handleSaveHeader}
-                                        >
-                                            Save Changes
-                                        </button>
-                                        <button
-                                            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                                            onClick={handleCancelEdit}
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
                                 </div>
                             ) : (
-                                <div>
-                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{tempProfile?.name}</h2>
-                                    <p className="text-sm sm:text-base text-gray-600">{tempProfile?.position}</p>
-                                    <p className="text-xs sm:text-sm text-gray-500">{tempProfile?.email}</p>
+                                <div className="space-y-4 mt-10 sm:mt-0">
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
+                                        {profile.gender && (
+                                            profile.gender === 'male' ? (
+                                                <Image
+                                                    src="/icons/man.png"
+                                                    width={20}
+                                                    height={20}
+                                                    alt="Male"
+                                                    className="text-center"
+                                                />
+                                            ) : profile.gender === 'female' ? (
+                                                <Image
+                                                    src="/icons/woman.png"
+                                                    width={20}
+                                                    height={20}
+                                                    alt="Female"
+                                                    className="text-center"
+                                                />
+                                            ) : null
+                                        )}
+                                    </div>
+
+                                    {profile.position && (
+                                        <div className="flex items-center gap-2">
+                                            <BriefcaseIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-sm sm:text-base text-gray-600">{profile.position}</p>
+                                        </div>
+                                    )}
+
+                                    {profile.email && (
+                                        <div className="flex items-center gap-2">
+                                            <EnvelopeIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-xs sm:text-sm text-gray-500">{profile.email}</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
 
-                        {!editingHeader && rootContext?.user?.role !== "recruiter" && (
+                        {/* Right Column - Personal Details Section (including gender) */}
+                        <div className="flex-1 pt-4 sm:pt-0 sm:pl-6">
+                            {editingMode ? (
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Mobile Number</label>
+                                        <input
+                                            type="text"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.mobile || ''}
+                                            onChange={(e) => handleInputChange('mobile', e.target.value)}
+                                            placeholder="Enter mobile number"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Gender</label>
+                                        <select
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.gender || ''}
+                                            onChange={(e) => handleInputChange('gender', e.target.value)}
+                                        >
+                                            <option value="">Select Gender</option>
+                                            <option value="male">Male</option>
+                                            <option value="female">Female</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
+                                        <input
+                                            type="date"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.dateOfBirth ? tempProfile.dateOfBirth.split('T')[0] : ''}
+                                            onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Company</label>
+                                        <input
+                                            type="text"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.company || ''}
+                                            onChange={(e) => handleInputChange('company', e.target.value)}
+                                            placeholder="Current company"
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 text-gray-700">
+                                    {profile.mobile && (
+                                        <div className="flex items-center gap-2">
+                                            <PhoneIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-xs sm:text-sm text-gray-500">{profile.mobile}</p>
+                                        </div>
+                                    )}
+                                    {profile.dateOfBirth && (
+                                        <div className="flex items-center gap-2">
+                                            <CakeIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-xs sm:text-sm text-gray-500">{formatDateTime(profile.dateOfBirth, "DD-MM-YYYY")}</p>
+                                        </div>
+                                    )}
+                                    {profile.company && (
+                                        <div className="flex items-center gap-2">
+                                            <BuildingOfficeIcon className="w-4 h-4 text-gray-500" />
+                                            <p className="text-xs sm:text-sm text-gray-500">{profile.company}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Single Edit/Save/Cancel Button - Positioned at top right */}
+                    <div className="absolute top-4 right-4">
+                        {editingMode ? (
+                            <div className="flex gap-2">
+                                <button
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                                    onClick={handleSaveAll}
+                                >
+                                    Save All
+                                </button>
+                                <button
+                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm"
+                                    onClick={handleCancelEdit}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        ) : (
                             <button
-                                onClick={() => {
-                                    setEditingHeader(true);
-                                    setTempProfile(userData);
-                                }}
-                                className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0"
+                                onClick={toggleEditMode}
+                                className="text-gray-600 hover:text-gray-900 flex items-center gap-1 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg transition-colors"
                             >
-                                <PencilIcon className="w-5 h-5" />
+                                <PencilIcon className="w-4 h-4" />
+                                <span className="text-sm font-medium">Edit Profile</span>
                             </button>
                         )}
                     </div>
@@ -581,7 +697,11 @@ function CandidateProfilePage({ userData }) {
                         <div className="hidden sm:block">
                             <ButtonTab tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                             <div className="py-3">
-                                <ActiveComponent profile={profile} setRootContext={setRootContext} mutated={mutated} />
+                                <ActiveComponent
+                                    profile={profile}
+                                    setRootContext={setRootContext}
+                                    mutated={mutated}
+                                />
                             </div>
                         </div>
 
@@ -603,7 +723,11 @@ function CandidateProfilePage({ userData }) {
                                         </button>
                                         {isOpen && (
                                             <div className="p-2">
-                                                <Component profile={profile} setRootContext={setRootContext} mutated={mutated} />
+                                                <Component
+                                                    profile={profile}
+                                                    setRootContext={setRootContext}
+                                                    mutated={mutated}
+                                                />
                                             </div>
                                         )}
                                     </div>

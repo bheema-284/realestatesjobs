@@ -13,7 +13,7 @@ const dummyLogos = [
     'https://placehold.co/48x48/F0F0F0/000000?text=YouTube',
 ];
 
-export default function AboutMe({ profile, canEdit }) {
+export default function AboutMe({ profile }) {
     // State for Summary section
     const [editingSummary, setEditingSummary] = useState(false);
     const [tempSummary, setTempSummary] = useState('');
@@ -57,7 +57,7 @@ export default function AboutMe({ profile, canEdit }) {
     const [serviceCall, setServiceCall] = useState(false);
 
     // Check if user can edit (passed from parent)
-    const isApplicant = canEdit;
+    const isApplicant = rootContext?.user?.role !== 'company';
 
     // Use users API instead of employees API
     const mutated = Mutated(profile?._id ? `/api/users?id=${profile?._id}` : null);
