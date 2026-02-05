@@ -12,6 +12,7 @@ export default function HomePage() {
     const router = useRouter();
     const { rootContext, setRootContext } = useContext(RootContext);
     const { data: companyData, error, isLoading } = useSWRFetch(`/api/companies`);
+
     const dummyData = [
         { image: "/cover/add1.jpg" },
         { image: "/cover/add2.jpg" },
@@ -167,7 +168,8 @@ export default function HomePage() {
     ];
 
 
-    const companies = companyData && companyData.map((company, index) => {
+    // Process company data from API
+    const companies = companyData ? companyData.map((company, index) => {
         // Function to get initials from company name
         const getCompanyInitials = (companyName) => {
             if (!companyName) return 'CO';
@@ -188,11 +190,15 @@ export default function HomePage() {
         return {
             id: company._id || 2000 + (index + 1),
             name: company.name || "",
-            logo: (!company.profileImage || company.profileImage === "") ? `https://placehold.co/48x48/F0F0F0/000000?text=${initials}` : company.profileImage || `https://placehold.co/48x48/F0F0F0/000000?text=${initials}`
+            logo: (!company.profileImage || company.profileImage === "")
+                ? `https://placehold.co/48x48/F0F0F0/000000?text=${initials}`
+                : company.profileImage
         };
-    }) || [];
+    }) : [];
 
-    const topRecruiters = [...recruiters, companies]
+    // Combine recruiters and companies into a single array
+    const topRecruiters = [...recruiters, ...companies];
+
     // Slug creation function - consistent across components
     const createSlug = (title) => {
         return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -513,9 +519,9 @@ export default function HomePage() {
         // Animation variants
         const directions = [
             { x: -50, y: 0 }, // from left
-            { x: 50, y: 0 },  // from right
+            { x: 50, y: 0 },  // from right
             { x: 0, y: -50 }, // from top
-            { x: 0, y: 50 },  // from bottom
+            { x: 0, y: 50 },  // from bottom
         ];
 
         return (
@@ -582,7 +588,24 @@ export default function HomePage() {
             {/* Our Top Recruiters Section with Auto-Scroll */}
             <div className="py-12">
                 <h2 className="text-4xl font-bold text-center mb-10">Our Top Recruiters</h2>
-                <AutoScrollLogos logos={topRecruiters} onLogoClick={rootContext?.user?.role !== "recruiter" ? handleLogoClick : undefined} />
+                {isLoading ? (
+                    <div className="text-center py-8">
+                        <p>Loading recruiters...</p>
+                    </div>
+                ) : error ? (
+                    <div className="text-center py-8">
+                        <p>Error loading recruiters. Showing static data only.</p>
+                        <AutoScrollLogos
+                            logos={recruiters}
+                            onLogoClick={rootContext?.user?.role !== "recruiter" ? handleLogoClick : undefined}
+                        />
+                    </div>
+                ) : (
+                    <AutoScrollLogos
+                        logos={topRecruiters}
+                        onLogoClick={rootContext?.user?.role !== "recruiter" ? handleLogoClick : undefined}
+                    />
+                )}
             </div>
             {/* All Locations Section */}
             <AllLocations />
