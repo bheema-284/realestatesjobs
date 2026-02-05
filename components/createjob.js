@@ -2091,28 +2091,6 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                             </Dialog.Title>
                                             <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6 fill-gray-900 hover:cursor-pointer hover:font-bold" onClick={closeModal} />
                                         </div>
-
-                                        {mode === 'auto-create' && (
-                                            <div className="mt-2 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                                <div>
-                                                    <p className="text-sm text-blue-700 font-medium">
-                                                        Auto-Create Mode Active
-                                                    </p>
-                                                    <p className="text-xs text-blue-600 mt-1">
-                                                        Fields will be auto-filled based on job title and location
-                                                    </p>
-                                                </div>
-                                                {!hasAutoFilled && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleManualAutoFill}
-                                                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
-                                                    >
-                                                        Auto-fill Now
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
                                     </div>
 
                                     {isLoading ? (
@@ -2124,7 +2102,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                         <div className="mt-2">
                                             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                                                 {/* Job Title (prefilled from props or auto-filled from category) */}
-                                                <div className='bg-blue-50 border border-blue-200 p-3 rounded-lg'>
+                                                <div className='flex gap-5 sm:justify-between bg-blue-50 border border-blue-200 p-2 rounded-lg'>
                                                     <div className="mb-3">
                                                         <label htmlFor="jobTitle" className="block text-sm font-medium text-gray-700 mb-2">
                                                             Job Title *
@@ -2138,12 +2116,18 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                             placeholder="Enter job title"
                                                             required
                                                         />
-                                                        {mode === 'auto-create' && formData.categorySlug && (
-                                                            <p className="text-xs text-blue-600 mt-1">
-                                                                Detected category: {jobCategories.find(cat => cat.slug === formData.categorySlug)?.name || 'Unknown'}
-                                                            </p>
-                                                        )}
                                                     </div>
+                                                    {mode === 'auto-create' && !hasAutoFilled && (
+                                                        <div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleManualAutoFill}
+                                                                className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                                                            >
+                                                                Auto-fill Now
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* Common fields in correct sequence */}
