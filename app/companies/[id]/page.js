@@ -7,5 +7,6 @@ export default function Company() {
   const params = useParams();
   const id = params?.id;
   const { data, error, isLoading } = useSWRFetch(id ? `/api/users?id=${id}` : null);
-  return <CompanyDetails userData={data} isLoading={isLoading} error={error} userId={id} />;
+  const nodata = !data || !data?._id || error || data?.error
+  return <CompanyDetails userData={data} isLoading={isLoading} error={nodata} userId={id} />;
 }
