@@ -187,13 +187,13 @@ export default function HomePage() {
 
         return {
             id: company._id || 2000 + (index + 1),
-            name: company.name,
-            logo: company.profileImage || `https://placehold.co/48x48/F0F0F0/000000?text=${initials}`
+            name: company.name || "",
+            logo: (!company.profileImage || company.profileImage === "") ? `https://placehold.co/48x48/F0F0F0/000000?text=${initials}` : company.profileImage || `https://placehold.co/48x48/F0F0F0/000000?text=${initials}`
         };
     }) || [];
 
     const topRecruiters = [...recruiters, companies]
-
+    console.log("topRecruiters", topRecruiters)
     // Slug creation function - consistent across components
     const createSlug = (title) => {
         return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
