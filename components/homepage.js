@@ -5,12 +5,13 @@ import Slider from "./common/slider";
 import { motion, useAnimation } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { useRouter } from "next/navigation";
-import { topRecruiters } from "./config/data";
 import RootContext from "./config/rootcontext";
+import { useSWRFetch } from "./config/useswrfetch";
 
 export default function HomePage() {
     const router = useRouter();
     const { rootContext, setRootContext } = useContext(RootContext);
+    const { data: companyData = [], error, isLoading } = useSWRFetch(`/api/companies`);
     const dummyData = [
         { image: "/cover/add1.jpg" },
         { image: "/cover/add2.jpg" },
@@ -147,6 +148,51 @@ export default function HomePage() {
         'Jobs in Tirupati',
         'Jobs in Shirdi',
     ];
+
+    const recruiters = [
+        { id: 1001, name: "DLF Ltd.", logo: "/company/dlf.png" },
+        { id: 1002, name: "Honer Properties", logo: "/company/honer.jpg" },
+        { id: 1003, name: "Brigade Group", logo: "/company/brigade.jpeg" },
+        { id: 1004, name: "Cyber City.", logo: "/company/cybercity.jpg" },
+        { id: 1005, name: "Jayabheri Properties", logo: "/company/jayabheri.jpg" },
+        { id: 1006, name: "Muppa Group", logo: "/company/muppa.jpeg" },
+        { id: 1007, name: "Prestige Group", logo: "/company/prestigegroup.png" },
+        { id: 1008, name: "My Home Group.", logo: "/company/myhomegroup.png" },
+        { id: 1009, name: "Radhey Properties", logo: "/company/radhey.jpg" },
+        { id: 1010, name: "Rajpushpa Group", logo: "/company/rajpushpagroup.jpg" },
+        { id: 1011, name: "NCC Ltd.", logo: "/company/ncc.jpg" },
+        { id: 1012, name: "Ramkey Group", logo: "/company/ramkeygroup.jpg" },
+        { id: 1013, name: "Lodha Group", logo: "/company/lodha.jpg" },
+        { id: 1014, name: "Phoenix Mills", logo: "/company/images.jpeg" },
+    ];
+
+
+    const companies = companyData.map((company, index) => {
+        // Function to get initials from company name
+        const getCompanyInitials = (companyName) => {
+            if (!companyName) return 'CO';
+
+            const words = companyName.split(' ');
+
+            if (words.length === 1) {
+                // For single word names, take first 2-3 characters
+                return companyName.substring(0, 3).toUpperCase();
+            } else {
+                // For multiple words, take first letters of first two words
+                return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+            }
+        };
+
+        const initials = getCompanyInitials(company.name);
+
+        return {
+            id: company._id || 2000 + (index + 1),
+            name: company.name,
+            logo: company.profileImage || `https://placehold.co/48x48/F0F0F0/000000?text=${initials}`
+        };
+    }) || [];
+
+    const topRecruiters = [...recruiters, companies]
 
     // Slug creation function - consistent across components
     const createSlug = (title) => {

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import React, { useState, useRef, useEffect } from "react";
 
 const AutoScrollLogos = ({ logos, scrollSpeed = 0.5, onLogoClick }) => {
@@ -94,7 +93,6 @@ const AutoScrollLogos = ({ logos, scrollSpeed = 0.5, onLogoClick }) => {
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            style={{ cursor: isDragging ? "grabbing" : "grab" }}
         >
             {/* Gradient overlays */}
             <div className="pointer-events-none absolute left-0 top-0 h-full w-24 bg-gradient-to-r from-white to-transparent z-10" />
@@ -105,17 +103,17 @@ const AutoScrollLogos = ({ logos, scrollSpeed = 0.5, onLogoClick }) => {
                 {loopedLogos.map((recruiter, index) => (
                     <div
                         key={index}
-                        className="flex-shrink-0 mx-12 flex items-center justify-center p-6 hover:scale-110 transition-transform duration-300 cursor-pointer"
+                        className="flex-shrink-0 mx-12 flex items-center justify-center p-6 hover:scale-110 transition-transform duration-200 cursor-pointer"
                         onClick={() => onLogoClick && onLogoClick(recruiter.id)}
                     >
                         {/* Using regular img tag for full image display */}
                         <img
                             src={recruiter.logo}
                             alt={recruiter.name}
-                            className="max-h-20 w-auto object-contain"
+                            className="min-h-20 w-auto object-contain"
                             style={{
-                                maxWidth: '200px',
-                                maxHeight: '80px',
+                                maxWidth: '250px',
+                                maxHeight: '115px',
                                 height: 'auto',
                                 width: 'auto'
                             }}
