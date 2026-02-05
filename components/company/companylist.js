@@ -22,7 +22,7 @@ const CompanyCard = ({ company }) => {
                 <img
                     src={company.profileImage || company.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
                     alt={company.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-2xl"
                 />
             </div>
 
