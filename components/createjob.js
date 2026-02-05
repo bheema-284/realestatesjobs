@@ -44,6 +44,183 @@ const languageDisplayNames = {
     'dogri': 'डोगरी'
 };
 
+// Location to language mapping
+const locationLanguageMapping = {
+    // Telugu speaking regions
+    'Hyderabad': ['telugu', 'hindi', 'english'],
+    'Tirupati': ['telugu', 'hindi', 'english'],
+
+    // Tamil speaking regions
+    'Chennai': ['tamil', 'hindi', 'english'],
+
+    // Kannada speaking regions
+    'Bengaluru': ['kannada', 'hindi', 'english'],
+
+    // Malayalam speaking regions
+    'Kochi': ['malayalam', 'hindi', 'english'],
+
+    // Marathi speaking regions
+    'Mumbai': ['marathi', 'hindi', 'english'],
+    'Shirdi': ['marathi', 'hindi', 'english'],
+
+    // Hindi speaking regions
+    'Delhi NCR': ['hindi', 'english'],
+    'Jaipur': ['hindi', 'english'],
+    'Ayodhya': ['hindi', 'english'],
+
+    // Gujarati speaking regions
+    'Ahmedabad': ['gujarati', 'hindi', 'english'],
+
+    // Bengali speaking regions
+    'Kolkata': ['bengali', 'hindi', 'english'],
+
+    // Default (if location not found)
+    'default': ['hindi', 'english']
+};
+
+// Job title to category mapping for auto-detection
+const jobTitleCategoryMapping = {
+    // Tele Caller
+    'tele caller': 'tele-caller',
+    'telecaller': 'tele-caller',
+    'call center': 'tele-caller',
+    'tele sales': 'tele-caller',
+    'telemarketing': 'tele-caller',
+    'customer support': 'tele-caller',
+
+    // Real Estate Sales
+    'real estate sales': 'real-estate-sales',
+    'property sales': 'real-estate-sales',
+    'sales executive': 'real-estate-sales',
+    'sales representative': 'real-estate-sales',
+    'sales agent': 'real-estate-sales',
+    'property advisor': 'real-estate-sales',
+    'real estate agent': 'real-estate-sales',
+
+    // Channel Partners
+    'channel partner': 'channel-partners',
+    'broker': 'channel-partners',
+    'real estate broker': 'channel-partners',
+    'property consultant': 'channel-partners',
+    'channel sales': 'channel-partners',
+
+    // Digital Marketing
+    'digital marketing': 'digital-marketing',
+    'social media': 'digital-marketing',
+    'seo': 'digital-marketing',
+    'content marketing': 'digital-marketing',
+    'google ads': 'digital-marketing',
+    'ppc': 'digital-marketing',
+
+    // Web Development
+    'web developer': 'web-development',
+    'frontend developer': 'web-development',
+    'backend developer': 'web-development',
+    'full stack': 'web-development',
+    'software developer': 'web-development',
+    'react developer': 'web-development',
+
+    // CRM Executive
+    'crm': 'crm-executive',
+    'customer relationship': 'crm-executive',
+    'crm executive': 'crm-executive',
+    'crm manager': 'crm-executive',
+
+    // Accounts & Auditing
+    'accountant': 'accounts-and-auditing',
+    'accounts': 'accounts-and-auditing',
+    'audit': 'accounts-and-auditing',
+    'finance': 'accounts-and-auditing',
+    'ca': 'accounts-and-auditing',
+    'tally': 'accounts-and-auditing',
+
+    // Architects
+    'architect': 'architects',
+    'architecture': 'architects',
+    'interior designer': 'architects',
+    'autocad': 'architects',
+
+    // Legal
+    'legal': 'legal',
+    'lawyer': 'legal',
+    'advocate': 'legal',
+    'legal advisor': 'legal',
+
+    // HR & Operations
+    'hr': 'hr-and-operations',
+    'human resources': 'hr-and-operations',
+    'recruiter': 'hr-and-operations',
+    'operations': 'hr-and-operoperations',
+    'hiring': 'hr-and-operations'
+};
+
+// Job title to default salary mapping
+const jobTitleSalaryMapping = {
+    'tele-caller': '₹ 15,000 - ₹ 25,000/month',
+    'real-estate-sales': '₹ 20,000 - ₹ 40,000/month + Commission',
+    'channel-partners': 'Commission Based (2-5%)',
+    'digital-marketing': '₹ 25,000 - ₹ 50,000/month',
+    'web-development': '₹ 40,000 - ₹ 80,000/month',
+    'crm-executive': '₹ 20,000 - ₹ 35,000/month',
+    'accounts-and-auditing': '₹ 30,000 - ₹ 60,000/month',
+    'architects': '₹ 35,000 - ₹ 70,000/month',
+    'legal': '₹ 40,000 - ₹ 80,000/month',
+    'hr-and-operations': '₹ 25,000 - ₹ 50,000/month',
+};
+
+// Job title to experience mapping
+const jobTitleExperienceMapping = {
+    'tele-caller': 'Beginner (0-1 Year)',
+    'real-estate-sales': '1-3 Years',
+    'channel-partners': '3-5 Years',
+    'digital-marketing': '1-3 Years',
+    'web-development': '2-5 Years',
+    'crm-executive': '1-3 Years',
+    'accounts-and-auditing': '2-5 Years',
+    'architects': '3-7 Years',
+    'legal': '3-7 Years',
+    'hr-and-operations': '2-5 Years',
+};
+
+// Job title to qualification mapping
+const jobTitleQualificationMapping = {
+    'tele-caller': ['Graduation', '12th / Intermediate'],
+    'real-estate-sales': ['Graduation'],
+    'channel-partners': ['Graduation', 'Post Graduation'],
+    'digital-marketing': ['Graduation', 'Post Graduation'],
+    'web-development': ['Graduation', 'Diploma'],
+    'crm-executive': ['Graduation'],
+    'accounts-and-auditing': ['Graduation', 'Post Graduation', 'CA/CMA'],
+    'architects': ['Graduation', 'Post Graduation'],
+    'legal': ['LL.B', 'LL.M'],
+    'hr-and-operations': ['Graduation', 'Post Graduation', 'MBA (HR)'],
+};
+
+// Default job descriptions based on category
+const defaultJobDescriptions = {
+    'tele-caller': '<h3>Job Responsibilities:</h3><ul><li>Make outbound calls to potential customers</li><li>Generate leads and schedule appointments</li><li>Explain product features and benefits</li><li>Maintain customer database</li><li>Achieve daily call targets</li><li>Follow up with leads</li></ul><h3>Requirements:</h3><ul><li>Excellent communication skills</li><li>Basic computer knowledge</li><li>Ability to work in targets</li><li>Pleasant personality</li><li>Local language proficiency</li></ul>',
+
+    'real-estate-sales': '<h3>Job Responsibilities:</h3><ul><li>Identify and approach potential clients</li><li>Show properties to interested buyers</li><li>Negotiate deals and close sales</li><li>Maintain client relationships</li><li>Stay updated with market trends</li><li>Achieve sales targets</li></ul><h3>Requirements:</h3><ul><li>Proven sales experience</li><li>Knowledge of real estate market</li><li>Excellent negotiation skills</li><li>Valid driving license</li><li>Local market knowledge</li></ul>',
+
+    'channel-partners': '<h3>Job Responsibilities:</h3><ul><li>Develop channel partner network</li><li>Train and motivate partners</li><li>Monitor partner performance</li><li>Resolve partner queries</li><li>Implement channel strategies</li><li>Achieve channel sales targets</li></ul><h3>Requirements:</h3><ul><li>Experience in channel management</li><li>Strong networking skills</li><li>Knowledge of real estate industry</li><li>Excellent communication skills</li><li>Leadership qualities</li></ul>',
+
+    'digital-marketing': '<h3>Job Responsibilities:</h3><ul><li>Develop digital marketing strategies</li><li>Manage social media accounts</li><li>Create and optimize content</li><li>Run Google/Facebook ad campaigns</li><li>Analyze campaign performance</li><li>SEO/SEM activities</li></ul><h3>Requirements:</h3><ul><li>Experience in digital marketing</li><li>Knowledge of SEO/SEM</li><li>Social media expertise</li><li>Analytical skills</li><li>Content creation skills</li></ul>',
+
+    'web-development': '<h3>Job Responsibilities:</h3><ul><li>Develop and maintain web applications</li><li>Write clean, efficient code</li><li>Collaborate with design team</li><li>Troubleshoot and debug</li><li>Optimize application performance</li><li>Implement security measures</li></ul><h3>Requirements:</h3><ul><li>Proficiency in relevant technologies</li><li>Problem-solving skills</li><li>Knowledge of web standards</li><li>Experience with databases</li><li>Version control (Git)</li></ul>',
+
+    'crm-executive': '<h3>Job Responsibilities:</h3><ul><li>Manage customer database</li><li>Handle customer queries</li><li>Implement CRM strategies</li><li>Generate customer reports</li><li>Improve customer satisfaction</li><li>Coordinate with sales team</li></ul><h3>Requirements:</h3><ul><li>Experience with CRM software</li><li>Customer service skills</li><li>Data management skills</li><li>Communication skills</li><li>Problem-solving ability</li></ul>',
+
+    'accounts-and-auditing': '<h3>Job Responsibilities:</h3><ul><li>Maintain financial records</li><li>Prepare financial statements</li><li>Handle tax compliance</li><li>Conduct internal audits</li><li>Manage accounts payable/receivable</li><li>Budget preparation</li></ul><h3>Requirements:</h3><ul><li>Accounting qualifications</li><li>Experience in accounting software</li><li>Knowledge of tax laws</li><li>Attention to detail</li><li>Analytical skills</li></ul>',
+
+    'architects': '<h3>Job Responsibilities:</h3><ul><li>Design building plans</li><li>Prepare architectural drawings</li><li>Coordinate with clients</li><li>Supervise construction</li><li>Ensure compliance with regulations</li><li>Material selection</li></ul><h3>Requirements:</h3><ul><li>Architecture degree</li><li>Proficiency in design software</li><li>Creative design skills</li><li>Knowledge of building codes</li><li>Project management skills</li></ul>',
+
+    'legal': '<h3>Job Responsibilities:</h3><ul><li>Draft legal documents</li><li>Provide legal advice</li><li>Handle property documentation</li><li>Conduct legal research</li><li>Represent in legal matters</li><li>Ensure regulatory compliance</li></ul><h3>Requirements:</h3><ul><li>Law degree</li><li>Bar council enrollment</li><li>Experience in real estate law</li><li>Research skills</li><li>Communication skills</li></ul>',
+
+    'hr-and-operations': '<h3>Job Responsibilities:</h3><ul><li>Recruitment and staffing</li><li>Employee relations</li><li>Performance management</li><li>Training and development</li><li>HR operations</li><li>Policy implementation</li></ul><h3>Requirements:</h3><ul><li>HR degree/diploma</li><li>Recruitment experience</li><li>Knowledge of labor laws</li><li>Communication skills</li><li>Organizational skills</li></ul>',
+
+    'default': '<h3>Job Responsibilities:</h3><ul><li>Please specify job responsibilities here</li><li>Add specific duties and tasks</li><li>Include performance expectations</li></ul><h3>Requirements:</h3><ul><li>Educational qualifications</li><li>Required experience</li><li>Technical skills</li><li>Soft skills</li><li>Additional requirements</li></ul>'
+};
+
 // Educational Qualification options
 const educationOptions = [
     'PhD',
@@ -523,7 +700,47 @@ const propertyTypeOptions = [
     { id: 'affordable', name: 'Affordable Housing' },
 ];
 
-// Job Preview Component
+// Helper function to detect category from job title
+const detectCategoryFromTitle = (title) => {
+    if (!title) return '';
+
+    const lowerTitle = title.toLowerCase();
+    for (const [keyword, category] of Object.entries(jobTitleCategoryMapping)) {
+        if (lowerTitle.includes(keyword)) {
+            return category;
+        }
+    }
+    return '';
+};
+
+// Helper function to get languages based on location
+const getLanguagesForLocation = (location) => {
+    if (!location) return locationLanguageMapping.default;
+    return locationLanguageMapping[location] || locationLanguageMapping.default;
+};
+
+// Auto-fill helper function
+const autoFillFormData = (title, location, mode) => {
+    if (mode !== 'auto-create' || !title) return null;
+
+    const category = detectCategoryFromTitle(title);
+    const languages = location ? getLanguagesForLocation(location) : locationLanguageMapping.default;
+
+    return {
+        categorySlug: category,
+        languageRequirements: languages,
+        salary: category ? jobTitleSalaryMapping[category] || '' : '',
+        experience: category ? jobTitleExperienceMapping[category] || '' : '',
+        qualification: category ? jobTitleQualificationMapping[category] || [] : [],
+        skills: category ? [...(categorySkills[category] || []).slice(0, 5)] : [...defaultCommonSkills.slice(0, 5)],
+        jobDescription: category ? defaultJobDescriptions[category] : defaultJobDescriptions.default,
+        employmentTypes: ['full-time'],
+        jobRoleType: 'Office Based',
+        propertyTypes: ['residential', 'commercial']
+    };
+};
+
+// Job Preview Component (keep as is, no changes needed)
 const JobPreview = ({ formData, jobCategories }) => {
     const getCategoryName = (slug) => {
         const category = jobCategories?.find(cat => cat.slug === slug);
@@ -533,9 +750,7 @@ const JobPreview = ({ formData, jobCategories }) => {
     const formatHTML = (html) => {
         if (!html || typeof html !== 'string') return '';
 
-        // Sanitize HTML to prevent React errors
         try {
-            // Remove any script tags and other potentially dangerous content
             const cleanHtml = html
                 .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
                 .replace(/on\w+="[^"]*"/g, '')
@@ -794,6 +1009,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
     const [showCustomQualInput, setShowCustomQualInput] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [previewError, setPreviewError] = useState(null);
+    const [hasAutoFilled, setHasAutoFilled] = useState(false);
 
     console.log("mode", mode);
     console.log("editData received:", editData);
@@ -901,6 +1117,70 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
         { slug: 'architects', name: 'Architects' },
         { slug: 'legal', name: 'Legal' },
     ];
+
+    // Function to auto-fill form data
+    const performAutoFill = () => {
+        if (mode === 'auto-create' && title && !hasAutoFilled) {
+            const autoFilledData = autoFillFormData(title, formData.location, mode);
+
+            if (autoFilledData) {
+                setFormData(prev => ({
+                    ...prev,
+                    ...autoFilledData
+                }));
+
+                // Update selected category
+                if (autoFilledData.categorySlug) {
+                    setSelectedCategory(autoFilledData.categorySlug);
+
+                    // Also update job title from category if title prop is empty
+                    if (!title && autoFilledData.categorySlug) {
+                        const selectedCategoryObj = jobCategories.find(cat => cat.slug === autoFilledData.categorySlug);
+                        if (selectedCategoryObj) {
+                            setFormData(prev => ({ ...prev, jobTitle: selectedCategoryObj.name }));
+                        }
+                    }
+                }
+
+                setHasAutoFilled(true);
+
+                // Show success message
+                setRootContext(prev => ({
+                    ...prev,
+                    toast: {
+                        show: true,
+                        dismiss: true,
+                        type: "success",
+                        position: "Auto-filled",
+                        message: "Form auto-filled based on job title and location"
+                    }
+                }));
+            }
+        }
+    };
+
+    // Effect to auto-fill when modal opens in auto-create mode
+    useEffect(() => {
+        if (isOpen && mode === 'auto-create' && title) {
+            // Small delay to ensure modal is fully loaded
+            const timer = setTimeout(() => {
+                performAutoFill();
+            }, 100);
+
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen, mode, title]);
+
+    // Effect to auto-fill when location changes in auto-create mode
+    useEffect(() => {
+        if (mode === 'auto-create' && formData.location && title && hasAutoFilled) {
+            const languages = getLanguagesForLocation(formData.location);
+            setFormData(prev => ({
+                ...prev,
+                languageRequirements: languages
+            }));
+        }
+    }, [formData.location, mode, title]);
 
     // Get current category skills
     const getCurrentCategorySkills = () => {
@@ -1048,11 +1328,12 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
         setIsSubmitting(false);
         setIsLoading(false);
         setPreviewError(null);
+        setHasAutoFilled(false);
     }
 
     // Effect to load edit data when modal opens
     useEffect(() => {
-        if (isOpen && editData && mode !== 'create') {
+        if (isOpen && editData && mode !== 'create' && mode !== 'auto-create') {
             setIsLoading(true);
             setPreviewError(null);
 
@@ -1093,7 +1374,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
             } finally {
                 setIsLoading(false);
             }
-        } else if (isOpen && mode === 'create') {
+        } else if (isOpen && (mode === 'create' || mode === 'auto-create')) {
             // Set default location to company location for new jobs
             if (userProfile?.location) {
                 setFormData(prev => ({ ...prev, location: userProfile.location }));
@@ -1123,6 +1404,12 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                 // Only auto-update if title prop is not provided
                 setFormData(prev => ({ ...prev, jobTitle: selectedCategoryObj.name }));
             }
+        }
+
+        // If location changes in auto-create mode, update languages
+        if (field === 'location' && mode === 'auto-create' && hasAutoFilled) {
+            const languages = getLanguagesForLocation(value);
+            setFormData(prev => ({ ...prev, languageRequirements: languages }));
         }
     };
 
@@ -1344,6 +1631,11 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                     </div>
                                 ))}
                             </div>
+                            {mode === 'auto-create' && (
+                                <p className="text-xs text-blue-600 mt-1">
+                                    Languages auto-selected based on location: {formData.location || 'Select location'}
+                                </p>
+                            )}
                         </div>
                     );
                 }
@@ -1472,6 +1764,11 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                 {fieldConfig.label}
                             </label>
                             <p className="text-xs text-gray-500 mt-1">Provide detailed job responsibilities and requirements</p>
+                            {mode === 'auto-create' && formData.categorySlug && (
+                                <p className="text-xs text-blue-600 mt-1">
+                                    Pre-filled with default description for {jobCategories.find(cat => cat.slug === formData.categorySlug)?.name || 'this role'}
+                                </p>
+                            )}
                         </div>
                         <div className="relative">
                             <DynamicTiptapEditor
@@ -1555,10 +1852,10 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
             };
 
             let apiUrl = '/api/companies/jobs';
-            let method = mode === "create" ? 'POST' : "PUT";
-            let successMessage = "Job posted successfully";
+            let method = (mode === "create" || mode === "auto-create") ? 'POST' : "PUT";
+            let successMessage = mode === "auto-create" ? "Job auto-created successfully" : "Job posted successfully";
 
-            if (mode !== "create" && editData?.id) {
+            if (mode !== "create" && mode !== "auto-create" && editData?.id) {
                 jobData.id = editData.id;
                 successMessage = "Job updated successfully";
             }
@@ -1628,6 +1925,11 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                 }
             }));
         }
+    };
+
+    // Manual auto-fill button handler
+    const handleManualAutoFill = () => {
+        performAutoFill();
     };
 
     // If user doesn't have permission, show access denied message
@@ -1784,10 +2086,33 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                     <div className='sticky top-0 bg-white py-3 z-10'>
                                         <div className="flex items-center justify-between">
                                             <Dialog.Title as="h3" className="text-lg sm:text-xl font-semibold leading-6 text-gray-900">
-                                                {mode !== 'create' ? 'Edit Job Posting' : 'Create Real Estate Job Posting'}
+                                                {mode === 'auto-create' ? 'Auto-Create Job Posting' :
+                                                    mode !== 'create' ? 'Edit Job Posting' : 'Create Real Estate Job Posting'}
                                             </Dialog.Title>
                                             <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6 fill-gray-900 hover:cursor-pointer hover:font-bold" onClick={closeModal} />
                                         </div>
+
+                                        {mode === 'auto-create' && (
+                                            <div className="mt-2 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                <div>
+                                                    <p className="text-sm text-blue-700 font-medium">
+                                                        Auto-Create Mode Active
+                                                    </p>
+                                                    <p className="text-xs text-blue-600 mt-1">
+                                                        Fields will be auto-filled based on job title and location
+                                                    </p>
+                                                </div>
+                                                {!hasAutoFilled && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleManualAutoFill}
+                                                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                                                    >
+                                                        Auto-fill Now
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {isLoading ? (
@@ -1812,8 +2137,13 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                             className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                             placeholder="Enter job title"
                                                             required
-                                                        />                                                        
-                                                    </div>                                                  
+                                                        />
+                                                        {mode === 'auto-create' && formData.categorySlug && (
+                                                            <p className="text-xs text-blue-600 mt-1">
+                                                                Detected category: {jobCategories.find(cat => cat.slug === formData.categorySlug)?.name || 'Unknown'}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
 
                                                 {/* Common fields in correct sequence */}
@@ -1943,76 +2273,18 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
 
                                                 {/* Language Requirements */}
                                                 <div className="md:col-span-2">
-                                                    <div className="flex flex-col gap-3">
-                                                        <label className="text-gray-700 font-medium text-sm sm:text-base">
-                                                            Language Requirements
-                                                        </label>
-                                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                                                            {languageOptions.map((option) => (
-                                                                <div
-                                                                    key={option.id}
-                                                                    className={`relative flex cursor-pointer rounded-lg px-3 py-2 shadow-sm border text-sm
-                                                                    ${formData.languageRequirements?.includes(option.id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
-                                                                    hover:border-blue-500 hover:shadow-md transition-all duration-200`}
-                                                                    onClick={() => handleCheckboxGroupChange('languageRequirements', option.id)}
-                                                                >
-                                                                    <div className="flex w-full items-center justify-between">
-                                                                        <div className="flex items-center">
-                                                                            <div>
-                                                                                <p className="font-medium">
-                                                                                    {option.name}
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                        {formData.languageRequirements?.includes(option.id) && (
-                                                                            <div className="flex-shrink-0 text-white">
-                                                                                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                                                                                    <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                                                                                </svg>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
+                                                    {renderField('languageRequirements', {
+                                                        type: 'checkbox-group',
+                                                        label: 'Language Requirements *'
+                                                    })}
                                                 </div>
 
                                                 {/* Property Types */}
                                                 <div className="md:col-span-2">
-                                                    <div className="flex flex-col gap-3">
-                                                        <label className="text-gray-700 font-medium text-sm sm:text-base">
-                                                            Property Types
-                                                        </label>
-                                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                                            {propertyTypeOptions.map((option) => (
-                                                                <div
-                                                                    key={option.id}
-                                                                    className={`relative flex cursor-pointer rounded-lg px-3 py-2 shadow-sm border text-sm
-                                                                    ${formData.propertyTypes?.includes(option.id) ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-900'}
-                                                                    hover:border-blue-500 hover:shadow-md transition-all duration-200`}
-                                                                    onClick={() => handleCheckboxGroupChange('propertyTypes', option.id)}
-                                                                >
-                                                                    <div className="flex w-full items-center justify-between">
-                                                                        <div className="flex items-center">
-                                                                            <div>
-                                                                                <p className="font-medium">
-                                                                                    {option.name}
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                        {formData.propertyTypes?.includes(option.id) && (
-                                                                            <div className="flex-shrink-0 text-white">
-                                                                                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                                                                                    <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                                                                                </svg>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
+                                                    {renderField('propertyTypes', {
+                                                        type: 'checkbox-group',
+                                                        label: 'Property Types'
+                                                    })}
                                                 </div>
 
                                                 {/* Job Description */}
@@ -2023,6 +2295,11 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                                 Job Description *
                                                             </label>
                                                             <p className="text-xs text-gray-500 mt-1">Provide detailed job responsibilities and requirements</p>
+                                                            {mode === 'auto-create' && formData.categorySlug && (
+                                                                <p className="text-xs text-blue-600 mt-1">
+                                                                    Pre-filled with default description for {jobCategories.find(cat => cat.slug === formData.categorySlug)?.name || 'this role'}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                         <div className="relative">
                                                             <DynamicTiptapEditor
@@ -2066,10 +2343,12 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                             {isSubmitting ? (
                                                                 <>
                                                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                                                                    {mode !== "create" ? 'Updating...' : 'Posting...'}
+                                                                    {mode === "auto-create" ? 'Auto-Creating...' :
+                                                                        mode !== "create" ? 'Updating...' : 'Posting...'}
                                                                 </>
                                                             ) : (
-                                                                mode !== "create" ? 'Update Job' : 'Post Job'
+                                                                mode === "auto-create" ? 'Auto-Create Job' :
+                                                                    mode !== "create" ? 'Update Job' : 'Post Job'
                                                             )}
                                                         </button>
                                                     </div>

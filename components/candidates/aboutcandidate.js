@@ -86,8 +86,6 @@ function CandidateProfilePage() {
             { name: 'My Digital Marketing', component: Marketing }
         ];
 
-    // Check if current user can edit this profile
-    const canEditProfile = rootContext?.user?.role === "applicant" && rootContext?.user?._id === id;
 
     // Check if user is company or superadmin
     const isCompany = rootContext?.user?.role === 'company' || rootContext?.user?.role === 'superadmin';
@@ -135,8 +133,6 @@ function CandidateProfilePage() {
 
     /** ─── Enhanced Image Upload + Crop ────────────────────── **/
     const handleImageChange = (e) => {
-        // Only allow image change if user can edit
-        if (!canEditProfile) return;
 
         const file = e.target.files?.[0];
         if (!file) return;
@@ -548,16 +544,16 @@ function CandidateProfilePage() {
                     <div className="absolute -top-12 left-6 sm:left-6">
                         <label
                             htmlFor="profileImageInput"
-                            className={`${(editingHeader || editingPersonalDetails) && canEditProfile ? "cursor-pointer group" : "cursor-default"} relative block`}
+                            className={`${(editingHeader || editingPersonalDetails) ? "cursor-pointer group" : "cursor-default"} relative block`}
                         >
                             <input
                                 id="profileImageInput"
                                 ref={fileInputRef}
                                 type="file"
                                 accept="image/*"
-                                disabled={!(editingHeader || editingPersonalDetails) || !canEditProfile}
+                                disabled={!(editingHeader || editingPersonalDetails)}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                onChange={(editingHeader || editingPersonalDetails) && canEditProfile ? handleImageChange : undefined}
+                                onChange={(editingHeader || editingPersonalDetails) ? handleImageChange : undefined}
                             />
                             <div className="relative">
                                 <img
@@ -565,7 +561,7 @@ function CandidateProfilePage() {
                                     alt="Profile Avatar"
                                     className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border-4 border-white object-cover shadow-lg"
                                 />
-                                {(editingHeader || editingPersonalDetails) && canEditProfile && (
+                                {(editingHeader || editingPersonalDetails) && (
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl text-white font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                         Change
                                     </div>
@@ -609,23 +605,20 @@ function CandidateProfilePage() {
                                             onChange={(e) => handleInputChange('email', e.target.value)}
                                         />
                                     </div>
-
-                                    {canEditProfile && (
-                                        <div className="flex gap-3 mt-2">
-                                            <button
-                                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                                                onClick={handleSaveHeader}
-                                            >
-                                                Save Changes
-                                            </button>
-                                            <button
-                                                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                                                onClick={handleCancelEdit}
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    )}
+                                    <div className="flex gap-3 mt-2">
+                                        <button
+                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                            onClick={handleSaveHeader}
+                                        >
+                                            Save Changes
+                                        </button>
+                                        <button
+                                            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                            onClick={handleCancelEdit}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="space-y-4 mt-10 sm:mt-0">
@@ -667,7 +660,7 @@ function CandidateProfilePage() {
                                     )}
 
                                     {/* Only show edit button if user is applicant and owns this profile */}
-                                    {!editingHeader && canEditProfile && (
+                                    {!editingHeader && (
                                         <button
                                             onClick={() => {
                                                 setEditingHeader(true);
@@ -687,7 +680,7 @@ function CandidateProfilePage() {
                         {/* Right Column - Personal Details Section (excluding gender) */}
                         <div className="flex-1 pt-4 sm:pt-0 sm:pl-6">
                             <div className="flex justify-between items-center mb-3">
-                                {!editingPersonalDetails && canEditProfile && (
+                                {!editingPersonalDetails && (
                                     <button
                                         onClick={togglePersonalDetailsEdit}
                                         className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
@@ -789,7 +782,6 @@ function CandidateProfilePage() {
                                     profile={profile}
                                     setRootContext={setRootContext}
                                     mutated={mutated}
-                                    canEdit={canEditProfile} // Pass edit permission to components
                                 />
                             </div>
                         </div>
@@ -816,7 +808,6 @@ function CandidateProfilePage() {
                                                     profile={profile}
                                                     setRootContext={setRootContext}
                                                     mutated={mutated}
-                                                    canEdit={canEditProfile} // Pass edit permission to components
                                                 />
                                             </div>
                                         )}

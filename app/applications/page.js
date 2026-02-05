@@ -538,7 +538,7 @@ const EnhancedJobList = ({
                 <div className="flex gap-3">
                     {/* Auto Create Button */}
                     <button
-                        onClick={() => { handleAutoCreate(tabName); setMode("create"); }}
+                        onClick={() => { handleAutoCreate(tabName); setMode("auto-create"); }}
                         className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 shadow-md"
                     >
                         <SparklesIcon className="w-5 h-5" />
