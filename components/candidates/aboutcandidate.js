@@ -2,8 +2,22 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { PencilIcon, XMarkIcon, PhoneIcon, EnvelopeIcon, CakeIcon, BuildingOfficeIcon, BriefcaseIcon } from '@heroicons/react/24/solid';
-import { ChevronDownIcon, ArrowPathIcon, ArrowsPointingOutIcon } from '@heroicons/react/20/solid';
+import { 
+    PencilIcon, 
+    XMarkIcon, 
+    PhoneIcon, 
+    EnvelopeIcon, 
+    CakeIcon, 
+    BuildingOfficeIcon, 
+    BriefcaseIcon,
+    UserIcon,
+    UserCircleIcon
+} from '@heroicons/react/24/solid';
+import { 
+    ChevronDownIcon, 
+    ArrowPathIcon, 
+    ArrowsPointingOutIcon 
+} from '@heroicons/react/20/solid';
 import AboutMe from './aboutme';
 import Applications from './applications';
 import Projects from './projects';
@@ -353,6 +367,14 @@ function CandidateProfilePage() {
         }
     };
 
+    // Handle gender selection
+    const handleGenderSelect = (gender) => {
+        setTempProfile(prev => ({
+            ...prev,
+            gender: gender
+        }));
+    };
+
     // Save all profile data including both sections
     const handleSaveAll = async () => {
         setServiceCall(true);
@@ -366,7 +388,7 @@ function CandidateProfilePage() {
             formData.append("position", tempProfile.position || "");
             formData.append("role", "applicant");
 
-            // Personal details section (including gender)
+            // Personal details section
             formData.append("mobile", tempProfile.mobile || "");
             formData.append("gender", tempProfile.gender || "");
             if (tempProfile.dateOfBirth) {
@@ -510,12 +532,47 @@ function CandidateProfilePage() {
                                 <div className="flex flex-col gap-3 text-gray-700 mt-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
-                                        <input
-                                            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            value={tempProfile.name || ""}
-                                            placeholder="Enter your full name"
-                                            onChange={(e) => handleInputChange('name', e.target.value)}
-                                        />
+                                        <div className="flex gap-3">
+                                            <input
+                                                className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                value={tempProfile.name || ""}
+                                                placeholder="Enter your full name"
+                                                onChange={(e) => handleInputChange('name', e.target.value)}
+                                            />
+                                            {/* Gender Selection Toggle */}
+                                            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleGenderSelect('male')}
+                                                    className={`px-3 py-2 rounded-md transition-all ${tempProfile.gender === 'male' 
+                                                        ? 'bg-blue-500 text-white shadow-sm' 
+                                                        : 'text-gray-600 hover:bg-gray-200'}`}
+                                                    title="Male"
+                                                >
+                                                    <UserIcon className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleGenderSelect('female')}
+                                                    className={`px-3 py-2 rounded-md transition-all ${tempProfile.gender === 'female' 
+                                                        ? 'bg-pink-500 text-white shadow-sm' 
+                                                        : 'text-gray-600 hover:bg-gray-200'}`}
+                                                    title="Female"
+                                                >
+                                                    <UserCircleIcon className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleGenderSelect('other')}
+                                                    className={`px-3 py-2 rounded-md transition-all ${tempProfile.gender === 'other' 
+                                                        ? 'bg-purple-500 text-white shadow-sm' 
+                                                        : 'text-gray-600 hover:bg-gray-200'}`}
+                                                    title="Other"
+                                                >
+                                                    <span className="text-sm font-medium">Other</span>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div>
@@ -541,25 +598,21 @@ function CandidateProfilePage() {
                                 </div>
                             ) : (
                                 <div className="space-y-4 mt-10 sm:-mt-0">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-3">
                                         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
                                         {profile.gender && (
                                             profile.gender === 'male' ? (
-                                                <Image
-                                                    src="/icons/man.png"
-                                                    width={20}
-                                                    height={20}
-                                                    alt="Male"
-                                                    className="text-center"
-                                                />
+                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600">
+                                                    <UserIcon className="w-5 h-5" />
+                                                </div>
                                             ) : profile.gender === 'female' ? (
-                                                <Image
-                                                    src="/icons/woman.png"
-                                                    width={20}
-                                                    height={20}
-                                                    alt="Female"
-                                                    className="text-center"
-                                                />
+                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-100 text-pink-600">
+                                                    <UserCircleIcon className="w-5 h-5" />
+                                                </div>
+                                            ) : profile.gender === 'other' ? (
+                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600">
+                                                    <span className="text-sm font-medium">Other</span>
+                                                </div>
                                             ) : null
                                         )}
                                     </div>
@@ -581,7 +634,7 @@ function CandidateProfilePage() {
                             )}
                         </div>
 
-                        {/* Right Column - Personal Details Section (including gender) */}
+                        {/* Right Column - Personal Details Section (gender removed from here) */}
                         <div className="flex-1 pt-4 sm:pt-0 sm:pl-6">
                             {editingMode ? (
                                 <div className="grid grid-cols-1 gap-4 mt-3">
@@ -594,19 +647,6 @@ function CandidateProfilePage() {
                                             onChange={(e) => handleInputChange('mobile', e.target.value)}
                                             placeholder="Enter mobile number"
                                         />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-1">Gender</label>
-                                        <select
-                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            value={tempProfile.gender || ''}
-                                            onChange={(e) => handleInputChange('gender', e.target.value)}
-                                        >
-                                            <option value="">Select Gender</option>
-                                            <option value="male">Male</option>
-                                            <option value="female">Female</option>
-                                            <option value="other">Other</option>
-                                        </select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
