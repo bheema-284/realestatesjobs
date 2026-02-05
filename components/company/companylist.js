@@ -18,11 +18,11 @@ const CompanyCard = ({ company }) => {
     return (
         <div className="relative w-full sm:w-[80%] mx-auto bg-white border border-gray-400 shadow-lg rounded-2xl p-4 sm:p-6">
             {/* Logo */}
-            <div className="absolute w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 -top-2 -left-2 sm:-top-3 sm:-left-3 border border-gray-400 shadow-lg bg-white rounded-lg sm:rounded-xl flex items-center justify-center p-1 sm:p-2 z-10">
+            <div className="absolute w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 -top-2 -left-2 sm:-top-3 sm:-left-3 border border-gray-400 shadow-lg bg-white rounded-lg sm:rounded-xl flex items-center justify-center z-10">
                 <img
                     src={company.profileImage || company.logo || "https://images.travelxp.com/images/txpin/vector/general/errorimage.svg"}
                     alt={company.name}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-cover"
                 />
             </div>
 
