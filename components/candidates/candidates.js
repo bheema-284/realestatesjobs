@@ -518,7 +518,7 @@ function ProfilePage() {
             setEditingHeader(false);
         }
     };
-
+    if (isLoading) { return (<Loading />) }
     return (
         <div className="bg-white min-h-screen mt-20">
             {serviceCall && <Loading />}
