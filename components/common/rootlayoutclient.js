@@ -18,6 +18,8 @@ function LayoutContent({ children }) {
     const router = useRouter();
     const [showLoader, setShowLoader] = useState(true);
     const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+    const [hasError, setHasError] = useState(false); // Track if error occurred
+    const [hideFooter, setHideFooter] = useState(false); // Track if footer should be hidden
 
     const {
         rootContext,
@@ -33,6 +35,31 @@ function LayoutContent({ children }) {
         updateNotifications,
         refreshUserData
     } = useContext(RootContext);
+
+    // Monitor rootContext for loader states
+    useEffect(() => {
+        // Hide footer when loader is showing
+        if (rootContext.loader) {
+            setHideFooter(true);
+        } else {
+            setHideFooter(false);
+        }
+    }, [rootContext.loader]);
+
+    // Monitor specific pages that should hide footer
+    useEffect(() => {
+        // Check if current page is company detail page without data
+        const isCompanyDetailPage = pathName.startsWith('/companies/') && pathName.split('/').length > 2;
+
+        // You can add more conditions here for other pages that should hide footer
+        // For example, if you have a flag in context that indicates "no data"
+        const shouldHideFooter =
+            rootContext.loader || // Hide during loader
+            (isCompanyDetailPage && rootContext.hideFooterOnNoData); // Hide on company detail with no data
+
+        setHideFooter(shouldHideFooter);
+
+    }, [pathName, rootContext.loader, rootContext.hideFooterOnNoData]);
 
     // Load user from storage on component mount
     useEffect(() => {
@@ -65,6 +92,7 @@ function LayoutContent({ children }) {
                 }
             } catch (error) {
                 console.error("Error loading user from storage:", error);
+                setHasError(true); // Set error state
                 // Clear invalid data
                 localStorage.removeItem("user_details");
                 sessionStorage.removeItem("user_details");
@@ -202,9 +230,72 @@ function LayoutContent({ children }) {
         return !noSidebarRoutes.includes(pathName);
     };
 
+    // Check if footer should be shown
+    const shouldShowFooter = () => {
+        // Don't show footer if there's an error
+        if (hasError) return false;
+
+        // Don't show footer when hideFooter flag is true
+        if (hideFooter) return false;
+
+        // Don't show footer on login/signup pages
+        if (pathName === "/login" || pathName === "/signup") return false;
+
+        return true;
+    };
+
+    // Check if navbar should be shown
+    const shouldShowNavbar = () => {
+        // Don't show navbar if there's an error on login/signup pages
+        if (hasError && (pathName === "/login" || pathName === "/signup")) return false;
+
+        // Don't show navbar on login/signup pages (normal case)
+        if (pathName === "/login" || pathName === "/signup") return false;
+
+        return true;
+    };
+
+    // If there's an error, show error message
+    if (hasError) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md">
+                    <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center rounded-full bg-red-100 text-red-500">
+                        <svg
+                            className="w-12 h-12"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                            />
+                        </svg>
+                    </div>
+                    <h1 className="text-2xl font-bold text-gray-800 mb-3">Something went wrong</h1>
+                    <p className="text-gray-600 mb-6">
+                        We encountered an error while loading the application. Please try refreshing the page.
+                    </p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Refresh Page
+                    </button>
+                    <p className="text-sm text-gray-500 mt-4">
+                        If the problem persists, please contact support.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <>
-            {(pathName !== "/login" && pathName !== "/signup") && (
+            {shouldShowNavbar() && (
                 <Navbar
                     rootContext={rootContext}
                     showLoader={showLoader}
@@ -235,11 +326,11 @@ function LayoutContent({ children }) {
                 )}
 
                 {/* Main content */}
-                <main className={`w-full`}>
+                <main className={`w-full ${hideFooter ? 'min-h-screen' : ''}`}>
                     {children}
                 </main>
             </div>
-            {(pathName !== "/login" && pathName !== "/signup") && <Footer />}
+            {shouldShowFooter() && <Footer />}
             {rootContext?.toast && <Toast />}
         </>
     );
@@ -247,6 +338,46 @@ function LayoutContent({ children }) {
 
 // Main layout component
 export default function RootLayoutClient({ children }) {
+    const [hasGlobalError, setHasGlobalError] = useState(false);
+
+    // Global error boundary for layout
+    useEffect(() => {
+        const handleGlobalError = (error) => {
+            console.error("Global error caught:", error);
+            setHasGlobalError(true);
+        };
+
+        window.addEventListener('error', handleGlobalError);
+
+        return () => {
+            window.removeEventListener('error', handleGlobalError);
+        };
+    }, []);
+
+    // If there's a global error, show minimal error layout
+    if (hasGlobalError) {
+        return (
+            <html lang="en" className={inter.variable}>
+                <body className="w-full mx-auto min-h-screen flex items-center justify-center bg-gray-50">
+                    <div className="text-center p-8">
+                        <h1 className="text-2xl font-bold text-gray-800 mb-4">
+                            Application Error
+                        </h1>
+                        <p className="text-gray-600 mb-6">
+                            Sorry, something went wrong with the application.
+                        </p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                        >
+                            Reload Application
+                        </button>
+                    </div>
+                </body>
+            </html>
+        );
+    }
+
     return (
         <html lang="en" className={inter.variable}>
             <body className="w-full mx-auto">
