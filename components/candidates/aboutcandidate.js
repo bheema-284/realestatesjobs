@@ -2,21 +2,21 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { 
-    PencilIcon, 
-    XMarkIcon, 
-    PhoneIcon, 
-    EnvelopeIcon, 
-    CakeIcon, 
-    BuildingOfficeIcon, 
+import {
+    PencilIcon,
+    XMarkIcon,
+    PhoneIcon,
+    EnvelopeIcon,
+    CakeIcon,
+    BuildingOfficeIcon,
     BriefcaseIcon,
     UserIcon,
     UserCircleIcon
 } from '@heroicons/react/24/solid';
-import { 
-    ChevronDownIcon, 
-    ArrowPathIcon, 
-    ArrowsPointingOutIcon 
+import {
+    ChevronDownIcon,
+    ArrowPathIcon,
+    ArrowsPointingOutIcon
 } from '@heroicons/react/20/solid';
 import AboutMe from './aboutme';
 import Applications from './applications';
@@ -487,7 +487,7 @@ function CandidateProfilePage() {
             setEditingMode(true);
         }
     };
-
+    if (isLoading) { return (<Loading />) }
     return (
         <div className="bg-white min-h-screen mt-20">
             {serviceCall && <Loading />}
@@ -544,32 +544,50 @@ function CandidateProfilePage() {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleGenderSelect('male')}
-                                                    className={`px-3 py-2 rounded-md transition-all ${tempProfile.gender === 'male' 
-                                                        ? 'bg-blue-500 text-white shadow-sm' 
+                                                    className={`px-3 py-2 rounded-md transition-all ${tempProfile.gender === 'male'
+                                                        ? 'bg-blue-500 text-white shadow-sm'
                                                         : 'text-gray-600 hover:bg-gray-200'}`}
                                                     title="Male"
                                                 >
-                                                    <UserIcon className="w-5 h-5" />
+                                                    <Image
+                                                        src="/icons/man.png"
+                                                        width={20}
+                                                        height={20}
+                                                        alt="Male"
+                                                        className="text-center"
+                                                    />
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleGenderSelect('female')}
-                                                    className={`px-3 py-2 rounded-md transition-all ${tempProfile.gender === 'female' 
-                                                        ? 'bg-pink-500 text-white shadow-sm' 
+                                                    className={`px-3 py-2 rounded-md transition-all ${tempProfile.gender === 'female'
+                                                        ? 'bg-pink-500 text-white shadow-sm'
                                                         : 'text-gray-600 hover:bg-gray-200'}`}
                                                     title="Female"
                                                 >
-                                                    <UserCircleIcon className="w-5 h-5" />
+                                                    <Image
+                                                        src="/icons/woman.png"
+                                                        width={20}
+                                                        height={20}
+                                                        alt="Female"
+                                                        className="text-center"
+                                                    />
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleGenderSelect('other')}
-                                                    className={`px-3 py-2 rounded-md transition-all ${tempProfile.gender === 'other' 
-                                                        ? 'bg-purple-500 text-white shadow-sm' 
+                                                    className={`px-3 py-2 rounded-md transition-all ${tempProfile.gender === 'other'
+                                                        ? 'bg-purple-500 text-white shadow-sm'
                                                         : 'text-gray-600 hover:bg-gray-200'}`}
                                                     title="Other"
                                                 >
-                                                    <span className="text-sm font-medium">Other</span>
+                                                    <Image
+                                                        src="/icons/other.png"
+                                                        width={20}
+                                                        height={20}
+                                                        alt="Other"
+                                                        className="text-center"
+                                                    />
                                                 </button>
                                             </div>
                                         </div>
@@ -603,16 +621,30 @@ function CandidateProfilePage() {
                                         {profile.gender && (
                                             profile.gender === 'male' ? (
                                                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600">
-                                                    <UserIcon className="w-5 h-5" />
+                                                    <Image
+                                                        src="/icons/man.png"
+                                                        width={20}
+                                                        height={20}
+                                                        alt="Male"
+                                                        className="text-center"
+                                                    />
                                                 </div>
                                             ) : profile.gender === 'female' ? (
-                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-100 text-pink-600">
-                                                    <UserCircleIcon className="w-5 h-5" />
-                                                </div>
+                                                <Image
+                                                    src="/icons/woman.png"
+                                                    width={20}
+                                                    height={20}
+                                                    alt="Female"
+                                                    className="text-center"
+                                                />
                                             ) : profile.gender === 'other' ? (
-                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600">
-                                                    <span className="text-sm font-medium">Other</span>
-                                                </div>
+                                                <Image
+                                                    src="/icons/other.png"
+                                                    width={20}
+                                                    height={20}
+                                                    alt="Other"
+                                                    className="text-center"
+                                                />
                                             ) : null
                                         )}
                                     </div>
