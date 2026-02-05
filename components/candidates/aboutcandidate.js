@@ -507,7 +507,7 @@ function CandidateProfilePage() {
                         {/* Left Column - Basic Info Section */}
                         <div className="flex-1">
                             {editingMode ? (
-                                <div className="flex flex-col gap-3 text-gray-700">
+                                <div className="flex flex-col gap-3 text-gray-700 mt-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
                                         <input
@@ -540,7 +540,7 @@ function CandidateProfilePage() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="space-y-4 mt-10 sm:mt-0">
+                                <div className="space-y-4 mt-10 sm:-mt-0">
                                     <div className="flex items-center gap-2">
                                         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
                                         {profile.gender && (
@@ -584,7 +584,7 @@ function CandidateProfilePage() {
                         {/* Right Column - Personal Details Section (including gender) */}
                         <div className="flex-1 pt-4 sm:pt-0 sm:pl-6">
                             {editingMode ? (
-                                <div className="grid grid-cols-1 gap-4">
+                                <div className="grid grid-cols-1 gap-4 mt-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Mobile Number</label>
                                         <input
@@ -654,7 +654,7 @@ function CandidateProfilePage() {
                     </div>
 
                     {/* Single Edit/Save/Cancel Button - Positioned at top right */}
-                    <div className="absolute top-4 right-4">
+                    <div className="absolute my-2 right-4">
                         {editingMode ? (
                             <div className="flex gap-2">
                                 <button

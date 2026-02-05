@@ -7,6 +7,7 @@ import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import JobPostingModal from '@/components/createjob';
 import ButtonTab from '@/components/common/buttontab';
 import { useSWRFetch, Mutated } from '@/components/config/useswrfetch';
+import Loading from '@/components/common/loading';
 
 // Generate unique job ID
 const generateJobId = () => {
@@ -534,24 +535,24 @@ const EnhancedJobList = ({
         <div className="w-full max-w-7xl mx-auto p-4">
             {/* Create Job Buttons */}
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">{tabName} Jobs</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{tabName} Jobs</h2>
                 <div className="flex gap-3">
                     {/* Auto Create Button */}
                     <button
                         onClick={() => { handleAutoCreate(tabName); setMode("auto-create"); }}
-                        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 shadow-md"
+                        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white p-2 sm:px-6 sm:py-3 rounded-sm sm:rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 shadow-md"
                     >
                         <SparklesIcon className="w-5 h-5" />
-                        <span>Auto Create Job</span>
+                        <span className='text-sm sm:text-md'>Auto Create Job</span>
                     </button>
 
                     {/* Manual Create Button */}
                     <button
                         onClick={() => { { handleCategoryClick(tabName); setMode("create"); } }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+                        className="bg-blue-600 hover:bg-blue-700 text-white p-2 sm:px-6 sm:py-3 rounded-sm sm:rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
                     >
                         <PlusIcon className="w-5 h-5" />
-                        <span>Create Job</span>
+                        <span className='text-sm sm:text-md'>Create Job</span>
                     </button>
                 </div>
             </div>
@@ -911,14 +912,7 @@ export default function Jobs() {
 
     // Show loading state
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading jobs...</p>
-                </div>
-            </div>
-        );
+        return (<Loading />);
     }
 
     // Show error state

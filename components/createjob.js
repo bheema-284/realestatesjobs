@@ -150,7 +150,7 @@ const jobTitleCategoryMapping = {
     'hr': 'hr-and-operations',
     'human resources': 'hr-and-operations',
     'recruiter': 'hr-and-operations',
-    'operations': 'hr-and-operoperations',
+    'operations': 'hr-and-operations',
     'hiring': 'hr-and-operations'
 };
 
@@ -196,29 +196,160 @@ const jobTitleQualificationMapping = {
     'hr-and-operations': ['Graduation', 'Post Graduation', 'MBA (HR)'],
 };
 
-// Default job descriptions based on category
+// Enhanced job descriptions with better formatting for Tiptap
 const defaultJobDescriptions = {
-    'tele-caller': '<strong>Job Responsibilities:</strong><ul><li>Make outbound calls to potential customers</li><li>Generate leads and schedule appointments</li><li>Explain product features and benefits</li><li>Maintain customer database</li><li>Achieve daily call targets</li><li>Follow up with leads</li></ul><h3>Requirements:</h3><ul><li>Excellent communication skills</li><li>Basic computer knowledge</li><li>Ability to work in targets</li><li>Pleasant personality</li><li>Local language proficiency</li></ul>',
+    'tele-caller': `<p><strong>Job Title: Tele Caller</strong></p>
+<p><strong>Location:</strong> Multiple Locations</p>
 
-    'real-estate-sales': '<strong>Job Responsibilities:</strong><ul><li>Identify and approach potential clients</li><li>Show properties to interested buyers</li><li>Negotiate deals and close sales</li><li>Maintain client relationships</li><li>Stay updated with market trends</li><li>Achieve sales targets</li></ul><h3>Requirements:</h3><ul><li>Proven sales experience</li><li>Knowledge of real estate market</li><li>Excellent negotiation skills</li><li>Valid driving license</li><li>Local market knowledge</li></ul>',
+<p><strong>Job Responsibilities:</strong></p>
+<ul>
+<li>Make outbound calls to potential customers and generate quality leads</li>
+<li>Explain property features and schedule site visits</li>
+<li>Maintain accurate records of all calls and follow-ups</li>
+<li>Achieve daily and weekly call targets</li>
+<li>Follow up with prospective clients and convert leads to appointments</li>
+<li>Provide excellent customer service and build positive relationships</li>
+</ul>
 
-    'channel-partners': '<strong>Job Responsibilities:</strong><ul><li>Develop channel partner network</li><li>Train and motivate partners</li><li>Monitor partner performance</li><li>Resolve partner queries</li><li>Implement channel strategies</li><li>Achieve channel sales targets</li></ul><h3>Requirements:</h3><ul><li>Experience in channel management</li><li>Strong networking skills</li><li>Knowledge of real estate industry</li><li>Excellent communication skills</li><li>Leadership qualities</li></ul>',
+<p><strong>Requirements:</strong></p>
+<ul>
+<li>Excellent communication skills in local language, Hindi and English</li>
+<li>Basic computer knowledge and CRM software familiarity</li>
+<li>Ability to work in a target-driven environment</li>
+<li>Positive attitude and customer-oriented approach</li>
+<li>Previous tele-calling experience preferred but freshers may apply</li>
+</ul>
 
-    'digital-marketing': '<strong>Job Responsibilities:</strong><ul><li>Develop digital marketing strategies</li><li>Manage social media accounts</li><li>Create and optimize content</li><li>Run Google/Facebook ad campaigns</li><li>Analyze campaign performance</li><li>SEO/SEM activities</li></ul><h3>Requirements:</h3><ul><li>Experience in digital marketing</li><li>Knowledge of SEO/SEM</li><li>Social media expertise</li><li>Analytical skills</li><li>Content creation skills</li></ul>',
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Attractive salary with performance incentives</li>
+<li>Professional growth opportunities</li>
+<li>Supportive work environment</li>
+<li>Training provided</li>
+</ul>`,
 
-    'web-development': '<strong>Job Responsibilities:</strong><ul><li>Develop and maintain web applications</li><li>Write clean, efficient code</li><li>Collaborate with design team</li><li>Troubleshoot and debug</li><li>Optimize application performance</li><li>Implement security measures</li></ul><h3>Requirements:</h3><ul><li>Proficiency in relevant technologies</li><li>Problem-solving skills</li><li>Knowledge of web standards</li><li>Experience with databases</li><li>Version control (Git)</li></ul>',
+    'real-estate-sales': `<p><strong>Job Title: Real Estate Sales Executive</strong></p>
+<p><strong>Location:</strong> Multiple Locations</p>
 
-    'crm-executive': '<strong>Job Responsibilities:</strong><ul><li>Manage customer database</li><li>Handle customer queries</li><li>Implement CRM strategies</li><li>Generate customer reports</li><li>Improve customer satisfaction</li><li>Coordinate with sales team</li></ul><h3>Requirements:</h3><ul><li>Experience with CRM software</li><li>Customer service skills</li><li>Data management skills</li><li>Communication skills</li><li>Problem-solving ability</li></ul>',
+<p><strong>Job Responsibilities:</strong></p>
+<ul>
+<li>Identify and approach potential clients in assigned territory</li>
+<li>Show properties to interested buyers and conduct site visits</li>
+<li>Negotiate deals and close sales transactions</li>
+<li>Maintain strong relationships with clients and channel partners</li>
+<li>Stay updated with real estate market trends</li>
+<li>Achieve monthly and quarterly sales targets</li>
+<li>Prepare and submit sales reports</li>
+</ul>
 
-    'accounts-and-auditing': '<strong>Job Responsibilities:</strong><ul><li>Maintain financial records</li><li>Prepare financial statements</li><li>Handle tax compliance</li><li>Conduct internal audits</li><li>Manage accounts payable/receivable</li><li>Budget preparation</li></ul><h3>Requirements:</h3><ul><li>Accounting qualifications</li><li>Experience in accounting software</li><li>Knowledge of tax laws</li><li>Attention to detail</li><li>Analytical skills</li></ul>',
+<p><strong>Requirements:</strong></p>
+<ul>
+<li>Proven sales experience in real estate or related field</li>
+<li>Excellent communication in local language, Hindi and English</li>
+<li>Strong negotiation and closing skills</li>
+<li>Knowledge of local real estate market</li>
+<li>Valid driving license and vehicle (preferred)</li>
+<li>Graduation degree in any field</li>
+</ul>
 
-    'architects': '<strong>Job Responsibilities:</strong><ul><li>Design building plans</li><li>Prepare architectural drawings</li><li>Coordinate with clients</li><li>Supervise construction</li><li>Ensure compliance with regulations</li><li>Material selection</li></ul><h3>Requirements:</h3><ul><li>Architecture degree</li><li>Proficiency in design software</li><li>Creative design skills</li><li>Knowledge of building codes</li><li>Project management skills</li></ul>',
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>High commission structure on sales</li>
+<li>Performance-based incentives and bonuses</li>
+<li>Career advancement opportunities</li>
+<li>Company-provided leads and marketing support</li>
+</ul>`,
 
-    'legal': '<strong>Job Responsibilities:</strong><ul><li>Draft legal documents</li><li>Provide legal advice</li><li>Handle property documentation</li><li>Conduct legal research</li><li>Represent in legal matters</li><li>Ensure regulatory compliance</li></ul><h3>Requirements:</h3><ul><li>Law degree</li><li>Bar council enrollment</li><li>Experience in real estate law</li><li>Research skills</li><li>Communication skills</li></ul>',
+    'channel-partners': `<p><strong>Job Title: Channel Partner</strong></p>
+<p><strong>Location:</strong> Multiple Locations</p>
 
-    'hr-and-operations': '<strong>Job Responsibilities:</strong><ul><li>Recruitment and staffing</li><li>Employee relations</li><li>Performance management</li><li>Training and development</li><li>HR operations</li><li>Policy implementation</li></ul><h3>Requirements:</h3><ul><li>HR degree/diploma</li><li>Recruitment experience</li><li>Knowledge of labor laws</li><li>Communication skills</li><li>Organizational skills</li></ul>',
+<p><strong>Job Responsibilities:</strong></p>
+<ul>
+<li>Develop channel partner network in assigned territory</li>
+<li>Train and motivate partners to achieve sales targets</li>
+<li>Monitor partner performance and provide support</li>
+<li>Resolve partner queries and maintain relationships</li>
+<li>Implement channel strategies and sales plans</li>
+<li>Achieve channel sales targets and growth objectives</li>
+</ul>
 
-    'default': '<strong>Job Responsibilities:</strong><ul><li>Please specify job responsibilities here</li><li>Add specific duties and tasks</li><li>Include performance expectations</li></ul><h3>Requirements:</h3><ul><li>Educational qualifications</li><li>Required experience</li><li>Technical skills</li><li>Soft skills</li><li>Additional requirements</li></ul>'
+<p><strong>Requirements:</strong></p>
+<ul>
+<li>Experience in channel management or real estate brokerage</li>
+<li>Strong networking and relationship building skills</li>
+<li>Knowledge of real estate industry and local market</li>
+<li>Excellent communication and negotiation skills</li>
+<li>Leadership qualities and team management skills</li>
+</ul>
+
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Attractive commission structure</li>
+<li>Business development support</li>
+<li>Training and certification programs</li>
+<li>Marketing and promotional materials</li>
+</ul>`,
+
+    'digital-marketing': `<p><strong>Job Title: Digital Marketing Executive</strong></p>
+<p><strong>Location:</strong> Multiple Locations</p>
+
+<p><strong>Job Responsibilities:</strong></p>
+<ul>
+<li>Develop and execute digital marketing strategies for real estate properties</li>
+<li>Manage social media accounts and create engaging content</li>
+<li>Run and optimize Google/Facebook ad campaigns</li>
+<li>SEO optimization for property listings and website</li>
+<li>Analyze campaign performance and prepare reports</li>
+<li>Email marketing campaigns and CRM integration</li>
+<li>Content creation for blogs, videos, and property descriptions</li>
+</ul>
+
+<p><strong>Requirements:</strong></p>
+<ul>
+<li>Experience in digital marketing, preferably in real estate</li>
+<li>Proficiency in SEO/SEM, social media marketing</li>
+<li>Knowledge of Google Analytics and ad platforms</li>
+<li>Creative content creation skills</li>
+<li>Analytical mindset and data-driven approach</li>
+<li>Graduation/Post-graduation in Marketing or related field</li>
+</ul>
+
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Competitive salary with performance bonuses</li>
+<li>Opportunity to work with premium real estate brands</li>
+<li>Professional development and training</li>
+<li>Creative freedom and innovative work environment</li>
+</ul>`,
+
+    'default': `<p><strong>Job Title: Real Estate Professional</strong></p>
+<p><strong>Location:</strong> Multiple Locations</p>
+
+<p><strong>Job Responsibilities:</strong></p>
+<ul>
+<li>Primary responsibilities specific to the role</li>
+<li>Secondary duties and tasks</li>
+<li>Team collaboration and reporting</li>
+<li>Performance tracking and goal achievement</li>
+<li>Client/customer interaction as required</li>
+</ul>
+
+<p><strong>Requirements:</strong></p>
+<ul>
+<li>Relevant educational qualifications</li>
+<li>Required experience in similar role</li>
+<li>Technical and soft skills as needed</li>
+<li>Language proficiency in local language, Hindi, English</li>
+<li>Local market knowledge preferred</li>
+</ul>
+
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Competitive compensation package</li>
+<li>Professional growth opportunities</li>
+<li>Supportive work culture</li>
+<li>Industry-specific training</li>
+</ul>`
 };
 
 // Educational Qualification options
@@ -719,28 +850,165 @@ const getLanguagesForLocation = (location) => {
     return locationLanguageMapping[location] || locationLanguageMapping.default;
 };
 
-// Auto-fill helper function
+// Function to get dynamic job description based on category, title, and location
+const getDynamicJobDescription = (categorySlug, jobTitle, location) => {
+    if (!categorySlug) return defaultJobDescriptions.default;
+
+    const baseDescription = defaultJobDescriptions[categorySlug] || defaultJobDescriptions.default;
+    const languages = getLanguagesForLocation(location);
+    const localLanguage = languages[0] || 'local language';
+
+    // Replace placeholders with actual values
+    return baseDescription
+        .replace(/local language/gi, localLanguage)
+        .replace(/Multiple Locations/gi, location || 'Multiple Locations');
+};
+
+// Enhanced auto-fill helper function with all required fields
 const autoFillFormData = (title, location, mode) => {
     if (mode !== 'auto-create' || !title) return null;
 
     const category = detectCategoryFromTitle(title);
     const languages = location ? getLanguagesForLocation(location) : locationLanguageMapping.default;
+    const jobDescription = getDynamicJobDescription(category, title, location);
+
+    // Get category-specific defaults
+    const categoryDefaults = getCategoryDefaults(category, location);
 
     return {
+        // Required fields
+        jobTitle: title,
         categorySlug: category,
-        languageRequirements: languages,
-        salary: category ? jobTitleSalaryMapping[category] || '' : '',
-        experience: category ? jobTitleExperienceMapping[category] || '' : '',
-        qualification: category ? jobTitleQualificationMapping[category] || [] : [],
-        skills: category ? [...(categorySkills[category] || []).slice(0, 5)] : [...defaultCommonSkills.slice(0, 5)],
-        jobDescription: category ? defaultJobDescriptions[category] : defaultJobDescriptions.default,
+        location: location || userProfile?.location || '',
+        salary: category ? jobTitleSalaryMapping[category] || '₹ 20,000 - ₹ 40,000/month' : '₹ 20,000 - ₹ 40,000/month',
+        experience: category ? jobTitleExperienceMapping[category] || '1-3 Years' : '1-3 Years',
         employmentTypes: ['full-time'],
+
+        // Other important fields
+        languageRequirements: languages,
+        qualification: category ? jobTitleQualificationMapping[category] || ['Graduation'] : ['Graduation'],
+        skills: category ? [...(categorySkills[category] || []).slice(0, 5)] : [...defaultCommonSkills.slice(0, 5)],
+        jobDescription: jobDescription,
         jobRoleType: 'Office Based',
-        propertyTypes: ['residential', 'commercial']
+        propertyTypes: ['residential', 'commercial'],
+
+        // Category-specific fields
+        ...categoryDefaults
     };
 };
 
-// Job Preview Component (keep as is, no changes needed)
+// Function to get category-specific default values
+const getCategoryDefaults = (categorySlug, location) => {
+    const defaults = {
+        salaryType: 'fixed',
+        salaryFrequency: 'Monthly',
+        salaryNegotiable: false,
+        hiringMultiple: false,
+        status: 'active',
+        workingSchedule: {
+            dayShift: true,
+            nightShift: false,
+            weekendAvailability: false,
+            custom: '9 AM - 6 PM, Monday to Friday',
+        }
+    };
+
+    if (!categorySlug) return defaults;
+
+    switch (categorySlug) {
+        case 'tele-caller':
+            return {
+                ...defaults,
+                commissionPercentage: '1-2%',
+                incentives: 'Performance bonus',
+                salesTargets: '50-60 calls per day',
+                additionalBenefits: ['performance-bonus', 'pf'],
+            };
+
+        case 'real-estate-sales':
+            return {
+                ...defaults,
+                commissionPercentage: '2-3%',
+                salesTargetAmount: '₹20-30 Lakhs',
+                targetAreas: location ? `Prime areas in ${location}` : 'City-wide',
+                leadProvided: true,
+                trainingProvided: true,
+                vehicleRequirement: true,
+            };
+
+        case 'channel-partners':
+            return {
+                ...defaults,
+                partnerType: 'Individual Broker',
+                partnerCommission: '3-5%',
+                networkSize: 'Medium (5-20 agents)',
+                exclusivePartnership: false,
+            };
+
+        case 'digital-marketing':
+            return {
+                ...defaults,
+                specialization: 'Social Media Marketing',
+                tools: 'Google Analytics, Facebook Ads, CRM tools',
+                workMode: 'Hybrid',
+            };
+
+        case 'web-development':
+            return {
+                ...defaults,
+                techStack: 'React.js',
+                workMode: 'Hybrid',
+                projectType: 'Real Estate Portals',
+            };
+
+        case 'crm-executive':
+            return {
+                ...defaults,
+                crmSoftware: 'Zoho CRM',
+                customerSegment: 'NRI Clients',
+                dataManagement: true,
+                clientRetention: true,
+            };
+
+        case 'accounts-and-auditing':
+            return {
+                ...defaults,
+                accountsQualification: 'B.Com',
+                accountingSoftware: 'Tally ERP 9',
+                industryExperience: ['real-estate'],
+            };
+
+        case 'architects':
+            return {
+                ...defaults,
+                architectureType: 'Residential',
+                designSoftware: 'AutoCAD',
+                projectScale: 'Medium (5000-20000 sq ft)',
+                portfolioRequired: true,
+            };
+
+        case 'legal':
+            return {
+                ...defaults,
+                legalSpecialization: 'Real Estate Law',
+                legalQualification: 'LL.B',
+                caseTypes: ['property-disputes', 'contract-drafting'],
+            };
+
+        case 'hr-and-operations':
+            return {
+                ...defaults,
+                hrSpecialization: 'Recruitment & Talent Acquisition',
+                hrQualification: 'MBA (HR)',
+                industryKnowledge: ['real-estate-recruitment'],
+            };
+
+        default:
+            return defaults;
+    }
+};
+
+// Job Preview Component
 const JobPreview = ({ formData, jobCategories }) => {
     const getCategoryName = (slug) => {
         const category = jobCategories?.find(cat => cat.slug === slug);
@@ -1118,10 +1386,10 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
         { slug: 'legal', name: 'Legal' },
     ];
 
-    // Function to auto-fill form data
+    // Function to auto-fill form data with ALL required fields
     const performAutoFill = () => {
-        if (mode === 'auto-create' && title && !hasAutoFilled) {
-            const autoFilledData = autoFillFormData(title, formData.location, mode);
+        if (mode === 'auto-create' && formData.jobTitle && !hasAutoFilled) {
+            const autoFilledData = autoFillFormData(formData.jobTitle, formData.location, mode);
 
             if (autoFilledData) {
                 setFormData(prev => ({
@@ -1132,14 +1400,6 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                 // Update selected category
                 if (autoFilledData.categorySlug) {
                     setSelectedCategory(autoFilledData.categorySlug);
-
-                    // Also update job title from category if title prop is empty
-                    if (!title && autoFilledData.categorySlug) {
-                        const selectedCategoryObj = jobCategories.find(cat => cat.slug === autoFilledData.categorySlug);
-                        if (selectedCategoryObj) {
-                            setFormData(prev => ({ ...prev, jobTitle: selectedCategoryObj.name }));
-                        }
-                    }
                 }
 
                 setHasAutoFilled(true);
@@ -1152,7 +1412,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                         dismiss: true,
                         type: "success",
                         position: "Auto-filled",
-                        message: "Form auto-filled based on job title and location"
+                        message: "All required fields auto-filled based on job title and location"
                     }
                 }));
             }
@@ -1161,26 +1421,34 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
 
     // Effect to auto-fill when modal opens in auto-create mode
     useEffect(() => {
-        if (isOpen && mode === 'auto-create' && title) {
+        if (isOpen && mode === 'auto-create' && formData.jobTitle && !hasAutoFilled) {
+            // Set default location from user profile
+            if (userProfile?.location && !formData.location) {
+                setFormData(prev => ({ ...prev, location: userProfile.location }));
+            }
+
             // Small delay to ensure modal is fully loaded
             const timer = setTimeout(() => {
                 performAutoFill();
-            }, 100);
+            }, 300);
 
             return () => clearTimeout(timer);
         }
-    }, [isOpen, mode, title]);
+    }, [isOpen, mode, formData.jobTitle, formData.location, hasAutoFilled, userProfile]);
 
-    // Effect to auto-fill when location changes in auto-create mode
+    // Effect to auto-fill when location or job title changes in auto-create mode
     useEffect(() => {
-        if (mode === 'auto-create' && formData.location && title && hasAutoFilled) {
-            const languages = getLanguagesForLocation(formData.location);
-            setFormData(prev => ({
-                ...prev,
-                languageRequirements: languages
-            }));
+        if (mode === 'auto-create' && hasAutoFilled && (formData.location || formData.jobTitle)) {
+            const autoFilledData = autoFillFormData(formData.jobTitle, formData.location, mode);
+            if (autoFilledData) {
+                setFormData(prev => ({
+                    ...prev,
+                    languageRequirements: autoFilledData.languageRequirements,
+                    jobDescription: autoFilledData.jobDescription
+                }));
+            }
         }
-    }, [formData.location, mode, title]);
+    }, [formData.location, formData.jobTitle, mode, hasAutoFilled]);
 
     // Get current category skills
     const getCurrentCategorySkills = () => {
@@ -1376,11 +1644,11 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
             }
         } else if (isOpen && (mode === 'create' || mode === 'auto-create')) {
             // Set default location to company location for new jobs
-            if (userProfile?.location) {
+            if (userProfile?.location && !formData.location) {
                 setFormData(prev => ({ ...prev, location: userProfile.location }));
             }
             // Set job title from title prop if provided
-            if (title) {
+            if (title && !formData.jobTitle) {
                 setFormData(prev => ({ ...prev, jobTitle: title }));
             }
         }
@@ -1406,10 +1674,16 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
             }
         }
 
-        // If location changes in auto-create mode, update languages
+        // If location changes in auto-create mode, update languages and description
         if (field === 'location' && mode === 'auto-create' && hasAutoFilled) {
-            const languages = getLanguagesForLocation(value);
-            setFormData(prev => ({ ...prev, languageRequirements: languages }));
+            const autoFilledData = autoFillFormData(formData.jobTitle, value, mode);
+            if (autoFilledData) {
+                setFormData(prev => ({
+                    ...prev,
+                    languageRequirements: autoFilledData.languageRequirements,
+                    jobDescription: autoFilledData.jobDescription
+                }));
+            }
         }
     };
 
@@ -2099,7 +2373,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                         Auto-Create Mode Active
                                                     </p>
                                                     <p className="text-xs text-blue-600 mt-1">
-                                                        Fields will be auto-filled based on job title and location
+                                                        All required fields will be auto-filled based on job title and location
                                                     </p>
                                                 </div>
                                                 {!hasAutoFilled && (
@@ -2135,7 +2409,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                             value={formData.jobTitle}
                                                             onChange={(e) => handleInputChange('jobTitle', e.target.value)}
                                                             className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                            placeholder="Enter job title"
+                                                            placeholder="Enter job title (e.g., Tele Caller, Real Estate Sales)"
                                                             required
                                                         />
                                                         {mode === 'auto-create' && formData.categorySlug && (
@@ -2297,7 +2571,7 @@ export default function JobPostingModal({ title, editData, mode, isOpen, setIsOp
                                                             <p className="text-xs text-gray-500 mt-1">Provide detailed job responsibilities and requirements</p>
                                                             {mode === 'auto-create' && formData.categorySlug && (
                                                                 <p className="text-xs text-blue-600 mt-1">
-                                                                    Pre-filled with default description for {jobCategories.find(cat => cat.slug === formData.categorySlug)?.name || 'this role'}
+                                                                    Auto-generated description for {jobCategories.find(cat => cat.slug === formData.categorySlug)?.name || 'this role'}
                                                                 </p>
                                                             )}
                                                         </div>

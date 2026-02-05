@@ -194,8 +194,7 @@ async function handleUpdatedProjectImages(formData, newProjects, oldProjects, us
     return finalProjects;
 }
 
-// -------------------- Other helpers (experience/education etc.) --------------------
-// These are kept as you originally provided (unchanged besides minor formatting)
+// -------------------- Experience Documents Handler --------------------
 async function processExperienceDocuments(formData, experienceData, userId, existingExperience) {
     const experienceWithDocs = [];
 
@@ -204,6 +203,7 @@ async function processExperienceDocuments(formData, experienceData, userId, exis
         const existingExp = existingExperience[i] || {};
 
         let documentUrl = existingExp.documentUrl;
+        let documentPreviewUrl = existingExp.documentPreviewUrl;
 
         // Check if there's a new document file for this experience entry
         const docFile = formData.get(`experienceDoc_${i}`);
@@ -211,25 +211,53 @@ async function processExperienceDocuments(formData, experienceData, userId, exis
             console.log(`Uploading experience document for index ${i}`);
 
             const buffer = Buffer.from(await docFile.arrayBuffer());
+
+            // Check file type
+            const isPDF = docFile.type === 'application/pdf';
+            const isWord = docFile.type.includes('msword') || docFile.type.includes('wordprocessingml');
+
+            // Use 'auto' for PDFs to get proper preview, 'raw' for other files
+            const resourceType = isPDF ? 'auto' : 'raw';
+
             const result = await new Promise((resolve, reject) => {
                 const uploadStream = cloudinary.uploader.upload_stream(
                     {
                         folder: `users/${userId}/experience`,
-                        resource_type: 'raw',
+                        resource_type: resourceType,
                         public_id: `exp_${i}_${Date.now()}`,
+                        // For PDFs, add flags for better handling
+                        ...(isPDF && {
+                            flags: 'attachment'
+                        }),
+                        // For Word docs, preserve format
+                        ...(isWord && {
+                            format: docFile.name.endsWith('.docx') ? 'docx' : 'doc'
+                        })
                     },
                     (err, res) => (err ? reject(err) : resolve(res))
                 );
                 uploadStream.end(buffer);
             });
+
             documentUrl = result.secure_url;
-            console.log(`Experience document uploaded: ${documentUrl}`);
+
+            // For PDFs, we can use the URL directly for preview
+            // For other files, we'll need to handle preview differently
+            if (isPDF) {
+                documentPreviewUrl = documentUrl;
+            } else {
+                // For non-PDF files, we can't preview in iframe
+                documentPreviewUrl = null;
+            }
+
+            console.log(`Experience document uploaded: ${documentUrl}`, { isPDF, isWord });
         }
 
         const mergedExperience = {
             ...existingExp,
             ...newExp,
             documentUrl: documentUrl,
+            documentPreviewUrl: documentPreviewUrl,
             logo: newExp.logo || existingExp.logo || dummyLogos[i % dummyLogos.length],
             showDescription: newExp.showDescription !== undefined ? newExp.showDescription : (existingExp.showDescription || false)
         };
@@ -240,6 +268,7 @@ async function processExperienceDocuments(formData, experienceData, userId, exis
     return experienceWithDocs;
 }
 
+// -------------------- Education Documents Handler --------------------
 async function processEducationDocuments(formData, educationData, userId, existingEducation) {
     const educationWithDocs = [];
 
@@ -248,31 +277,52 @@ async function processEducationDocuments(formData, educationData, userId, existi
         const existingEdu = existingEducation[i] || {};
 
         let documentUrl = existingEdu.documentUrl;
+        let documentPreviewUrl = existingEdu.documentPreviewUrl;
 
         const docFile = formData.get(`educationDoc_${i}`);
         if (docFile && docFile.size > 0) {
             console.log(`Uploading education document for index ${i}`);
 
             const buffer = Buffer.from(await docFile.arrayBuffer());
+
+            const isPDF = docFile.type === 'application/pdf';
+            const isWord = docFile.type.includes('msword') || docFile.type.includes('wordprocessingml');
+            const resourceType = isPDF ? 'auto' : 'raw';
+
             const result = await new Promise((resolve, reject) => {
                 const uploadStream = cloudinary.uploader.upload_stream(
                     {
                         folder: `users/${userId}/education`,
-                        resource_type: 'raw',
+                        resource_type: resourceType,
                         public_id: `edu_${i}_${Date.now()}`,
+                        ...(isPDF && {
+                            flags: 'attachment'
+                        }),
+                        ...(isWord && {
+                            format: docFile.name.endsWith('.docx') ? 'docx' : 'doc'
+                        })
                     },
                     (err, res) => (err ? reject(err) : resolve(res))
                 );
                 uploadStream.end(buffer);
             });
+
             documentUrl = result.secure_url;
-            console.log(`Education document uploaded: ${documentUrl}`);
+
+            if (isPDF) {
+                documentPreviewUrl = documentUrl;
+            } else {
+                documentPreviewUrl = null;
+            }
+
+            console.log(`Education document uploaded: ${documentUrl}`, { isPDF, isWord });
         }
 
         const mergedEducation = {
             ...existingEdu,
             ...newEdu,
             documentUrl: documentUrl,
+            documentPreviewUrl: documentPreviewUrl,
             years: newEdu.years || `${newEdu.startYear || ''} - ${newEdu.endYear || ''}` || existingEdu.years
         };
 
@@ -556,6 +606,26 @@ async function resetRecruiterPassword(recruiterEmail, newPassword, resetBy) {
         recruiterEmail: recruiter.email,
         companyName: company.name
     };
+}
+
+// Helper function for JSON projects (for non-formData requests)
+function processProjectsFromJSON(newProjects, existingProjects) {
+    return newProjects.map(project => {
+        const existingProject = existingProjects.find(p =>
+            p._id?.toString() === project._id?.toString() ||
+            p.id === project.id
+        ) || {};
+
+        return {
+            ...existingProject,
+            ...project,
+            _id: project._id && typeof project._id === 'string' ?
+                new ObjectId(project._id) :
+                project._id || existingProject._id || new ObjectId(),
+            lastUpdated: new Date(),
+            addedDate: project.addedDate || existingProject.addedDate || new Date()
+        };
+    });
 }
 
 // -------------------- PUT handler (main) --------------------
@@ -1010,6 +1080,26 @@ export async function PUT(request) {
                 }
             }
 
+            // 🔹 Handle Experience with documents
+            const experienceData = formData.get("experience");
+            if (experienceData) {
+                try {
+                    const parsedExperience = JSON.parse(experienceData);
+                    if (Array.isArray(parsedExperience)) {
+                        // ✅ FIXED: Now calling processExperienceDocuments for experience
+                        updateFields.experience = await processExperienceDocuments(
+                            formData,
+                            parsedExperience,
+                            userId,
+                            existingUser.experience || []
+                        );
+                    }
+                } catch (error) {
+                    console.warn("Experience field is not valid JSON, treating as text");
+                    updateFields.experience = experienceData;
+                }
+            }
+
             // 🔹 Handle Education with documents
             const educationData = formData.get("education");
             if (educationData) {
@@ -1294,6 +1384,14 @@ export async function PUT(request) {
 
             // Handle media fields
             if (field === "galleryImages" || field === "videos") {
+                if (Array.isArray(value)) {
+                    updateFields[field] = value;
+                }
+                continue;
+            }
+
+            // Handle experience and education in JSON requests
+            if (field === "experience" || field === "education") {
                 if (Array.isArray(value)) {
                     updateFields[field] = value;
                 }

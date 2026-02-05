@@ -680,7 +680,7 @@ export default function AboutMe({ profile }) {
         );
     };
 
-    // Document View Modal Component (for viewing uploaded documents)
+    // Update the DocumentViewModal component to handle Cloudinary URLs properly:
     const DocumentViewModal = ({
         isOpen,
         onClose,
@@ -696,7 +696,6 @@ export default function AboutMe({ profile }) {
                 document.body.style.overflow = "auto";
             }
 
-            // Cleanup function
             return () => {
                 document.body.style.overflow = "auto";
             };
@@ -704,19 +703,48 @@ export default function AboutMe({ profile }) {
 
         if (!isOpen || !url) return null;
 
+        // Check if it's a Cloudinary URL and handle accordingly
+        const isCloudinaryUrl = url.includes('cloudinary.com');
+
+        // Determine file type
         const isPDF = url.toLowerCase().endsWith('.pdf') ||
-            url.includes('application/pdf') ||
-            url.includes('.pdf?');
+            url.includes('.pdf?') ||
+            (isCloudinaryUrl && url.includes('.pdf'));
 
         const isWord = url.toLowerCase().endsWith('.doc') ||
             url.toLowerCase().endsWith('.docx') ||
-            url.includes('application/msword') ||
-            url.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+            url.includes('.doc?') ||
+            url.includes('.docx?');
 
-        // Extract filename from URL or use provided fileName
+        // For Cloudinary PDFs, we need to add #view=FitH to the URL for proper iframe display
+        const getPreviewUrl = () => {
+            if (isPDF && isCloudinaryUrl) {
+                // Add PDF viewer parameters for Cloudinary URLs
+                if (!url.includes('/upload/')) return url;
+
+                // Insert transformation before upload part
+                const parts = url.split('/upload/');
+                if (parts.length === 2) {
+                    // Add PDF viewer flag and quality optimization
+                    return `${parts[0]}/upload/fl_attachment,pg_1/${parts[1]}`;
+                }
+            }
+            return url;
+        };
+
+        const previewUrl = getPreviewUrl();
+
+        // Extract filename
         const getFileName = () => {
             if (fileName) return fileName;
             try {
+                if (isCloudinaryUrl) {
+                    // Extract from Cloudinary public_id
+                    const urlObj = new URL(url);
+                    const pathParts = urlObj.pathname.split('/');
+                    const publicId = pathParts[pathParts.length - 1];
+                    return publicId.split('_').slice(2).join('_') || 'document';
+                }
                 const urlObj = new URL(url);
                 const pathParts = urlObj.pathname.split('/');
                 return pathParts[pathParts.length - 1] || 'document';
@@ -736,6 +764,9 @@ export default function AboutMe({ profile }) {
                             <h3 className="text-base sm:text-lg font-semibold text-gray-800 truncate max-w-[70%]">
                                 {displayFileName}
                             </h3>
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                {isPDF ? 'PDF' : isWord ? 'Word' : 'Document'}
+                            </span>
                         </div>
                         <div className="flex items-center gap-2">
                             <a
@@ -760,26 +791,31 @@ export default function AboutMe({ profile }) {
                     <div className="flex-1 overflow-auto p-3 sm:p-4 bg-white">
                         {isPDF ? (
                             <iframe
-                                src={`${url}#toolbar=0&navpanes=0&scrollbar=0`}
+                                src={previewUrl}
                                 className="w-full h-full border rounded-lg"
                                 title="Document Preview"
                                 onError={(e) => {
                                     console.error('PDF load error:', e);
                                     e.target.innerHTML = `
-                                        <div class="flex flex-col items-center justify-center h-full p-8 text-center">
-                                            <DocumentIcon class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                                            <p class="text-gray-700 font-medium text-sm sm:text-base">
-                                                Could not load PDF preview
-                                            </p>
-                                            <p class="text-xs sm:text-sm text-gray-500 mt-2">
-                                                Please download the file to view it.
-                                            </p>
+                                    <div class="flex flex-col items-center justify-center h-full p-8 text-center">
+                                        <DocumentIcon class="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                        <p class="text-gray-700 font-medium text-sm sm:text-base">
+                                            Could not load PDF preview
+                                        </p>
+                                        <p class="text-xs sm:text-sm text-gray-500 mt-2">
+                                            The PDF may be protected or too large to preview.
+                                        </p>
+                                        <div class="flex gap-3 mt-4">
+                                            <a href="${url}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                                Open in New Tab
+                                            </a>
                                             <a href="${url}" download="${displayFileName}" 
-                                               class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                               class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                                                 Download PDF
                                             </a>
                                         </div>
-                                    `;
+                                    </div>
+                                `;
                                 }}
                             />
                         ) : isWord ? (
@@ -789,7 +825,7 @@ export default function AboutMe({ profile }) {
                                         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                                     </svg>
                                 </div>
-                                <h4 className="text-lg font-semibold text-gray-800 mb-2">Word Document Preview</h4>
+                                <h4 className="text-lg font-semibold text-gray-800 mb-2">Word Document</h4>
                                 <p className="text-gray-600 mb-4 max-w-md">
                                     Word documents cannot be previewed in the browser. Please download the file to view it.
                                 </p>
@@ -812,7 +848,7 @@ export default function AboutMe({ profile }) {
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                                 <DocumentIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                                <h4 className="text-lg font-semibold text-gray-800 mb-2">Document Preview</h4>
+                                <h4 className="text-lg font-semibold text-gray-800 mb-2">Document</h4>
                                 <p className="text-gray-600 mb-4">
                                     This file type cannot be previewed in the browser.
                                 </p>
@@ -831,6 +867,7 @@ export default function AboutMe({ profile }) {
                         <div className="text-xs sm:text-sm text-gray-600 truncate">
                             <p><strong>Type:</strong> {type === "experience" ? "Experience Document" : "Education Document"}</p>
                             <p><strong>File:</strong> {displayFileName}</p>
+                            <p><strong>Format:</strong> {isPDF ? 'PDF' : isWord ? 'Word Document' : 'Other'}</p>
                         </div>
 
                         <div className="flex justify-end gap-2 sm:gap-3">
