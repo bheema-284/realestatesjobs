@@ -549,7 +549,7 @@ function CandidateProfilePage() {
                                                         : 'text-gray-600 hover:bg-gray-200'}`}
                                                     title="Male"
                                                 >
-                                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-100 text-pink-600">
+                                                    <div className="flex items-center justify-center w-4 h-4">
                                                         <Image
                                                             src="/icons/man.png"
                                                             width={20}
@@ -567,7 +567,7 @@ function CandidateProfilePage() {
                                                         : 'text-gray-600 hover:bg-gray-200'}`}
                                                     title="Female"
                                                 >
-                                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-100 text-pink-600">
+                                                    <div className="flex items-center justify-center w-4 h-4">
                                                         <Image
                                                             src="/icons/woman.png"
                                                             width={20}
@@ -585,7 +585,7 @@ function CandidateProfilePage() {
                                                         : 'text-gray-600 hover:bg-gray-200'}`}
                                                     title="Other"
                                                 >
-                                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-100 text-pink-600">
+                                                    <div className="flex items-center justify-center w-4 h-4">
                                                         <Image
                                                             src="/icons/other.png"
                                                             width={20}
@@ -621,7 +621,7 @@ function CandidateProfilePage() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="space-y-4 mt-10 sm:-mt-0">
+                                <div className="space-y-4 mt-10 sm:mt-0">
                                     <div className="flex items-center gap-3">
                                         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h2>
                                         {profile.gender && (
@@ -673,9 +673,9 @@ function CandidateProfilePage() {
                         </div>
 
                         {/* Right Column - Personal Details Section (gender removed from here) */}
-                        <div className="flex-1 pt-4 sm:pt-0 sm:pl-6">
+                        <div className="flex-1">
                             {editingMode ? (
-                                <div className="grid grid-cols-1 gap-4 mt-3">
+                                <div className="flex flex-col gap-3 text-gray-700 sm:mt-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Mobile Number</label>
                                         <input
