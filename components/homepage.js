@@ -191,7 +191,7 @@ export default function HomePage() {
             id: company._id || 2000 + (index + 1),
             name: company.name || "",
             logo: (!company.profileImage || company.profileImage === "")
-                ? `https://placehold.co/50x50//F0F0F0/1e40af?text=${initials}&font=montserrat`
+                ? `https://placehold.co/50x50/F0F0F0/1e40af?text=${initials}&font=montserrat`
                 : company.profileImage
         };
     }) : [];
