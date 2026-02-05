@@ -549,13 +549,15 @@ function CandidateProfilePage() {
                                                         : 'text-gray-600 hover:bg-gray-200'}`}
                                                     title="Male"
                                                 >
-                                                    <Image
-                                                        src="/icons/man.png"
-                                                        width={20}
-                                                        height={20}
-                                                        alt="Male"
-                                                        className="text-center"
-                                                    />
+                                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-100 text-pink-600">
+                                                        <Image
+                                                            src="/icons/man.png"
+                                                            width={20}
+                                                            height={20}
+                                                            alt="Male"
+                                                            className="text-center"
+                                                        />
+                                                    </div>
                                                 </button>
                                                 <button
                                                     type="button"
@@ -565,13 +567,15 @@ function CandidateProfilePage() {
                                                         : 'text-gray-600 hover:bg-gray-200'}`}
                                                     title="Female"
                                                 >
-                                                    <Image
-                                                        src="/icons/woman.png"
-                                                        width={20}
-                                                        height={20}
-                                                        alt="Female"
-                                                        className="text-center"
-                                                    />
+                                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-100 text-pink-600">
+                                                        <Image
+                                                            src="/icons/woman.png"
+                                                            width={20}
+                                                            height={20}
+                                                            alt="Female"
+                                                            className="text-center"
+                                                        />
+                                                    </div>
                                                 </button>
                                                 <button
                                                     type="button"
@@ -581,13 +585,15 @@ function CandidateProfilePage() {
                                                         : 'text-gray-600 hover:bg-gray-200'}`}
                                                     title="Other"
                                                 >
-                                                    <Image
-                                                        src="/icons/other.png"
-                                                        width={20}
-                                                        height={20}
-                                                        alt="Other"
-                                                        className="text-center"
-                                                    />
+                                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-100 text-pink-600">
+                                                        <Image
+                                                            src="/icons/other.png"
+                                                            width={20}
+                                                            height={20}
+                                                            alt="Other"
+                                                            className="text-center"
+                                                        />
+                                                    </div>
                                                 </button>
                                             </div>
                                         </div>
