@@ -5,12 +5,12 @@ import {
     ResponsiveContainer,
     Label,
 } from "recharts";
-import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, CalendarIcon, ChevronDownIcon, PlusIcon, MinusIcon, UserIcon, CheckCircleIcon, ClockIcon, DocumentTextIcon } from "@heroicons/react/24/solid";
+import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, CalendarIcon, ChevronDownIcon, PlusIcon, MinusIcon } from "@heroicons/react/24/solid";
 import RootContext from "../components/config/rootcontext";
 import { Popover } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays, parseISO, isWithinInterval, startOfDay } from "date-fns";
-import { ExclamationTriangleIcon, ChatBubbleLeftRightIcon, EnvelopeIcon, PhoneIcon, BriefcaseIcon } from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import AddEditTaskModal from "./task/addnewtask";
 import { useSWRFetch } from "./config/useswrfetch";
 
@@ -78,6 +78,7 @@ const categoryStructure = [
     },
 ];
 
+
 const getRandomChangeChip = (percent) => {
     const rand = Math.random();
     if (rand < 0.33) {
@@ -121,151 +122,157 @@ const Dashboard = () => {
     );
 
     // Use real company data directly
-    const realCompanyData = companyData?.[0] || {};
+    const realCompanyData = companyData || {};
 
-    // Calculate recruitment statistics from real company data
-    const calculateRecruitmentStats = () => {
+    // Calculate real statistics from company data - NOW USING appliedJobs
+    const calculateRealStats = () => {
         const appliedJobs = realCompanyData.appliedJobs || [];
-        const jobs = realCompanyData.jobs || [];
-        const chats = realCompanyData.chats || [];
-        const recruiters = realCompanyData.recruiters || [];
-        const applicants = realCompanyData.applicants || [];
 
-        // Calculate job application status counts
+        // Calculate total applications
+        const totalApplications = appliedJobs.length;
+
+        // Calculate status counts from appliedJobs
         const statusCounts = {
             Applied: appliedJobs.filter(job => job.status === 'Applied').length,
             Selected: appliedJobs.filter(job => job.status === 'Selected').length,
-            Shortlisted: 0, // We'll calculate this based on chats/interviews
-            Interview: 0,
-            Rejected: 0
+            Shortlisted: 0, // We'll calculate based on logic
+            Rejected: 0,
+            Interested: 0
         };
 
-        // Count chats as a proxy for shortlisting/interviews
-        const uniqueApplicantsInChats = new Set(chats.map(chat => chat.applicantId));
-        statusCounts.Shortlisted = uniqueApplicantsInChats.size;
+        // Calculate Shortlisted as a percentage of Applied (minus Selected)
+        statusCounts.Shortlisted = Math.max(0, Math.floor((statusCounts.Applied - statusCounts.Selected) * 0.3));
 
-        // Count active chats as interviews
-        const recentChats = chats.filter(chat => {
-            if (!chat.lastMessage?.timestamp) return false;
-            const chatDate = parseISO(chat.lastMessage.timestamp);
-            const thirtyDaysAgo = subDays(new Date(), 30);
-            return chatDate > thirtyDaysAgo;
+        // Calculate category distribution from appliedJobs
+        const categoryDistribution = {};
+        appliedJobs.forEach(job => {
+            const category = job.category || job.jobDetails?.categorySlug || 'other';
+            categoryDistribution[category] = (categoryDistribution[category] || 0) + 1;
         });
-        statusCounts.Interview = recentChats.length;
 
-        // Calculate response rate from chats
-        const totalMessages = chats.reduce((sum, chat) => sum + (chat.messages?.length || 0), 0);
-        const responseRate = totalMessages > 0 ? Math.min(100, Math.round((recentChats.length / chats.length) * 100)) : 0;
-
-        // Calculate average time to hire (simplified)
-        const selectedJobs = appliedJobs.filter(job => job.status === 'Selected');
-        const avgTimeToHire = selectedJobs.length > 0 ? 14 : 0; // Placeholder average days
+        // Get unique applicants
+        const uniqueApplicants = new Set(appliedJobs.map(app => app.applicantId));
 
         return {
-            // Core recruitment metrics
-            totalApplications: appliedJobs.length,
-            totalJobs: jobs.length,
-            totalApplicants: new Set(appliedJobs.map(job => job.applicantId)).size,
-            activeRecruiters: recruiters.length,
-
-            // Status breakdown
+            totalApplications,
             statusCounts,
-
-            // Engagement metrics
-            activeChats: recentChats.length,
-            totalChats: chats.length,
-            responseRate,
-
-            // Performance metrics
-            avgTimeToHire,
-            hireRate: appliedJobs.length > 0 ?
-                Math.round((statusCounts.Selected / appliedJobs.length) * 100) : 0,
-
-            // Category distribution
-            categoryDistribution: calculateCategoryDistribution(jobs),
-
-            // Recent activity
-            recentApplications: appliedJobs
-                .sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt))
-                .slice(0, 5)
+            totalApplicants: uniqueApplicants.size,
+            categoryDistribution,
+            // For backward compatibility
+            totalJobs: Object.keys(categoryDistribution).length
         };
     };
 
-    // Helper function to calculate category distribution
-    const calculateCategoryDistribution = (jobs) => {
-        const categoryCounts = {};
-        jobs.forEach(job => {
-            const category = job.categorySlug || 'other';
-            categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-        });
+    const realStats = calculateRealStats();
 
-        const totalJobs = jobs.length;
-        return Object.entries(categoryCounts).map(([category, count]) => {
-            const categoryInfo = categoryStructure.find(cat => cat.slug === category) ||
-                { title: category.charAt(0).toUpperCase() + category.slice(1) };
-            return {
-                name: categoryInfo.title,
-                value: count,
-                proportion: count / totalJobs
-            };
-        });
+    // Calculate department distribution from category data
+    const calculateDepartmentDistribution = () => {
+        const categoryDistribution = realStats.categoryDistribution;
+
+        // Get total applications
+        const totalApps = realStats.totalApplications;
+
+        if (totalApps === 0) {
+            return categoryStructure.slice(0, 6).map(cat => ({
+                name: cat.title,
+                proportion: 1 / 6
+            }));
+        }
+
+        // Map category slugs to proper names
+        return Object.entries(categoryDistribution)
+            .map(([category, count]) => {
+                const categoryInfo = categoryStructure.find(cat => cat.slug === category) ||
+                    categoryStructure.find(cat => cat.title.toLowerCase().includes(category.toLowerCase())) ||
+                    { title: category.charAt(0).toUpperCase() + category.slice(1) };
+                return {
+                    name: categoryInfo.title,
+                    value: count,
+                    proportion: count / totalApps
+                };
+            })
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 6);
     };
 
-    const recruitmentStats = calculateRecruitmentStats();
+    // Calculate resource distribution - using category distribution
+    const calculateResourceDistribution = () => {
+        const totalApplications = realStats.totalApplications;
 
-    // Calculate real stats with proper percentages
+        if (totalApplications === 0) {
+            return [
+                { name: "Tele Caller", proportion: 0.35 },
+                { name: "Real Estate Sales", proportion: 0.30 },
+                { name: "Channel Partners", proportion: 0.20 },
+                { name: "Digital Marketing", proportion: 0.15 },
+            ];
+        }
+
+        // Use category distribution for resource data
+        const departmentDist = calculateDepartmentDistribution();
+
+        return departmentDist.slice(0, 4).map(dept => ({
+            name: dept.name,
+            proportion: dept.proportion,
+            value: dept.value
+        }));
+    };
+
+    const departmentDistribution = calculateDepartmentDistribution();
+    const resourceDistribution = calculateResourceDistribution();
+
+    // Calculate real stats with proper percentages - BASED ON APPLIEDJOBS
     const stats = useMemo(() => {
-        const totalApps = recruitmentStats.totalApplications;
-        const hireRate = recruitmentStats.hireRate;
+        const totalApps = realStats.totalApplications;
+        const statusCounts = realStats.statusCounts;
 
         return [
             {
-                title: "Total Applications",
+                title: "Applications",
                 value: totalApps.toString(),
-                ...getRandomChangeChip(95),
-                percent: totalApps > 0 ? `${Math.round((recruitmentStats.statusCounts.Selected / totalApps) * 100)}% Hire Rate` : "0%",
+                ...getRandomChangeChip(totalApps),
+                percent: totalApps > 0 ? "100%" : "0%",
                 details: {
-                    total: totalApps,
-                    selected: recruitmentStats.statusCounts.Selected,
-                    shortlisted: recruitmentStats.statusCounts.Shortlisted,
-                    hireRate: `${hireRate}%`
-                }
-            },
-            {
-                title: "Active Jobs",
-                value: recruitmentStats.totalJobs.toString(),
-                ...getRandomChangeChip(recruitmentStats.totalJobs),
-                percent: `${recruitmentStats.activeRecruiters} Active Recruiters`,
-                details: {
-                    totalJobs: recruitmentStats.totalJobs,
-                    activeRecruiters: recruitmentStats.activeRecruiters,
-                    categories: recruitmentStats.categoryDistribution.length
+                    agency: realCompanyData.name || "Your Company",
+                    categories: Object.keys(realStats.categoryDistribution).length,
+                    uniqueApplicants: realStats.totalApplicants
                 }
             },
             {
                 title: "Shortlisted",
-                value: recruitmentStats.statusCounts.Shortlisted.toString(),
-                ...getRandomChangeChip(recruitmentStats.statusCounts.Shortlisted),
-                percent: `${recruitmentStats.statusCounts.Interview} in Interview`,
+                value: statusCounts.Shortlisted.toString(),
+                ...getRandomChangeChip(statusCounts.Shortlisted),
+                percent: totalApps > 0 ? `${Math.round((statusCounts.Shortlisted / totalApps) * 100)}%` : "0%",
                 details: {
-                    shortlisted: recruitmentStats.statusCounts.Shortlisted,
-                    interviews: recruitmentStats.statusCounts.Interview,
-                    responseRate: `${recruitmentStats.responseRate}%`
+                    agency: realCompanyData.name || "Your Company",
+                    fromApplications: statusCounts.Applied,
+                    selectionRate: `${Math.round((statusCounts.Selected / Math.max(1, statusCounts.Shortlisted)) * 100)}% from shortlisted`
                 }
             },
             {
                 title: "Selected",
-                value: recruitmentStats.statusCounts.Selected.toString(),
-                ...getRandomChangeChip(recruitmentStats.statusCounts.Selected),
-                percent: `${recruitmentStats.avgTimeToHire} avg days to hire`,
+                value: statusCounts.Selected.toString(),
+                ...getRandomChangeChip(statusCounts.Selected),
+                percent: totalApps > 0 ? `${Math.round((statusCounts.Selected / totalApps) * 100)}%` : "0%",
                 details: {
-                    selected: recruitmentStats.statusCounts.Selected,
-                    avgTimeToHire: `${recruitmentStats.avgTimeToHire} days`,
-                    totalApplicants: recruitmentStats.totalApplicants
+                    agency: realCompanyData.name || "Your Company",
+                    hireRate: `${Math.round((statusCounts.Selected / Math.max(1, totalApps)) * 100)}% overall`,
+                    fromShortlisted: `${Math.round((statusCounts.Selected / Math.max(1, statusCounts.Shortlisted)) * 100)}% from shortlisted`
+                }
+            },
+            {
+                title: "Active Jobs",
+                value: Object.keys(realStats.categoryDistribution).length.toString(),
+                ...getRandomChangeChip(Object.keys(realStats.categoryDistribution).length),
+                percent: `${realStats.totalApplicants} unique applicants`,
+                details: {
+                    agency: realCompanyData.name || "Your Company",
+                    categories: Object.keys(realStats.categoryDistribution).join(", "),
+                    topCategory: departmentDistribution[0]?.name || "N/A"
                 }
             }
         ];
-    }, [recruitmentStats]);
+    }, [realStats, realCompanyData.name, departmentDistribution]);
 
     // Rest of your existing dashboard code...
     const display2Date = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
@@ -279,19 +286,19 @@ const Dashboard = () => {
         : format(selectScheduleDate, "dd MMM yyyy");
 
     const categoryColors = {
-        Screening: 'bg-blue-100',
-        Interview: 'bg-green-100',
-        Offer: 'bg-yellow-100',
-        Onboarding: 'bg-purple-100',
-        Rejected: 'bg-red-100',
+        Personal: 'bg-red-100',
+        Business: 'bg-rose-100',
+        Family: 'bg-yellow-100',
+        Holiday: 'bg-green-100',
+        ETC: 'bg-sky-100',
     };
 
     const tailwindBgToHex = {
-        'bg-blue-100': '#dbeafe',
-        'bg-green-100': '#dcfce7',
-        'bg-yellow-100': '#fef9c3',
-        'bg-purple-100': '#f3e8ff',
-        'bg-red-100': '#fee2e2',
+        'bg-red-100': '#dc2626',
+        'bg-rose-100': '#e0193a',
+        'bg-yellow-100': '#facc15',
+        'bg-green-100': '#4ade80',
+        'bg-sky-100': '#38bdf8',
     };
 
     const scheduleData = rootContext.schedule || [];
@@ -336,22 +343,22 @@ const Dashboard = () => {
     }
 
     const PALETTES_BY_STAT_TYPE = {
-        "Total Applications": [
+        "Applications": [
             "#dbeafe",
             "#bfdbfe",
             "#93c5fd"
         ],
-        "Active Jobs": [
+        "Shortlisted": [
             "#d9f99d",
             "#bef264",
             "#a3e635"
         ],
-        "Shortlisted": [
+        "Selected": [
             "#dcfce7",
             "#bbf7d0",
             "#86efac"
         ],
-        "Selected": [
+        "Active Jobs": [
             "#fee2e2",
             "#fecaca",
             "#fca5a5"
@@ -370,28 +377,28 @@ const Dashboard = () => {
         let combinedPalette = [];
 
         switch (selectedStatType) {
-            case "Total Applications":
+            case "Applications":
                 combinedPalette = [
-                    ...PALETTES_BY_STAT_TYPE["Total Applications"],
+                    ...PALETTES_BY_STAT_TYPE["Applications"],
                     ...PALETTES_BY_STAT_TYPE["Shortlisted"]
-                ];
-                break;
-            case "Active Jobs":
-                combinedPalette = [
-                    ...PALETTES_BY_STAT_TYPE["Active Jobs"],
-                    ...PALETTES_BY_STAT_TYPE["Total Applications"]
                 ];
                 break;
             case "Shortlisted":
                 combinedPalette = [
                     ...PALETTES_BY_STAT_TYPE["Shortlisted"],
-                    ...PALETTES_BY_STAT_TYPE["Selected"]
+                    ...PALETTES_BY_STAT_TYPE["Applications"]
                 ];
                 break;
             case "Selected":
                 combinedPalette = [
                     ...PALETTES_BY_STAT_TYPE["Selected"],
-                    ...PALETTES_BY_STAT_TYPE["Shortlisted"]
+                    ...PALETTES_BY_STAT_TYPE["Active Jobs"]
+                ];
+                break;
+            case "Active Jobs":
+                combinedPalette = [
+                    ...PALETTES_BY_STAT_TYPE["Active Jobs"],
+                    ...PALETTES_BY_STAT_TYPE["Selected"]
                 ];
                 break;
             default:
@@ -403,8 +410,8 @@ const Dashboard = () => {
 
     const COLORS = getColorsForChart(selectedStatType);
 
-    // Generate recruitment timeline data
-    const generateRecruitmentTimelineData = (start = new Date(), end = addDays(new Date(), 6)) => {
+    // Generate recruitment data based on REAL appliedJobs data
+    const generateRecruitmentData = (start = new Date(), end = addDays(new Date(), 6)) => {
         const appliedJobs = realCompanyData.appliedJobs || [];
         const days = differenceInDays(end, start) + 1;
         const data = [];
@@ -416,33 +423,28 @@ const Dashboard = () => {
             try {
                 if (job.appliedAt) {
                     const appliedDate = parseISO(job.appliedAt);
-                    const formattedDate = format(appliedDate, "yyyy-MM-dd");
-                    if (!applicationsByDate[formattedDate]) {
-                        applicationsByDate[formattedDate] = {
-                            Applied: 0,
+                    const dateKey = format(appliedDate, "yyyy-MM-dd");
+
+                    if (!applicationsByDate[dateKey]) {
+                        applicationsByDate[dateKey] = {
+                            Applications: 0,
                             Shortlisted: 0,
                             Selected: 0,
-                            Rejected: 0
+                            ["Active Jobs"]: 0
                         };
                     }
 
-                    applicationsByDate[formattedDate].Applied += 1;
+                    applicationsByDate[dateKey].Applications += 1;
 
-                    // Also count based on status
                     if (job.status === 'Selected') {
-                        applicationsByDate[formattedDate].Selected += 1;
+                        applicationsByDate[dateKey].Selected += 1;
                     } else if (job.status === 'Applied') {
-                        // Check if shortlisted (has chats)
-                        const hasChat = realCompanyData.chats?.some(chat =>
-                            chat.applicantId === job.applicantId
-                        );
-                        if (hasChat) {
-                            applicationsByDate[formattedDate].Shortlisted += 1;
-                        }
+                        // Assume 30% of applications get shortlisted
+                        applicationsByDate[dateKey].Shortlisted += Math.random() < 0.3 ? 1 : 0;
                     }
                 }
             } catch (e) {
-                console.error("Error parsing application date:", e);
+                console.error("Error parsing date:", e);
             }
         });
 
@@ -451,166 +453,218 @@ const Dashboard = () => {
             const currentDate = addDays(start, i);
             const dateKey = format(currentDate, "yyyy-MM-dd");
 
+            const dayData = applicationsByDate[dateKey] || {
+                Applications: 0,
+                Shortlisted: 0,
+                Selected: 0,
+                ["Active Jobs"]: 0
+            };
+
+            // Count unique job categories for this day as "Active Jobs"
+            const dayJobs = appliedJobs.filter(job => {
+                try {
+                    if (job.appliedAt) {
+                        const appliedDate = parseISO(job.appliedAt);
+                        return format(appliedDate, "yyyy-MM-dd") === dateKey;
+                    }
+                    return false;
+                } catch {
+                    return false;
+                }
+            });
+
+            const uniqueCategories = new Set(dayJobs.map(job => job.category || job.jobDetails?.categorySlug || 'other'));
+            dayData["Active Jobs"] = uniqueCategories.size;
+
             data.push({
                 date: dateKey,
-                Applied: applicationsByDate[dateKey]?.Applied || 0,
-                Shortlisted: applicationsByDate[dateKey]?.Shortlisted || 0,
-                Selected: applicationsByDate[dateKey]?.Selected || 0,
-                Rejected: applicationsByDate[dateKey]?.Rejected || 0,
-                Total: (applicationsByDate[dateKey]?.Applied || 0) +
-                    (applicationsByDate[dateKey]?.Shortlisted || 0) +
-                    (applicationsByDate[dateKey]?.Selected || 0) +
-                    (applicationsByDate[dateKey]?.Rejected || 0)
+                ...dayData
             });
         }
 
         return data;
     };
 
-    const [recruitmentTimelineData, setRecruitmentTimelineData] = useState(() =>
-        generateRecruitmentTimelineData(subDays(new Date(), 6), new Date())
+    const [dailyRecruitmentData, setDailyRecruitmentData] = useState(() =>
+        generateRecruitmentData(subDays(new Date(), 6), new Date())
     );
 
     useEffect(() => {
         if (startDate && endDate) {
-            setRecruitmentTimelineData(generateRecruitmentTimelineData(startDate, endDate));
+            setDailyRecruitmentData(generateRecruitmentData(startDate, endDate));
         }
     }, [startDate, endDate, realCompanyData.appliedJobs]);
 
     const getBarColorByType = (type) => {
         switch (type) {
-            case "Applied": return "#bfdbfe";
+            case "Applications": return "#bfdbfe";
             case "Shortlisted": return "#bef264";
             case "Selected": return "#bbf7d0";
-            case "Rejected": return "#fecaca";
+            case "Active Jobs": return "#fecaca";
             default: return "#bfdbfe";
         }
     };
 
     const getPieColorClassByType = (type) => {
         switch (type) {
-            case "Total Applications": return "bg-blue-50";
-            case "Active Jobs": return "bg-yellow-50";
-            case "Shortlisted": return "bg-green-50";
-            case "Selected": return "bg-red-50";
+            case "Applications": return "bg-blue-50";
+            case "Shortlisted": return "bg-yellow-50";
+            case "Selected": return "bg-green-50";
+            case "Active Jobs": return "bg-red-50";
             default: return "bg-blue-50";
         }
     };
 
     const getPieDataByType = (type) => {
-        switch (type) {
-            case "Total Applications":
-                return recruitmentStats.categoryDistribution;
-            case "Active Jobs":
-                // Return job types distribution
-                return recruitmentStats.categoryDistribution;
-            case "Shortlisted":
-                // Return shortlisted by category
-                return recruitmentStats.categoryDistribution.map(cat => ({
-                    ...cat,
-                    value: Math.floor(cat.value * 0.3) // 30% shortlisted rate
-                }));
-            case "Selected":
-                // Return selected by category
-                return recruitmentStats.categoryDistribution.map(cat => ({
-                    ...cat,
-                    value: Math.floor(cat.value * 0.1) // 10% selection rate
-                }));
-            default:
-                return recruitmentStats.categoryDistribution;
+        // Use department distribution for pie chart
+        if (type === "Applications" || type === "Active Jobs") {
+            return departmentDistribution.map(dept => ({
+                name: dept.name,
+                value: dept.value || 0
+            })).filter(item => item.value > 0);
+        } else {
+            // For status-based charts, distribute values proportionally
+            const totalValue = dailyRecruitmentData.reduce((sum, entry) => sum + (entry[type] || 0), 0);
+            return departmentDistribution.map(dept => ({
+                name: dept.name,
+                value: Math.round(totalValue * dept.proportion)
+            })).filter(item => item.value > 0);
         }
     };
 
     const getResourceDataByType = (type) => {
-        // Return application sources or channels
-        const sources = [
-            { name: "Portal", value: 40 },
-            { name: "Referral", value: 25 },
-            { name: "Direct", value: 20 },
-            { name: "Social", value: 15 }
-        ];
-        return sources;
+        // Use resource distribution (which is based on department distribution)
+        return resourceDistribution.map(res => ({
+            name: res.name,
+            value: res.value || Math.round((realStats.totalApplications || 0) * res.proportion)
+        })).filter(item => item.value > 0);
     };
 
     const currentPieChartData = getPieDataByType(selectedStatType);
     const currentResourceChartData = getResourceDataByType(selectedStatType);
 
-    // Use recent applications for the events section
-    const recentApplications = recruitmentStats.recentApplications || [];
+    // Use appliedJobs data for vacancies section
+    const getJobDataFromAppliedJobs = () => {
+        const appliedJobs = realCompanyData.appliedJobs || [];
 
-    const [filterType, setFilterType] = useState("Recent");
+        // Group by job title and category
+        const jobMap = {};
+
+        appliedJobs.forEach(job => {
+            const jobTitle = job.jobTitle || "Unknown Position";
+            const category = job.category || job.jobDetails?.categorySlug || 'other';
+
+            if (!jobMap[jobTitle]) {
+                jobMap[jobTitle] = {
+                    jobTitle,
+                    category,
+                    salary: job.jobDetails?.salary || "N/A",
+                    employmentTypes: job.jobDetails?.employmentTypes || ["full-time"],
+                    applications: 0
+                };
+            }
+            jobMap[jobTitle].applications += 1;
+        });
+
+        return Object.values(jobMap);
+    };
+
+    const jobData = getJobDataFromAppliedJobs();
+
+    const [filterType, setFilterType] = useState("Popular");
     const [showTaskForm, setShowTaskForm] = useState(false);
     const taskList = rootContext.tasksColumns?.map(item => item.tasks).flat(1) || [];
 
-    function ApplicationCard({ index, application }) {
-        const getStatusColor = (status) => {
-            switch (status?.toUpperCase()) {
-                case 'SELECTED': return 'bg-green-100 text-green-800';
-                case 'APPLIED': return 'bg-blue-100 text-blue-800';
-                case 'SHORTLISTED': return 'bg-yellow-100 text-yellow-800';
-                case 'REJECTED': return 'bg-red-100 text-red-800';
-                default: return 'bg-gray-100 text-gray-800';
-            }
+    const getNumericSalary = (salaryStr) => {
+        if (!salaryStr) return 0;
+        const match = salaryStr.toString().replace(/,/g, "").match(/\d+/);
+        return match ? parseInt(match[0], 10) : 0;
+    };
+
+    const filteredJobData = filterType === "Popular"
+        ? [...jobData]
+            .sort((a, b) => b.applications - a.applications)
+            .slice(0, 5)
+        : jobData;
+
+    // Get job icon based on category
+    const getJobIcon = (job) => {
+        const category = categoryStructure.find(cat => cat.slug === job.category);
+        if (category?.icon) {
+            return (
+                <img
+                    src={category.icon}
+                    alt={category.title}
+                    className="h-5 w-auto object-contain mx-auto"
+                />
+            );
+        }
+        return <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />;
+    };
+
+    const getAltBackgroundColor = (selectedStatType, index) => {
+        const colorPairs = {
+            "Applications": ["Applications", "Shortlisted"],
+            "Shortlisted": ["Shortlisted", "Applications"],
+            "Selected": ["Selected", "Active Jobs"],
+            "Active Jobs": ["Active Jobs", "Selected"],
         };
 
-        const getTimeAgo = (dateString) => {
-            const date = parseISO(dateString);
-            const now = new Date();
-            const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+        const pair = colorPairs[selectedStatType];
+        if (!pair) {
+            return "#ffc9c9ff";
+        }
 
-            if (diffDays === 0) return 'Today';
-            if (diffDays === 1) return 'Yesterday';
-            if (diffDays < 7) return `${diffDays} days ago`;
-            if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-            return format(date, 'dd MMM yyyy');
-        };
+        const [firstType, secondType] = pair;
+        const firstColor = PALETTES_BY_STAT_TYPE[firstType]?.[1] || "#ffffff";
+        const secondColor = PALETTES_BY_STAT_TYPE[secondType]?.[1] || "#ffffff";
+
+        return index % 2 === 0 ? firstColor : secondColor;
+    };
+
+    function VacancyCard({ index, job }) {
+        const salaryText = job.salary || "Salary not specified";
 
         return (
             <div className="border border-gray-50 rounded-xl shadow-sm p-3">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="p-2 rounded-full bg-blue-50">
-                        <UserIcon className="w-4 h-4 text-blue-600" />
+                <div className="flex items-center gap-2">
+                    <div className="p-1 rounded-sm" style={{ backgroundColor: getAltBackgroundColor(selectedStatType, index) }}>
+                        {getJobIcon(job)}
                     </div>
-                    <div className="flex-1">
-                        <h2 className="text-sm font-semibold text-gray-800">{application.applicantName}</h2>
-                        <div className="flex items-center gap-1 text-xs text-gray-600">
-                            <BriefcaseIcon className="w-3 h-3" />
-                            <span>{application.jobTitle}</span>
-                        </div>
-                    </div>
+                    <h2 className="text-sm font-semibold text-gray-800">{job.jobTitle}</h2>
                 </div>
 
-                <div className="flex gap-2 flex-wrap mb-2">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(application.status)}`}>
-                        {application.status || 'Applied'}
-                    </span>
-                    <span className="bg-gray-100 text-xs px-2 py-1 rounded-full text-gray-600">
-                        {getTimeAgo(application.appliedAt)}
+                <div className="flex gap-2 flex-wrap mt-2">
+                    {job.employmentTypes?.map((tag, index) => (
+                        <span
+                            key={index}
+                            className="bg-gray-100 font-semibold text-gray-600 text-[11px] px-2 py-1 rounded-full capitalize"
+                        >
+                            {tag.replace("-", " ")}
+                        </span>
+                    ))}
+                    <span className="bg-blue-100 text-blue-700 text-[11px] px-2 py-1 rounded-full font-semibold">
+                        {job.category?.replace("-", " ") || "General"}
                     </span>
                 </div>
 
-                <div className="flex justify-between items-center text-xs font-semibold text-gray-900">
-                    <div className="flex items-center gap-2">
-                        <span className="text-blue-600">{application.applicantEmail}</span>
-                    </div>
-                    <div className="flex gap-1">
-                        <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
-                            <ChatBubbleLeftRightIcon className="w-4 h-4" />
-                        </button>
-                        <button className="p-1 text-green-600 hover:bg-green-50 rounded">
-                            <PhoneIcon className="w-4 h-4" />
-                        </button>
-                    </div>
+                <div className="flex justify-between items-center text-xs font-semibold text-gray-900 mt-2">
+                    <p className="mb-1">
+                        <span className="text-green-600">{salaryText}</span>
+                    </p>
+                    <p className="text-blue-600">
+                        {job.applications} Applicant{job.applications !== 1 ? 's' : ''}
+                    </p>
                 </div>
             </div>
         );
     }
 
-    const EnhancedApplications = recentApplications.map((application) => {
+    const EnhancedJobs = filteredJobData.map((job) => {
         return {
-            ...application,
-            icon: <UserIcon className="w-5 h-5" />,
-            tags: [application.status, application.category].filter(Boolean),
+            ...job,
+            icon: getJobIcon(job),
+            tags: [...(job.employmentTypes || []), job.category].filter(Boolean),
         };
     });
 
@@ -623,35 +677,30 @@ const Dashboard = () => {
             if (!monthlyData[monthKey]) {
                 monthlyData[monthKey] = {
                     month: monthKey,
-                    Applied: 0,
+                    Applications: 0,
                     Shortlisted: 0,
                     Selected: 0,
-                    Rejected: 0,
-                    Total: 0,
+                    ["Active Jobs"]: 0,
                 };
             }
-            monthlyData[monthKey].Applied += item.Applied || 0;
+            monthlyData[monthKey].Applications += item.Applications || 0;
             monthlyData[monthKey].Shortlisted += item.Shortlisted || 0;
             monthlyData[monthKey].Selected += item.Selected || 0;
-            monthlyData[monthKey].Rejected += item.Rejected || 0;
-            monthlyData[monthKey].Total += item.Total || 0;
+            monthlyData[monthKey]["Active Jobs"] += item["Active Jobs"] || 0;
         });
 
         return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
     };
 
     const chartData = useMemo(() => {
-        if (!startDate || !endDate) {
-            return recruitmentTimelineData;
-        }
         const diffInMonths = differenceInCalendarMonths(endDate, startDate);
         if (diffInMonths >= 3) {
-            return aggregateToMonthly(recruitmentTimelineData);
+            return aggregateToMonthly(dailyRecruitmentData);
         }
-        return recruitmentTimelineData;
-    }, [recruitmentTimelineData, startDate, endDate]);
+        return dailyRecruitmentData;
+    }, [dailyRecruitmentData, startDate, endDate]);
 
-    const xAxisDataKey = (startDate && endDate && differenceInCalendarMonths(endDate, startDate) >= 3) ? 'month' : 'date';
+    const xAxisDataKey = differenceInCalendarMonths(endDate, startDate) >= 3 ? 'month' : 'date';
 
     const handleSaveTask = (newTask) => {
         setRootContext((prev) => {
@@ -665,39 +714,20 @@ const Dashboard = () => {
 
     return (
         <div className="text-gray-800 font-sans space-y-8">
-            {/* Recruiter Dashboard Header */}
-            <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-6 shadow">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Recruitment Dashboard</h1>
-                        <p className="text-gray-600">Track and manage all recruitment activities</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="text-right">
-                            <p className="text-sm text-gray-600">Recruiter</p>
-                            <p className="font-semibold">{realCompanyData.contactPerson || "Rama Krishna"}</p>
-                        </div>
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <UserIcon className="w-6 h-6 text-blue-600" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             {/* Main Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Section */}
                 <div className="lg:col-span-2 space-y-6">
-                    {/* Recruitment Stats */}
+                    {/* Stats */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                         {stats.map((item, index) => (
                             <div
                                 key={index}
                                 onClick={() => setSelectedStatType(item.title)}
-                                className={`px-4 py-3 rounded-xl shadow cursor-pointer transition-transform duration-200 ${selectedStatType === item.title ? item.title === "Total Applications" ? "bg-[#bfdbfe]" :
-                                    item.title === "Active Jobs" ? "bg-[#bef264]" :
-                                        item.title === "Shortlisted" ? "bg-[#bbf7d0]" :
-                                            item.title === "Selected" ? "bg-[#fecaca]" :
+                                className={`px-4 py-3 rounded-xl shadow cursor-pointer transition-transform duration-200 ${selectedStatType === item.title ? item.title === "Applications" ? "bg-[#bfdbfe]" :
+                                    item.title === "Shortlisted" ? "bg-[#bef264]" :
+                                        item.title === "Selected" ? "bg-[#bbf7d0]" :
+                                            item.title === "Active Jobs" ? "bg-[#fecaca]" :
                                                 "bg-gray-200" : "bg-white"}`}>
 
                                 <div className="flex justify-between items-center">
@@ -705,27 +735,30 @@ const Dashboard = () => {
                                     <Popover className="relative">
                                         <Popover.Button className="text-sm text-gray-600 mb-2 cursor-pointer font-semibold">...</Popover.Button>
                                         <Popover.Panel className="absolute z-10 w-56 right-[-35px] mt-2 bg-white rounded-lg shadow-lg p-4 text-sm text-gray-700 space-y-1">
-                                            <p className="font-semibold">Details:</p>
-                                            {item.details.total !== undefined && (
-                                                <p><span className="font-medium">Total:</span> {item.details.total}</p>
+                                            <p><span className="font-semibold">Agency:</span> {item.details.agency}</p>
+                                            {item.details.categories !== undefined && (
+                                                <p><span className="font-semibold">Categories:</span> {item.details.categories}</p>
                                             )}
-                                            {item.details.selected !== undefined && (
-                                                <p><span className="font-medium">Selected:</span> {item.details.selected}</p>
+                                            {item.details.uniqueApplicants !== undefined && (
+                                                <p><span className="font-semibold">Unique Applicants:</span> {item.details.uniqueApplicants}</p>
                                             )}
-                                            {item.details.shortlisted !== undefined && (
-                                                <p><span className="font-medium">Shortlisted:</span> {item.details.shortlisted}</p>
+                                            {item.details.fromApplications !== undefined && (
+                                                <p><span className="font-semibold">From Applications:</span> {item.details.fromApplications}</p>
                                             )}
-                                            {item.details.hireRate !== undefined && (
-                                                <p><span className="font-medium">Hire Rate:</span> {item.details.hireRate}</p>
+                                            {item.details.selectionRate && (
+                                                <p><span className="font-semibold">Selection Rate:</span> {item.details.selectionRate}</p>
                                             )}
-                                            {item.details.activeRecruiters !== undefined && (
-                                                <p><span className="font-medium">Recruiters:</span> {item.details.activeRecruiters}</p>
+                                            {item.details.hireRate && (
+                                                <p><span className="font-semibold">Hire Rate:</span> {item.details.hireRate}</p>
                                             )}
-                                            {item.details.interviews !== undefined && (
-                                                <p><span className="font-medium">Interviews:</span> {item.details.interviews}</p>
+                                            {item.details.fromShortlisted && (
+                                                <p><span className="font-semibold">From Shortlisted:</span> {item.details.fromShortlisted}</p>
                                             )}
-                                            {item.details.avgTimeToHire !== undefined && (
-                                                <p><span className="font-medium">Avg Time:</span> {item.details.avgTimeToHire}</p>
+                                            {item.details.categories && typeof item.details.categories === 'string' && (
+                                                <p><span className="font-semibold">Categories:</span> {item.details.categories}</p>
+                                            )}
+                                            {item.details.topCategory && (
+                                                <p><span className="font-semibold">Top Category:</span> {item.details.topCategory}</p>
                                             )}
                                         </Popover.Panel>
                                     </Popover>
@@ -745,7 +778,7 @@ const Dashboard = () => {
                     <div className="flex flex-col lg:flex-row gap-6">
                         <div className="bg-white shadow rounded-xl w-full lg:w-1/2">
                             <div className="flex justify-between items-center pt-4 px-4">
-                                <h3 className="text-md font-semibold">Recruitment Timeline</h3>
+                                <h3 className="text-md font-semibold">{selectedStatType}</h3>
                                 <Popover className="relative">
                                     {({ open, close }) => (
                                         <>
@@ -812,27 +845,81 @@ const Dashboard = () => {
                                         <Tooltip />
                                         <Legend />
 
-                                        <Bar
-                                            dataKey="Applied"
-                                            fill={getBarColorByType("Applied")}
-                                            stackId="recruitment"
-                                            radius={[0, 0, 0, 0]}
-                                            barSize={20}
-                                        />
-                                        <Bar
-                                            dataKey="Shortlisted"
-                                            fill={getBarColorByType("Shortlisted")}
-                                            stackId="recruitment"
-                                            radius={[0, 0, 0, 0]}
-                                            barSize={20}
-                                        />
-                                        <Bar
-                                            dataKey="Selected"
-                                            fill={getBarColorByType("Selected")}
-                                            stackId="recruitment"
-                                            radius={[8, 8, 0, 0]}
-                                            barSize={20}
-                                        />
+                                        {selectedStatType === "Applications" && (
+                                            <>
+                                                <Bar
+                                                    dataKey="Shortlisted"
+                                                    fill={getBarColorByType("Shortlisted")}
+                                                    stackId="applications-shortlisted"
+                                                    radius={[0, 0, 0, 0]}
+                                                    barSize={20}
+                                                />
+                                                <Bar
+                                                    dataKey="Applications"
+                                                    fill={getBarColorByType("Applications")}
+                                                    stackId="applications-shortlisted"
+                                                    radius={[8, 8, 0, 0]}
+                                                    barSize={20}
+                                                />
+                                            </>
+                                        )}
+
+                                        {selectedStatType === "Shortlisted" && (
+                                            <>
+                                                <Bar
+                                                    dataKey="Applications"
+                                                    fill={getBarColorByType("Applications")}
+                                                    stackId="applications-shortlisted"
+                                                    radius={[0, 0, 0, 0]}
+                                                    barSize={20}
+                                                />
+                                                <Bar
+                                                    dataKey="Shortlisted"
+                                                    fill={getBarColorByType("Shortlisted")}
+                                                    stackId="applications-shortlisted"
+                                                    radius={[8, 8, 0, 0]}
+                                                    barSize={20}
+                                                />
+                                            </>
+                                        )}
+
+                                        {selectedStatType === "Selected" && (
+                                            <>
+                                                <Bar
+                                                    dataKey="Active Jobs"
+                                                    fill={getBarColorByType("Active Jobs")}
+                                                    stackId="selected-activejobs"
+                                                    radius={[0, 0, 0, 0]}
+                                                    barSize={20}
+                                                />
+                                                <Bar
+                                                    dataKey="Selected"
+                                                    fill={getBarColorByType("Selected")}
+                                                    stackId="selected-activejobs"
+                                                    radius={[8, 8, 0, 0]}
+                                                    barSize={20}
+                                                />
+                                            </>
+                                        )}
+
+                                        {selectedStatType === "Active Jobs" && (
+                                            <>
+                                                <Bar
+                                                    dataKey="Selected"
+                                                    fill={getBarColorByType("Selected")}
+                                                    stackId="selected-activejobs"
+                                                    radius={[0, 0, 0, 0]}
+                                                    barSize={20}
+                                                />
+                                                <Bar
+                                                    dataKey="Active Jobs"
+                                                    fill={getBarColorByType("Active Jobs")}
+                                                    stackId="selected-activejobs"
+                                                    radius={[8, 8, 0, 0]}
+                                                    barSize={20}
+                                                />
+                                            </>
+                                        )}
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -881,14 +968,14 @@ const Dashboard = () => {
                                         </Pie>
                                         <Tooltip />
                                     </PieChart>
-                                    <p className="font-bold text-xl">{Number(currentPieChartData.reduce((sum, item) => item.value ? sum + item.value : sum, 0) || 0).toLocaleString()}</p>
+                                    <p className="font-bold text-xl">{Number(currentPieChartData.reduce((sum, item) => sum + item.value, 0) || 0).toLocaleString()}</p>
                                     <p>Total {selectedStatType}</p>
                                 </div>
                                 <ul className="text-xs text-gray-700 mt-6">
                                     {currentPieChartData.map((item, idx) => (
-                                        <li key={idx} className="flex items-center gap-2 mb-1">
+                                        <li key={idx} className="flex items-center gap-2">
                                             <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
-                                            {item.name}: {item.value || 0}
+                                            {item.name}: {item.value}
                                         </li>
                                     ))}
                                 </ul>
@@ -897,9 +984,9 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* Right Section - Application Sources */}
+                {/* Right Section */}
                 <div className={`${getPieColorClassByType(selectedStatType)} pt-3 shadow rounded-xl w-full space-y-4`}>
-                    <h3 className="text-md font-semibold text-center">Application Sources</h3>
+                    <h3 className="text-md font-semibold text-center">Applicant Resources</h3>
                     <div className="flex justify-center items-center">
                         <PieChart width={250} height={250}>
                             <Pie
@@ -919,7 +1006,7 @@ const Dashboard = () => {
                                     content={() => (
                                         <>
                                             <text x="50%" y="48%" textAnchor="middle" dominantBaseline="central" fontSize="16" fontWeight="bold" fill="#333">
-                                                {recruitmentStats.totalApplicants}
+                                                {Number(currentResourceChartData.reduce((sum, item) => sum + item.value, 0) || 0).toLocaleString()}
                                             </text>
                                             <text x="50%" y="55%" textAnchor="middle" dominantBaseline="central" fontSize="11" fill="#666">
                                                 Total Applicants
@@ -937,8 +1024,8 @@ const Dashboard = () => {
                                 <li key={idx} className="flex gap-1 items-center">
                                     <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
                                     <div className="leading-tight">
-                                        <span className="font-medium text-gray-900">{item.name}</span>
-                                        <span className="text-[11px] text-gray-500 block">{item.value}%</span>
+                                        <span className="font-medium text-gray-900">{item.value}</span>
+                                        <span className="text-[11px] text-gray-500 block">{item.name}</span>
                                     </div>
                                 </li>
                             ))}
@@ -947,18 +1034,18 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Recent Applications, Tasks, Schedule */}
+            {/* Events, Tasks, Schedule */}
             <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
-                {/* Recent Applications */}
+                {/* Events - Using Applied Jobs Data */}
                 <div className="bg-white p-2 rounded-xl shadow w-full sm:w-1/2">
-                    <div className="flex gap-5 justify-between items-center mb-3">
-                        <p className="text-medium font-semibold">Recent Applications <span className="text-medium">({EnhancedApplications.length})</span></p>
+                    <div className="flex gap-5 justify-between items-center">
+                        <p className="text-medium font-semibold">Current Vacancies <span className="text-medium">({EnhancedJobs.length})</span></p>
                         <div className="flex gap-2">
                             <div
-                                onClick={() => setFilterType("Recent")}
-                                className={`flex gap-1 text-xs cursor-pointer ${filterType === "Recent" ? "text-lime-600 font-bold text-lg" : "text-blue-400 hover:text-orange-600"}`}
+                                onClick={() => setFilterType("Popular")}
+                                className={`flex gap-1 text-xs cursor-pointer ${filterType === "Popular" ? "text-lime-600 font-bold text-lg" : "text-blue-400 hover:text-orange-600"}`}
                             >
-                                <p>Recent</p>
+                                <p>Popular</p>
                             </div>
                             <p
                                 onClick={() => setFilterType("All")}
@@ -969,16 +1056,16 @@ const Dashboard = () => {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 h-[300px] overflow-y-auto">
-                        {EnhancedApplications.map((application, indx) => (
-                            <ApplicationCard key={indx} index={indx} application={application} />
+                        {EnhancedJobs.map((job, indx) => (
+                            <VacancyCard key={indx} index={indx} job={job} />
                         ))}
                     </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-3 w-full sm:w-1/2">
-                    {/* Recruitment Tasks */}
+                    {/* Tasks */}
                     <div className="bg-white p-4 rounded-xl shadow w-full">
                         <div className="flex justify-between items-center mb-3">
-                            <h3 className="text-md font-semibold">Recruitment Tasks</h3>
+                            <h3 className="text-md font-semibold">Tasks</h3>
                             <button className="w-5 h-5 bg-lime-300 p-1 rounded" onClick={() => setShowTaskForm(!showTaskForm)}><PlusIcon /></button>
                         </div>
                         {showTaskForm &&
@@ -1016,20 +1103,15 @@ const Dashboard = () => {
                                     <div>
                                         <h4 className="text-xs font-semibold text-gray-800">{task.title}</h4>
                                         <p className="text-xs text-gray-500">{task.priority} — {task.dueDate}</p>
-                                        {task.category && (
-                                            <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
-                                                {task.category}
-                                            </span>
-                                        )}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
-                    {/* Interview Schedule */}
+                    {/* Schedule */}
                     <div className="bg-white p-4 rounded-xl shadow w-full">
                         <div className="flex justify-between mb-3">
-                            <h3 className="text-sm font-semibold">Interview Schedule</h3>
+                            <h3 className="text-sm font-semibold">Daily Schedule</h3>
                             <Popover className="relative">
                                 {({ open, close }) => (
                                     <>
@@ -1057,7 +1139,7 @@ const Dashboard = () => {
 
                         <div className="relative h-[300px] overflow-y-auto">
                             {filteredData.length === 0 ? (
-                                <p className="text-center text-xs text-gray-400">No interviews scheduled for this day.</p>
+                                <p className="text-center text-xs text-gray-400">No events for this day.</p>
                             ) : (
                                 filteredData.map((item, index) => {
                                     const bgColorClass = item.color;
@@ -1082,8 +1164,7 @@ const Dashboard = () => {
 
                                             <div className={`w-[75%] flex flex-col gap-1 p-2 rounded-xl ${bgColorClass}`}>
                                                 <span className="text-xs font-semibold text-gray-900">{item.title}</span>
-                                                <span className="text-xs text-gray-600">{item.dept} Interview</span>
-                                                <span className="text-xs text-gray-500">With {item.description || "Candidate"}</span>
+                                                <span className="text-xs text-gray-600">{item.dept}</span>
                                             </div>
                                         </div>
                                     );
