@@ -638,15 +638,15 @@ export default function ProjectDetailsPage() {
                 </div>
 
                 {/* Sections */}
-                <div className="space-y-20 mt-44">
+                <div className="space-y-5 mt-10">
                     {sections.map((sec) => (
                         <div
                             key={sec}
                             ref={sectionRefs.current[sec]}
                             data-section={sec}
-                            className="scroll-mt-40 min-h-[50vh] px-2 flex flex-col justify-center"
+                            className="scroll-mt-52 min-h-[50vh] px-2 flex flex-col justify-center"
                         >
-                            <h2 className="text-2xl font-semibold mb-6 text-gray-800 pb-2">
+                            <h2 className="text-2xl font-semibold mb-4 text-gray-800 pb-2">
                                 {sec}
                             </h2>
 
