@@ -116,10 +116,6 @@ const JobCard = ({ job, category, isOpen, onToggle }) => {
         onToggle();
     };
 
-    const handleButtonClick = (e) => {
-        e.stopPropagation();
-    };
-
     return (
         <div
             className="
@@ -136,7 +132,6 @@ const JobCard = ({ job, category, isOpen, onToggle }) => {
                 sticky top-2 lg:top-4 z-10
                 cursor-pointer
             "
-            onClick={handleCardClick}
         >
             {serviceCall && <Loading />}
 
@@ -196,7 +191,7 @@ const JobCard = ({ job, category, isOpen, onToggle }) => {
             </div>
 
             {/* RIGHT BUTTON - Responsive layout */}
-            <div className="flex items-center justify-between w-full lg:w-auto mt-4 lg:mt-0" onClick={handleButtonClick}>
+            <div className="flex items-center justify-between w-full lg:w-auto mt-4 lg:mt-0" onClick={handleCardClick}>
                 {/* Blue Vertical Line - Hidden on mobile, visible on desktop */}
                 <div className="hidden lg:block w-[2px] h-20 lg:h-24 bg-[#153A67] mr-4"></div>
 
@@ -278,56 +273,6 @@ const JobDetailsContent = ({ job, isOpen }) => {
             transition-all duration-300 ease-in-out
             transform origin-top
         ">
-            {/* Job Summary */}
-            <div className="mb-6 lg:mb-8">
-                <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 lg:mb-4">Job Summary</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4 text-gray-700">
-                    <div className="flex items-center gap-3">
-                        <BuildingOfficeIcon className="w-5 h-5 lg:w-6 lg:h-6 text-blue-600" />
-                        <div>
-                            <p className="font-semibold text-sm lg:text-base">Company</p>
-                            <p className="text-sm lg:text-base">{job.companyName}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <MapPinIcon className="w-5 h-5 lg:w-6 lg:h-6 text-green-600" />
-                        <div>
-                            <p className="font-semibold text-sm lg:text-base">Location</p>
-                            <p className="text-sm lg:text-base">{job.location}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <ClockIcon className="w-5 h-5 lg:w-6 lg:h-6 text-blue-600" />
-                        <div>
-                            <p className="font-semibold text-sm lg:text-base">Employment Type</p>
-                            <p className="text-sm lg:text-base">{job.employmentTypes?.[0] || job.type || "Full-time"}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <BriefcaseIcon className="w-5 h-5 lg:w-6 lg:h-6 text-purple-600" />
-                        <div>
-                            <p className="font-semibold text-sm lg:text-base">Experience</p>
-                            <p className="text-sm lg:text-base">{job.experience || "1-3 years"}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <CurrencyRupeeIcon className="w-5 h-5 lg:w-6 lg:h-6 text-emerald-600" />
-                        <div>
-                            <p className="font-semibold text-sm lg:text-base">Salary</p>
-                            <p className="text-sm lg:text-base">{job.salary || job.salaryAmount || "20000"}</p>
-                        </div>
-                    </div>
-                    {job.vacancies && (
-                        <div className="flex items-center gap-3">
-                            <UserGroupIcon className="w-5 h-5 lg:w-6 lg:h-6 text-orange-600" />
-                            <div>
-                                <p className="font-semibold text-sm lg:text-base">Vacancies</p>
-                                <p className="text-sm lg:text-base">{job.vacancies}</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
 
             {/* Job Description */}
             {job.jobDescription && (
@@ -544,13 +489,7 @@ const JobsDetails = () => {
     };
 
     if (loading) {
-        return (
-            <div className="jobs-details sm:py-8 lg:py-10 sm:px-4 lg:px-0">
-                <div className="flex justify-center items-center h-48 lg:h-64">
-                    <div className="animate-spin rounded-full h-10 w-10 lg:h-12 lg:w-12 border-b-2 border-blue-600"></div>
-                </div>
-            </div>
-        );
+        return (<Loading />);
     }
 
     if (error) {
