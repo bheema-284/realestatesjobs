@@ -540,7 +540,7 @@ function CandidateProfilePage() {
                                                 onChange={(e) => handleInputChange('name', e.target.value)}
                                             />
                                             {/* Gender Selection Toggle */}
-                                            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                                            {!isCompany && <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                                                 <button
                                                     type="button"
                                                     onClick={() => handleGenderSelect('male')}
@@ -595,7 +595,7 @@ function CandidateProfilePage() {
                                                         />
                                                     </div>
                                                 </button>
-                                            </div>
+                                            </div>}
                                         </div>
                                     </div>
 
@@ -619,6 +619,16 @@ function CandidateProfilePage() {
                                             onChange={(e) => handleInputChange('email', e.target.value)}
                                         />
                                     </div>
+                                    {isCompany && <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Mobile Number</label>
+                                        <input
+                                            type="text"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            value={tempProfile.mobile || ''}
+                                            onChange={(e) => handleInputChange('mobile', e.target.value)}
+                                            placeholder="Enter mobile number"
+                                        />
+                                    </div>}
                                 </div>
                             ) : (
                                 <div className="space-y-4 mt-10 sm:mt-0">
@@ -673,7 +683,7 @@ function CandidateProfilePage() {
                         </div>
 
                         {/* Right Column - Personal Details Section (gender removed from here) */}
-                        <div className="flex-1">
+                        {!isCompany && <div className="flex-1">
                             {editingMode ? (
                                 <div className="flex flex-col gap-3 text-gray-700 sm:mt-3">
                                     <div>
@@ -728,7 +738,7 @@ function CandidateProfilePage() {
                                     )}
                                 </div>
                             )}
-                        </div>
+                        </div>}
                     </div>
 
                     {/* Single Edit/Save/Cancel Button - Positioned at top right */}
