@@ -118,7 +118,7 @@ const Dashboard = () => {
     }, []);
 
     const { data: companyData, error, isLoading } = useSWRFetch(
-        companyID ? `/api/companies?companyId=${companyID}` : null
+        companyID ? `/api/companies?id=${companyID}` : null
     );
 
     // Use real company data directly
@@ -285,7 +285,7 @@ const Dashboard = () => {
             }
         ];
     }, [realStats, realCompanyData.name]);
-   
+
     // Rest of your existing dashboard code...
     const display2Date = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
     const today = new Date();
