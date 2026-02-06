@@ -13,6 +13,7 @@ import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays,
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import AddEditTaskModal from "./task/addnewtask";
 import { useSWRFetch } from "./config/useswrfetch";
+import { useRouter } from "next/navigation";
 
 // Category structure with icons
 const categoryStructure = [
@@ -110,7 +111,7 @@ const Dashboard = () => {
     const [dateRange, setDateRange] = useState([null, null]);
     const [startDate, endDate] = dateRange;
     const [companyID, setCompanyID] = useState(null);
-
+    const router = useRouter();
     // Fetch company data
     useEffect(() => {
         const user_details = JSON.parse(localStorage.getItem('user_details') || '{}');
@@ -747,6 +748,11 @@ const Dashboard = () => {
         });
     }
 
+    const allJobs = () => {
+        router.push(`/applications`)
+        setFilterType("All");
+    }
+
     return (
         <div className="text-gray-800 font-sans space-y-8">
             {/* Main Section */}
@@ -835,7 +841,6 @@ const Dashboard = () => {
                                                                 close();
                                                             }
                                                         }}
-                                                        inline
                                                     />
                                                 </div>
                                             </Popover.Panel>
@@ -977,7 +982,6 @@ const Dashboard = () => {
                                                     <DatePicker
                                                         selected={selectedDate}
                                                         onChange={(date) => { setSelectedDate(date); close() }}
-                                                        inline
                                                     />
                                                 </div>
                                             </Popover.Panel>
@@ -1083,7 +1087,7 @@ const Dashboard = () => {
                                 <p>Popular</p>
                             </div>
                             <p
-                                onClick={() => setFilterType("All")}
+                                onClick={allJobs}
                                 className={`text-xs cursor-pointer ${filterType === "All" ? "text-lime-600 font-bold text-lg" : "text-blue-400 hover:text-orange-600"}`}
                             >
                                 See All
@@ -1163,7 +1167,6 @@ const Dashboard = () => {
                                                         setSelectScheduleDate(date);
                                                         close();
                                                     }}
-                                                    inline
                                                 />
                                             </div>
                                         </Popover.Panel>
