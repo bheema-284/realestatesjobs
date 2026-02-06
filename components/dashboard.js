@@ -8,8 +8,7 @@ import {
 import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, CalendarIcon, ChevronDownIcon, PlusIcon, MinusIcon } from "@heroicons/react/24/solid";
 import RootContext from "../components/config/rootcontext";
 import { Popover } from "@headlessui/react";
-import DatePicker from "react-datepicker";
-import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays, parseISO, isWithinInterval, startOfDay } from "date-fns";
+import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays, parseISO, isWithinInterval, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay } from "date-fns";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import AddEditTaskModal from "./task/addnewtask";
 import { useSWRFetch } from "./config/useswrfetch";
@@ -103,6 +102,109 @@ const getRandomChangeChip = (percent) => {
     }
 };
 
+// Custom Calendar Component
+const CustomCalendar = ({ selectedDate, onDateChange, isRange = false, startDate, endDate, onRangeChange }) => {
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+
+    const days = eachDayOfInterval({
+        start: startOfMonth(currentMonth),
+        end: endOfMonth(currentMonth)
+    });
+
+    const prevMonth = () => {
+        setCurrentMonth(subDays(startOfMonth(currentMonth), 1));
+    };
+
+    const nextMonth = () => {
+        setCurrentMonth(addDays(endOfMonth(currentMonth), 1));
+    };
+
+    const handleDateClick = (date) => {
+        if (isRange) {
+            if (!startDate || (startDate && endDate)) {
+                onRangeChange([date, null]);
+            } else if (startDate && !endDate) {
+                const sorted = [startDate, date].sort((a, b) => a - b);
+                onRangeChange(sorted);
+            }
+        } else {
+            onDateChange(date);
+        }
+    };
+
+    const isDateSelected = (date) => {
+        if (isRange) {
+            if (startDate && endDate) {
+                return date >= startDate && date <= endDate;
+            } else if (startDate) {
+                return isSameDay(date, startDate);
+            }
+            return false;
+        }
+        return selectedDate && isSameDay(date, selectedDate);
+    };
+
+    const isStartDate = (date) => startDate && isSameDay(date, startDate);
+    const isEndDate = (date) => endDate && isSameDay(date, endDate);
+
+    return (
+        <div className="bg-white p-4 rounded-lg shadow-lg w-64">
+            <div className="flex justify-between items-center mb-4">
+                <button
+                    onClick={prevMonth}
+                    className="p-1 hover:bg-gray-100 rounded"
+                >
+                    <ChevronDownIcon className="w-4 h-4 transform -rotate-90" />
+                </button>
+                <span className="font-semibold">
+                    {format(currentMonth, 'MMMM yyyy')}
+                </span>
+                <button
+                    onClick={nextMonth}
+                    className="p-1 hover:bg-gray-100 rounded"
+                >
+                    <ChevronDownIcon className="w-4 h-4 transform rotate-90" />
+                </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 mb-2">
+                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                    <div key={day} className="text-center text-xs font-medium text-gray-500">
+                        {day}
+                    </div>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+                {days.map((day, idx) => {
+                    const isSelected = isDateSelected(day);
+                    const isToday = isSameDay(day, new Date());
+                    const isStart = isStartDate(day);
+                    const isEnd = isEndDate(day);
+                    const isInRange = isRange && startDate && endDate && day > startDate && day < endDate;
+
+                    return (
+                        <button
+                            key={idx}
+                            onClick={() => handleDateClick(day)}
+                            className={`
+                                w-8 h-8 text-sm rounded flex items-center justify-center
+                                ${isToday && !isSelected ? 'border border-blue-500' : ''}
+                                ${isSelected ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}
+                                ${isStart || isEnd ? 'bg-blue-600 text-white' : ''}
+                                ${isInRange ? 'bg-blue-100' : ''}
+                                ${format(day, 'MM') !== format(currentMonth, 'MM') ? 'text-gray-400' : ''}
+                            `}
+                        >
+                            {format(day, 'd')}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const Dashboard = () => {
     const { rootContext, setRootContext } = useContext(RootContext);
     const [selectedDate, setSelectedDate] = useState(null);
@@ -112,6 +214,7 @@ const Dashboard = () => {
     const [startDate, endDate] = dateRange;
     const [companyID, setCompanyID] = useState(null);
     const router = useRouter();
+
     // Fetch company data
     useEffect(() => {
         const user_details = JSON.parse(localStorage.getItem('user_details') || '{}');
@@ -155,9 +258,9 @@ const Dashboard = () => {
             .replace(/-+/g, '-')          // Replace multiple hyphens with single hyphen
             .trim();
     };
+
     // Calculate real statistics from company data - NOW USING appliedJobs
     const calculateRealStats = () => {
-
         // Usage in your code
         const appliedJobs = (realCompanyData.appliedJobs || []).map(item => ({
             ...item,
@@ -356,13 +459,13 @@ const Dashboard = () => {
     }, [selectScheduleDate, scheduleData, categoryColors]);
 
     const formatDateRange = () => {
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(endDate.getDate() - 6);
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 6);
 
-        const dayStart = startDate.getDate();
-        const dayEnd = endDate.getDate();
-        const monthName = endDate.toLocaleDateString('en-US', { month: 'long' });
+        const dayStart = start.getDate();
+        const dayEnd = end.getDate();
+        const monthName = end.toLocaleDateString('en-US', { month: 'long' });
 
         return `${dayStart}-${dayEnd} ${monthName}`;
     };
@@ -830,19 +933,17 @@ const Dashboard = () => {
                                             </Popover.Button>
 
                                             <Popover.Panel className="absolute z-10 mt-2 right-0">
-                                                <div className="bg-white p-2 rounded shadow-lg">
-                                                    <DatePicker
-                                                        selectsRange
-                                                        startDate={startDate}
-                                                        endDate={endDate}
-                                                        onChange={(update) => {
-                                                            setDateRange(update);
-                                                            if (update[0] && update[1]) {
-                                                                close();
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
+                                                <CustomCalendar
+                                                    isRange={true}
+                                                    startDate={startDate}
+                                                    endDate={endDate}
+                                                    onRangeChange={(range) => {
+                                                        setDateRange(range);
+                                                        if (range[0] && range[1]) {
+                                                            close();
+                                                        }
+                                                    }}
+                                                />
                                             </Popover.Panel>
                                         </>
                                     )}
@@ -978,12 +1079,13 @@ const Dashboard = () => {
                                             </Popover.Button>
 
                                             <Popover.Panel className="absolute z-10 mt-2 right-0">
-                                                <div className="bg-white p-2 rounded shadow-lg">
-                                                    <DatePicker
-                                                        selected={selectedDate}
-                                                        onChange={(date) => { setSelectedDate(date); close() }}
-                                                    />
-                                                </div>
+                                                <CustomCalendar
+                                                    selectedDate={selectedDate}
+                                                    onDateChange={(date) => {
+                                                        setSelectedDate(date);
+                                                        close();
+                                                    }}
+                                                />
                                             </Popover.Panel>
                                         </>
                                     )}
@@ -1160,15 +1262,13 @@ const Dashboard = () => {
                                             <ChevronDownIcon className="w-4 h-4" />
                                         </Popover.Button>
                                         <Popover.Panel className="absolute z-30 mt-2 right-0">
-                                            <div className="bg-white p-2 rounded shadow-lg">
-                                                <DatePicker
-                                                    selected={selectScheduleDate}
-                                                    onChange={(date) => {
-                                                        setSelectScheduleDate(date);
-                                                        close();
-                                                    }}
-                                                />
-                                            </div>
+                                            <CustomCalendar
+                                                selectedDate={selectScheduleDate}
+                                                onDateChange={(date) => {
+                                                    setSelectScheduleDate(date);
+                                                    close();
+                                                }}
+                                            />
                                         </Popover.Panel>
                                     </>
                                 )}
