@@ -638,7 +638,7 @@ export default function ProjectDetailsPage() {
                 </div>
 
                 {/* Sections */}
-                <div className="space-y-20 mt-20">
+                <div className="space-y-20 mt-40">
                     {sections.map((sec) => (
                         <div
                             key={sec}
