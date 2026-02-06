@@ -118,11 +118,11 @@ const Dashboard = () => {
     }, []);
 
     const { data: companyData, error, isLoading } = useSWRFetch(
-        companyID ? `/api/companies` : null
+        companyID ? `/api/companies?id=${companyID}` : null
     );
 
     // Use real company data directly
-    const realCompanyData = companyData?.[0] || {};
+    const realCompanyData = companyData || {};
 
     // Calculate real statistics from company data
     const calculateRealStats = () => {
