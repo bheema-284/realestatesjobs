@@ -10,7 +10,7 @@ import RootContext from "../components/config/rootcontext";
 import { Popover } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import { addDays, format, differenceInDays, differenceInCalendarMonths, subDays, parseISO, isWithinInterval, startOfDay } from "date-fns";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon, BuildingOfficeIcon, HomeModernIcon, MapPinIcon, UserGroupIcon, CheckCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
 import AddEditTaskModal from "./task/addnewtask";
 import { useSWRFetch } from "./config/useswrfetch";
 
@@ -78,7 +78,6 @@ const categoryStructure = [
     },
 ];
 
-
 const getRandomChangeChip = (percent) => {
     const rand = Math.random();
     if (rand < 0.33) {
@@ -124,167 +123,184 @@ const Dashboard = () => {
     // Use real company data directly
     const realCompanyData = companyData?.[0] || {};
 
-    // Calculate real statistics from company data
-    const calculateRealStats = () => {
-        const jobs = realCompanyData.jobs || [];
+    // Calculate company statistics
+    const calculateCompanyStats = () => {
+        const projects = realCompanyData.projects || [];
         const appliedJobs = realCompanyData.appliedJobs || [];
+        const statistics = realCompanyData.statistics || [];
+        const applicants = realCompanyData.applicants || [];
+        const projectsOfApplicants = realCompanyData.projectsOfApplicants || [];
+        const jobs = realCompanyData.jobs || [];
 
-        // Calculate total applications across all jobs
-        const totalApplications = jobs.reduce((total, job) => {
-            return total + (job.applications?.length || 0);
-        }, 0);
+        // Find statistics values
+        const getStatValue = (label) => {
+            const stat = statistics.find(s => s.label === label);
+            return stat ? stat.value : "0";
+        };
 
-        // Calculate status counts from appliedJobs
-        const statusCounts = {
-            Applied: 0,
-            Shortlisted: 0,
-            Selected: 0,
+        // Count project statuses
+        const projectStatusCounts = projects.reduce((acc, project) => {
+            const status = project.status?.toUpperCase() || 'UNKNOWN';
+            acc[status] = (acc[status] || 0) + 1;
+            return acc;
+        }, {});
+
+        // Count job application statuses
+        const jobStatusCounts = {
+            Applied: appliedJobs.filter(job => job.status === 'Applied').length,
+            Selected: appliedJobs.filter(job => job.status === 'Selected').length,
+            Shortlisted: 0, // Not in your data, will calculate
             Rejected: 0,
             Interested: 0
         };
 
-        appliedJobs.forEach(appliedJob => {
-            if (statusCounts.hasOwnProperty(appliedJob.status)) {
-                statusCounts[appliedJob.status]++;
-            }
-        });
-
-        // Also count from job applications
-        jobs.forEach(job => {
-            job.applications?.forEach(app => {
-                if (statusCounts.hasOwnProperty(app.status)) {
-                    statusCounts[app.status]++;
-                }
-            });
-        });
-
         return {
-            totalApplications,
-            statusCounts,
+            // Company statistics
+            projectsCompleted: getStatValue("Projects Completed"),
+            happyCustomers: getStatValue("Happy Customers"),
+            yearsExperience: getStatValue("Years Experience"),
+            citiesPresence: getStatValue("Cities Presence"),
+
+            // Project statistics
+            totalProjects: projects.length,
+            ongoingProjects: projectStatusCounts['ONGOING'] || 0,
+            completedProjects: projectStatusCounts['COMPLETED'] || 0,
+
+            // Job statistics
             totalJobs: jobs.length,
-            totalApplicants: new Set(appliedJobs.map(app => app.applicantId)).size
+            totalApplicants: applicants.length,
+            activeApplicants: new Set(projectsOfApplicants.map(p => p.applicantId)).size,
+
+            // Application statistics
+            jobApplications: jobStatusCounts.Applied,
+            jobSelections: jobStatusCounts.Selected,
         };
     };
 
-    const realStats = calculateRealStats();
+    const companyStats = calculateCompanyStats();
 
-    // Calculate department distribution from real jobs
-    const calculateDepartmentDistribution = () => {
-        const jobs = realCompanyData.jobs || [];
+    // Calculate project statistics
+    const calculateProjectStats = () => {
+        const projects = realCompanyData.projects || [];
 
-        // Count jobs by category
-        const categoryCounts = {};
-        jobs.forEach(job => {
-            const category = job.categorySlug || 'other';
-            categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-        });
-
-        // Convert to department distribution
-        const totalJobs = jobs.length;
-        if (totalJobs === 0) {
-            return categoryStructure.slice(0, 6).map(cat => ({
-                name: cat.title,
-                proportion: 1 / 6
-            }));
+        if (projects.length === 0) {
+            return {
+                byType: [],
+                byStatus: [],
+                byLocation: [],
+                totalValue: "0cr",
+                averageBudget: "0cr"
+            };
         }
 
-        return categoryStructure
-            .filter(cat => categoryCounts[cat.slug] > 0)
-            .slice(0, 6)
-            .map(cat => ({
-                name: cat.title,
-                proportion: categoryCounts[cat.slug] / totalJobs
-            }));
-    };
+        // Count by project type
+        const typeCounts = {};
+        const statusCounts = {};
+        const locationCounts = {};
+        let totalValue = 0;
 
-    // Calculate resource distribution from real applications
-    const calculateResourceDistribution = () => {
-        // Based on your data structure, we'll use job categories as resources
-        const jobs = realCompanyData.jobs || [];
-        const totalApplications = realStats.totalApplications;
+        projects.forEach(project => {
+            // Project type
+            const type = project.projectType || 'Other';
+            typeCounts[type] = (typeCounts[type] || 0) + 1;
 
-        if (totalApplications === 0) {
-            return [
-                { name: "Channel Partners", proportion: 0.35 },
-                { name: "Web Development", proportion: 0.30 },
-                { name: "Real Estate Sales", proportion: 0.20 },
-                { name: "Digital Marketing", proportion: 0.15 },
-            ];
-        }
+            // Project status
+            const status = project.status?.toUpperCase() || 'UNKNOWN';
+            statusCounts[status] = (statusCounts[status] || 0) + 1;
 
-        const resourceCounts = {};
-        jobs.forEach(job => {
-            const category = job.categorySlug || 'other';
-            const jobApplications = job.applications?.length || 0;
-            resourceCounts[category] = (resourceCounts[category] || 0) + jobApplications;
+            // Location
+            const location = project.location || 'Unknown';
+            locationCounts[location] = (locationCounts[location] || 0) + 1;
+
+            // Budget value
+            if (project.budget) {
+                const budgetStr = project.budget.toString().toLowerCase();
+                let value = 0;
+                if (budgetStr.includes('cr')) {
+                    value = parseFloat(budgetStr.replace('cr', '').trim()) * 10000000;
+                } else if (budgetStr.includes('lakh')) {
+                    value = parseFloat(budgetStr.replace('lakh', '').replace('lakhs', '').trim()) * 100000;
+                }
+                totalValue += value;
+            }
         });
 
-        return Object.entries(resourceCounts)
-            .map(([category, count]) => {
-                const categoryInfo = categoryStructure.find(cat => cat.slug === category) ||
-                    { title: category.charAt(0).toUpperCase() + category.slice(1) };
-                return {
-                    name: categoryInfo.title,
-                    proportion: count / totalApplications
-                };
-            })
-            .slice(0, 4);
+        return {
+            byType: Object.entries(typeCounts).map(([name, count]) => ({
+                name,
+                value: count,
+                proportion: count / projects.length
+            })),
+            byStatus: Object.entries(statusCounts).map(([name, count]) => ({
+                name,
+                value: count,
+                proportion: count / projects.length
+            })),
+            byLocation: Object.entries(locationCounts).map(([name, count]) => ({
+                name,
+                value: count,
+                proportion: count / projects.length
+            })),
+            totalValue: (totalValue / 10000000).toFixed(1) + 'cr',
+            averageBudget: (totalValue / projects.length / 10000000).toFixed(1) + 'cr'
+        };
     };
 
-    const departmentDistribution = calculateDepartmentDistribution();
-    const resourceDistribution = calculateResourceDistribution();
+    const projectStats = calculateProjectStats();
 
     // Calculate real stats with proper percentages
     const stats = useMemo(() => {
-        const totalApps = realStats.totalApplications;
+        const totalApps = companyStats.jobApplications;
+        const totalProjects = companyStats.totalProjects;
 
         return [
             {
-                title: "Applications",
-                value: totalApps.toString(),
+                title: "Total Projects",
+                value: totalProjects.toString(),
                 ...getRandomChangeChip(95),
-                percent: totalApps > 0 ? "100%" : "0%",
+                percent: `${Math.min(100, Math.round((companyStats.ongoingProjects / Math.max(1, totalProjects)) * 100))}% Ongoing`,
                 details: {
-                    agency: realCompanyData.name || "Your Company",
-                    lastMonth: Math.floor(totalApps * 0.8),
-                    growth: `${totalApps - Math.floor(totalApps * 0.8)} more applications than last month`
+                    agency: realCompanyData.name || "Alpha Reality",
+                    ongoing: companyStats.ongoingProjects,
+                    completed: companyStats.completedProjects,
+                    totalValue: projectStats.totalValue
                 }
             },
             {
-                title: "Shortlisted",
-                value: realStats.statusCounts.Shortlisted.toString(),
-                ...getRandomChangeChip(realStats.statusCounts.Shortlisted),
-                percent: totalApps > 0 ? `${Math.round((realStats.statusCounts.Shortlisted / totalApps) * 100)}%` : "0%",
+                title: "Happy Customers",
+                value: companyStats.happyCustomers,
+                ...getRandomChangeChip(companyStats.happyCustomers),
+                percent: "+12%",
                 details: {
-                    agency: realCompanyData.name || "Your Company",
-                    lastMonth: Math.floor(realStats.statusCounts.Shortlisted * 0.8),
-                    growth: `${realStats.statusCounts.Shortlisted - Math.floor(realStats.statusCounts.Shortlisted * 0.8)} more shortlisted than last month`
+                    agency: realCompanyData.name || "Alpha Reality",
+                    satisfaction: "98% Satisfaction Rate",
+                    retention: "85% Repeat Business"
                 }
             },
             {
-                title: "Selected",
-                value: realStats.statusCounts.Selected.toString(),
-                ...getRandomChangeChip(realStats.statusCounts.Selected),
-                percent: totalApps > 0 ? `${Math.round((realStats.statusCounts.Selected / totalApps) * 100)}%` : "0%",
+                title: "Applications",
+                value: companyStats.jobApplications.toString(),
+                ...getRandomChangeChip(companyStats.jobApplications),
+                percent: totalApps > 0 ? `${Math.round((companyStats.jobSelections / Math.max(1, companyStats.jobApplications)) * 100)}% Selected` : "0%",
                 details: {
-                    agency: realCompanyData.name || "Your Company",
-                    lastMonth: Math.floor(realStats.statusCounts.Selected * 0.8),
-                    growth: `${realStats.statusCounts.Selected - Math.floor(realStats.statusCounts.Selected * 0.8)} more hires than last month`
+                    agency: realCompanyData.name || "Alpha Reality",
+                    selected: companyStats.jobSelections,
+                    activeApplicants: companyStats.activeApplicants
                 }
             },
             {
-                title: "Not Selected",
-                value: realStats.statusCounts.Rejected.toString(),
-                ...getRandomChangeChip(realStats.statusCounts.Rejected),
-                percent: totalApps > 0 ? `${Math.round((realStats.statusCounts.Rejected / totalApps) * 100)}%` : "0%",
+                title: "Experience",
+                value: companyStats.yearsExperience,
+                ...getRandomChangeChip(100),
+                percent: `${companyStats.citiesPresence} Cities`,
                 details: {
-                    agency: realCompanyData.name || "Your Company",
-                    lastMonth: Math.floor(realStats.statusCounts.Rejected * 0.8),
-                    drop: `${Math.floor(realStats.statusCounts.Rejected * 0.8) - realStats.statusCounts.Rejected} fewer rejections than last month`
+                    agency: realCompanyData.name || "Alpha Reality",
+                    cities: companyStats.citiesPresence,
+                    projectsCompleted: companyStats.projectsCompleted
                 }
             }
         ];
-    }, [realStats, realCompanyData.name]);
+    }, [companyStats, realCompanyData.name, projectStats]);
 
     // Rest of your existing dashboard code...
     const display2Date = selectedDate ? format(selectedDate, "dd MMM yyyy") : "Today";
@@ -355,22 +371,22 @@ const Dashboard = () => {
     }
 
     const PALETTES_BY_STAT_TYPE = {
-        "Applications": [
+        "Total Projects": [
             "#dbeafe",
             "#bfdbfe",
             "#93c5fd"
         ],
-        "Shortlisted": [
+        "Happy Customers": [
             "#d9f99d",
             "#bef264",
             "#a3e635"
         ],
-        "Selected": [
+        "Applications": [
             "#dcfce7",
             "#bbf7d0",
             "#86efac"
         ],
-        "Not Selected": [
+        "Experience": [
             "#fee2e2",
             "#fecaca",
             "#fca5a5"
@@ -389,28 +405,28 @@ const Dashboard = () => {
         let combinedPalette = [];
 
         switch (selectedStatType) {
-            case "Applications":
+            case "Total Projects":
                 combinedPalette = [
-                    ...PALETTES_BY_STAT_TYPE["Applications"],
-                    ...PALETTES_BY_STAT_TYPE["Shortlisted"]
-                ];
-                break;
-            case "Shortlisted":
-                combinedPalette = [
-                    ...PALETTES_BY_STAT_TYPE["Shortlisted"],
+                    ...PALETTES_BY_STAT_TYPE["Total Projects"],
                     ...PALETTES_BY_STAT_TYPE["Applications"]
                 ];
                 break;
-            case "Selected":
+            case "Happy Customers":
                 combinedPalette = [
-                    ...PALETTES_BY_STAT_TYPE["Selected"],
-                    ...PALETTES_BY_STAT_TYPE["Not Selected"]
+                    ...PALETTES_BY_STAT_TYPE["Happy Customers"],
+                    ...PALETTES_BY_STAT_TYPE["Total Projects"]
                 ];
                 break;
-            case "Not Selected":
+            case "Applications":
                 combinedPalette = [
-                    ...PALETTES_BY_STAT_TYPE["Not Selected"],
-                    ...PALETTES_BY_STAT_TYPE["Selected"]
+                    ...PALETTES_BY_STAT_TYPE["Applications"],
+                    ...PALETTES_BY_STAT_TYPE["Happy Customers"]
+                ];
+                break;
+            case "Experience":
+                combinedPalette = [
+                    ...PALETTES_BY_STAT_TYPE["Experience"],
+                    ...PALETTES_BY_STAT_TYPE["Total Projects"]
                 ];
                 break;
             default:
@@ -422,125 +438,156 @@ const Dashboard = () => {
 
     const COLORS = getColorsForChart(selectedStatType);
 
-    // Generate recruitment data based on real applications
-    const generateRecruitmentData = (start = new Date(), end = addDays(new Date(), 6)) => {
-        const jobs = realCompanyData.jobs || [];
+    // Generate project timeline data
+    const generateProjectTimelineData = (start = new Date(), end = addDays(new Date(), 6)) => {
+        const projects = realCompanyData.projects || [];
         const days = differenceInDays(end, start) + 1;
         const data = [];
 
-        // Distribute applications across days
-        const totalApplications = realStats.totalApplications;
-        const applicationsPerDay = Math.ceil(totalApplications / days);
+        // Group projects by date
+        const projectsByDate = {};
 
+        projects.forEach(project => {
+            try {
+                if (project.startDate) {
+                    const startDate = parseISO(project.startDate);
+                    const formattedDate = format(startDate, "yyyy-MM-dd");
+                    if (!projectsByDate[formattedDate]) {
+                        projectsByDate[formattedDate] = {
+                            Ongoing: 0,
+                            Completed: 0,
+                            Upcoming: 0
+                        };
+                    }
+                    const status = project.status?.toUpperCase() || 'ONGOING';
+                    if (status === 'ONGOING') projectsByDate[formattedDate].Ongoing += 1;
+                    else if (status === 'COMPLETED') projectsByDate[formattedDate].Completed += 1;
+                    else projectsByDate[formattedDate].Upcoming += 1;
+                }
+            } catch (e) {
+                console.error("Error parsing project date:", e);
+            }
+        });
+
+        // Fill in all days in range
         for (let i = 0; i < days; i++) {
-            const date = format(addDays(start, i), "yyyy-MM-dd");
-
-            // Calculate realistic numbers based on your actual data
-            const applications = Math.min(applicationsPerDay, totalApplications - (i * applicationsPerDay));
-            const shortlisted = Math.floor(applications * 0.3);
-            const selected = Math.floor(shortlisted * 0.2);
-            const notselected = applications - shortlisted - selected;
+            const currentDate = addDays(start, i);
+            const dateKey = format(currentDate, "yyyy-MM-dd");
 
             data.push({
-                date,
-                Applications: applications,
-                Shortlisted: shortlisted,
-                Selected: selected,
-                ["Not Selected"]: notselected
+                date: dateKey,
+                Ongoing: projectsByDate[dateKey]?.Ongoing || 0,
+                Completed: projectsByDate[dateKey]?.Completed || 0,
+                Upcoming: projectsByDate[dateKey]?.Upcoming || 0,
+                Total: (projectsByDate[dateKey]?.Ongoing || 0) +
+                    (projectsByDate[dateKey]?.Completed || 0) +
+                    (projectsByDate[dateKey]?.Upcoming || 0)
             });
         }
 
         return data;
     };
 
-    const [dailyRecruitmentData, setDailyRecruitmentData] = useState(() =>
-        generateRecruitmentData(subDays(new Date(), 6), new Date())
+    const [projectTimelineData, setProjectTimelineData] = useState(() =>
+        generateProjectTimelineData(subDays(new Date(), 6), new Date())
     );
 
     useEffect(() => {
         if (startDate && endDate) {
-            setDailyRecruitmentData(generateRecruitmentData(startDate, endDate));
+            setProjectTimelineData(generateProjectTimelineData(startDate, endDate));
         }
-    }, [startDate, endDate, realStats.totalApplications]);
+    }, [startDate, endDate, realCompanyData.projects]);
 
     const getBarColorByType = (type) => {
         switch (type) {
-            case "Applications": return "#bfdbfe";
-            case "Shortlisted": return "#bef264";
-            case "Selected": return "#bbf7d0";
-            case "Not Selected": return "#fecaca";
+            case "Ongoing": return "#bfdbfe";
+            case "Completed": return "#bef264";
+            case "Upcoming": return "#bbf7d0";
+            case "Total": return "#fecaca";
             default: return "#bfdbfe";
         }
     };
 
     const getPieColorClassByType = (type) => {
         switch (type) {
-            case "Applications": return "bg-blue-50";
-            case "Shortlisted": return "bg-yellow-50";
-            case "Selected": return "bg-green-50";
-            case "Not Selected": return "bg-red-50";
+            case "Total Projects": return "bg-blue-50";
+            case "Happy Customers": return "bg-yellow-50";
+            case "Applications": return "bg-green-50";
+            case "Experience": return "bg-red-50";
             default: return "bg-blue-50";
         }
     };
 
     const getPieDataByType = (type) => {
-        const totalValue = dailyRecruitmentData.reduce((sum, entry) => sum + (entry[type] || 0), 0);
-        return departmentDistribution.map(dept => ({
-            name: dept.name,
-            value: Math.round(totalValue * dept.proportion)
-        })).filter(item => item.value > 0);
+        switch (type) {
+            case "Total Projects":
+                return projectStats.byType;
+            case "Happy Customers":
+                return projectStats.byStatus;
+            case "Applications":
+                return projectStats.byLocation.slice(0, 6);
+            case "Experience":
+                // Return project types for experience chart
+                return projectStats.byType;
+            default:
+                return projectStats.byType;
+        }
     };
 
     const getResourceDataByType = (type) => {
-        const totalValue = dailyRecruitmentData.reduce((sum, entry) => sum + (entry[type] || 0), 0);
-        return resourceDistribution.map(res => ({
-            name: res.name,
-            value: Math.round(totalValue * res.proportion)
-        })).filter(item => item.value > 0);
+        // Return services or project types as resources
+        const services = realCompanyData.services || [];
+        return services.slice(0, 4).map((service, index) => ({
+            name: service,
+            value: Math.floor(Math.random() * 100) + 20,
+            proportion: 1 / services.length
+        }));
     };
 
     const currentPieChartData = getPieDataByType(selectedStatType);
     const currentResourceChartData = getResourceDataByType(selectedStatType);
 
-    // Use real jobs data directly from companyData
-    const events = realCompanyData.jobs || [];
+    // Use real projects data directly from companyData
+    const events = realCompanyData.projects || [];
 
-    const [filterType, setFilterType] = useState("Popular");
+    const [filterType, setFilterType] = useState("Active");
     const [showTaskForm, setShowTaskForm] = useState(false);
     const taskList = rootContext.tasksColumns?.map(item => item.tasks).flat(1) || [];
 
-    const getNumericSalary = (salaryStr) => {
-        const match = salaryStr?.replace(/,/g, "").match(/\d+/);
-        return match ? parseInt(match[0], 10) : 0;
+    const getNumericBudget = (budgetStr) => {
+        if (!budgetStr) return 0;
+        const budget = budgetStr.toString().toLowerCase();
+        if (budget.includes('cr')) {
+            return parseFloat(budget.replace('cr', '').trim()) * 100;
+        } else if (budget.includes('lakh')) {
+            return parseFloat(budget.replace('lakh', '').replace('lakhs', '').trim());
+        }
+        return parseFloat(budget) || 0;
     };
 
-    const filteredEvents = filterType === "Popular"
+    const filteredEvents = filterType === "Active"
         ? [...events]
-            .sort((a, b) => getNumericSalary(b.salaryAmount) - getNumericSalary(a.salaryAmount))
+            .filter(project => project.status?.toUpperCase() === 'ONGOING')
             .slice(0, 5)
         : events;
 
-    // Get job icon based on category
-    const getJobIcon = (job) => {
-        const category = categoryStructure.find(cat => cat.slug === job.categorySlug);
-        if (category?.icon) {
-            return (
-                <img
-                    src={category.icon}
-                    alt={category.title}
-                    className="h-5 w-auto object-contain mx-auto"
-                />
-            );
+    // Get project icon based on type
+    const getProjectIcon = (project) => {
+        if (project.projectType === 'Villas') {
+            return <HomeModernIcon className="w-5 h-5 text-blue-600" />;
+        } else if (project.projectType?.includes('Commercial')) {
+            return <BuildingOfficeIcon className="w-5 h-5 text-green-600" />;
+        } else {
+            return <BuildingOfficeIcon className="w-5 h-5 text-orange-600" />;
         }
-        return <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />;
     };
 
     const getAltBackgroundColor = (selectedStatType, index) => {
         const colorPairs = {
-            "Applications": ["Applications", "Shortlisted"],
-            "Shortlisted": ["Shortlisted", "Applications"],
-            "Selected": ["Selected", "Not Selected"],
-            "Not Selected": ["Not Selected", "Selected"],
+            "Total Projects": ["Total Projects", "Applications"],
+            "Happy Customers": ["Happy Customers", "Total Projects"],
+            "Applications": ["Applications", "Happy Customers"],
+            "Experience": ["Experience", "Total Projects"],
         };
 
         const pair = colorPairs[selectedStatType];
@@ -555,63 +602,60 @@ const Dashboard = () => {
         return index % 2 === 0 ? firstColor : secondColor;
     };
 
-    const distributeApplications = (total, count) => {
-        if (count === 0) return [];
-        const randoms = Array.from({ length: count }, () => Math.random());
-        const sum = randoms.reduce((acc, val) => acc + val, 0);
-        return randoms.map((val, idx, arr) =>
-            idx === count - 1
-                ? total - arr.slice(0, count - 1).reduce((s, v, i) => s + Math.round((v / sum) * total), 0)
-                : Math.round((val / sum) * total)
-        );
-    };
-
-    const jobApplications = useMemo(() =>
-        distributeApplications(realStats.totalApplications, events.length),
-        [realStats.totalApplications, events.length]
-    );
-
-    function VacancyCard({ index, job }) {
-        const salaryText = `${job.salaryAmount || job.salary} / ${job.salaryFrequency}`;
-        const applicantsCount = job.applications?.length || jobApplications[index] || 0;
+    function ProjectCard({ index, project }) {
+        const getStatusColor = (status) => {
+            switch (status?.toUpperCase()) {
+                case 'ONGOING': return 'bg-green-100 text-green-800';
+                case 'COMPLETED': return 'bg-blue-100 text-blue-800';
+                case 'UPCOMING': return 'bg-yellow-100 text-yellow-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        };
 
         return (
             <div className="border border-gray-50 rounded-xl shadow-sm p-3">
-                <div className="flex items-center gap-2">
-                    <p className="p-1 rounded-sm" style={{ backgroundColor: getAltBackgroundColor(selectedStatType, index) }}>
-                        {getJobIcon(job)}
-                    </p>
-                    <h2 className="text-sm font-semibold text-gray-800">{job.jobTitle}</h2>
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1 rounded-sm" style={{ backgroundColor: getAltBackgroundColor(selectedStatType, index) }}>
+                        {getProjectIcon(project)}
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-sm font-semibold text-gray-800">{project.title}</h2>
+                        <div className="flex items-center gap-1 text-xs text-gray-600">
+                            <MapPinIcon className="w-3 h-3" />
+                            <span>{project.location}</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="flex gap-2 flex-wrap">
-                    {job.employmentTypes?.map((tag, index) => (
-                        <span
-                            key={index}
-                            className="bg-gray-100 font-semibold text-gray-600 text-[11px] px-2 py-1 rounded-full capitalize"
-                        >
-                            {tag.replace("-", " ")}
+                <div className="flex gap-2 flex-wrap mb-2">
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(project.status)}`}>
+                        {project.status || 'ONGOING'}
+                    </span>
+                    {project.bedrooms && (
+                        <span className="bg-gray-100 text-xs px-2 py-1 rounded-full text-gray-600">
+                            {project.bedrooms}
                         </span>
-                    ))}
+                    )}
                 </div>
 
                 <div className="flex justify-between items-center text-xs font-semibold text-gray-900">
                     <p className="mb-1">
-                        <span className="">{salaryText}</span>
+                        <span className="text-blue-600">{project.budget || 'N/A'}</span>
                     </p>
-                    <p className="">
-                        {applicantsCount} Applicants
+                    <p className="flex items-center gap-1">
+                        <UserGroupIcon className="w-3 h-3" />
+                        <span>{project.totalUnits || 'N/A'} Units</span>
                     </p>
                 </div>
             </div>
         );
     }
 
-    const EnhancedJobs = filteredEvents.map((job) => {
+    const EnhancedProjects = filteredEvents.map((project) => {
         return {
-            ...job,
-            icon: getJobIcon(job),
-            tags: job.employmentTypes,
+            ...project,
+            icon: getProjectIcon(project),
+            tags: [project.status, project.projectType].filter(Boolean),
         };
     });
 
@@ -624,30 +668,33 @@ const Dashboard = () => {
             if (!monthlyData[monthKey]) {
                 monthlyData[monthKey] = {
                     month: monthKey,
-                    Applications: 0,
-                    Shortlisted: 0,
-                    Selected: 0,
-                    ["Not Selected"]: 0,
+                    Ongoing: 0,
+                    Completed: 0,
+                    Upcoming: 0,
+                    Total: 0,
                 };
             }
-            monthlyData[monthKey].Applications += item.Applications || 0;
-            monthlyData[monthKey].Shortlisted += item.Shortlisted || 0;
-            monthlyData[monthKey].Selected += item.Selected || 0;
-            monthlyData[monthKey]["Not Selected"] += item["Not Selected"] || 0;
+            monthlyData[monthKey].Ongoing += item.Ongoing || 0;
+            monthlyData[monthKey].Completed += item.Completed || 0;
+            monthlyData[monthKey].Upcoming += item.Upcoming || 0;
+            monthlyData[monthKey].Total += item.Total || 0;
         });
 
         return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
     };
 
     const chartData = useMemo(() => {
+        if (!startDate || !endDate) {
+            return projectTimelineData;
+        }
         const diffInMonths = differenceInCalendarMonths(endDate, startDate);
         if (diffInMonths >= 3) {
-            return aggregateToMonthly(dailyRecruitmentData);
+            return aggregateToMonthly(projectTimelineData);
         }
-        return dailyRecruitmentData;
-    }, [dailyRecruitmentData, startDate, endDate]);
+        return projectTimelineData;
+    }, [projectTimelineData, startDate, endDate]);
 
-    const xAxisDataKey = differenceInCalendarMonths(endDate, startDate) >= 3 ? 'month' : 'date';
+    const xAxisDataKey = (startDate && endDate && differenceInCalendarMonths(endDate, startDate) >= 3) ? 'month' : 'date';
 
     const handleSaveTask = (newTask) => {
         setRootContext((prev) => {
@@ -661,6 +708,35 @@ const Dashboard = () => {
 
     return (
         <div className="text-gray-800 font-sans space-y-8">
+            {/* Company Overview */}
+            <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-6 shadow">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                    <img
+                        src={realCompanyData.profileImage || "https://via.placeholder.com/80"}
+                        alt={realCompanyData.name || "Company"}
+                        className="w-20 h-20 rounded-full border-4 border-white shadow"
+                    />
+                    <div className="flex-1">
+                        <h1 className="text-2xl font-bold text-gray-900">{realCompanyData.name || "Alpha Reality"}</h1>
+                        <p className="text-gray-600">{realCompanyData.tagline || "Leading You to Better Living"}</p>
+                        <div className="flex flex-wrap gap-3 mt-2">
+                            <span className="flex items-center gap-1 text-sm text-gray-700">
+                                <BuildingOfficeIcon className="w-4 h-4" />
+                                {realCompanyData.industry || "Real Estate"}
+                            </span>
+                            <span className="flex items-center gap-1 text-sm text-gray-700">
+                                <MapPinIcon className="w-4 h-4" />
+                                {realCompanyData.location || "Hyderabad"}
+                            </span>
+                            <span className="flex items-center gap-1 text-sm text-gray-700">
+                                <ClockIcon className="w-4 h-4" />
+                                Est. {realCompanyData.established || "2025"}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Main Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Section */}
@@ -671,10 +747,10 @@ const Dashboard = () => {
                             <div
                                 key={index}
                                 onClick={() => setSelectedStatType(item.title)}
-                                className={`px-4 py-3 rounded-xl shadow cursor-pointer transition-transform duration-200 ${selectedStatType === item.title ? item.title === "Applications" ? "bg-[#bfdbfe]" :
-                                    item.title === "Shortlisted" ? "bg-[#bef264]" :
-                                        item.title === "Selected" ? "bg-[#bbf7d0]" :
-                                            item.title === "Not Selected" ? "bg-[#fecaca]" :
+                                className={`px-4 py-3 rounded-xl shadow cursor-pointer transition-transform duration-200 ${selectedStatType === item.title ? item.title === "Total Projects" ? "bg-[#bfdbfe]" :
+                                    item.title === "Happy Customers" ? "bg-[#bef264]" :
+                                        item.title === "Applications" ? "bg-[#bbf7d0]" :
+                                            item.title === "Experience" ? "bg-[#fecaca]" :
                                                 "bg-gray-200" : "bg-white"}`}>
 
                                 <div className="flex justify-between items-center">
@@ -682,15 +758,24 @@ const Dashboard = () => {
                                     <Popover className="relative">
                                         <Popover.Button className="text-sm text-gray-600 mb-2 cursor-pointer font-semibold">...</Popover.Button>
                                         <Popover.Panel className="absolute z-10 w-56 right-[-35px] mt-2 bg-white rounded-lg shadow-lg p-4 text-sm text-gray-700 space-y-1">
-                                            <p><span className="font-semibold">Agency:</span> {item.details.agency}</p>
-                                            {item.details.lastMonth && (
-                                                <p><span className="font-semibold">Last Month:</span> {item.details.lastMonth}</p>
+                                            <p><span className="font-semibold">Company:</span> {item.details.agency}</p>
+                                            {item.details.ongoing !== undefined && (
+                                                <p><span className="font-semibold">Ongoing:</span> {item.details.ongoing}</p>
                                             )}
-                                            {item.details.growth && (
-                                                <p><span className="font-semibold">Growth:</span> {item.details.growth}</p>
+                                            {item.details.completed !== undefined && (
+                                                <p><span className="font-semibold">Completed:</span> {item.details.completed}</p>
                                             )}
-                                            {item.details.drop && (
-                                                <p><span className="font-semibold">Drop:</span> {item.details.drop}</p>
+                                            {item.details.totalValue && (
+                                                <p><span className="font-semibold">Total Value:</span> {item.details.totalValue}</p>
+                                            )}
+                                            {item.details.satisfaction && (
+                                                <p><span className="font-semibold">Satisfaction:</span> {item.details.satisfaction}</p>
+                                            )}
+                                            {item.details.selected !== undefined && (
+                                                <p><span className="font-semibold">Selected:</span> {item.details.selected}</p>
+                                            )}
+                                            {item.details.cities && (
+                                                <p><span className="font-semibold">Cities:</span> {item.details.cities}</p>
                                             )}
                                         </Popover.Panel>
                                     </Popover>
@@ -710,7 +795,7 @@ const Dashboard = () => {
                     <div className="flex flex-col lg:flex-row gap-6">
                         <div className="bg-white shadow rounded-xl w-full lg:w-1/2">
                             <div className="flex justify-between items-center pt-4 px-4">
-                                <h3 className="text-md font-semibold">{selectedStatType}</h3>
+                                <h3 className="text-md font-semibold">Project Timeline</h3>
                                 <Popover className="relative">
                                     {({ open, close }) => (
                                         <>
@@ -777,81 +862,27 @@ const Dashboard = () => {
                                         <Tooltip />
                                         <Legend />
 
-                                        {selectedStatType === "Applications" && (
-                                            <>
-                                                <Bar
-                                                    dataKey="Shortlisted"
-                                                    fill={getBarColorByType("Shortlisted")}
-                                                    stackId="applications-shortlisted"
-                                                    radius={[0, 0, 0, 0]}
-                                                    barSize={20}
-                                                />
-                                                <Bar
-                                                    dataKey="Applications"
-                                                    fill={getBarColorByType("Applications")}
-                                                    stackId="applications-shortlisted"
-                                                    radius={[8, 8, 0, 0]}
-                                                    barSize={20}
-                                                />
-                                            </>
-                                        )}
-
-                                        {selectedStatType === "Shortlisted" && (
-                                            <>
-                                                <Bar
-                                                    dataKey="Applications"
-                                                    fill={getBarColorByType("Applications")}
-                                                    stackId="applications-shortlisted"
-                                                    radius={[0, 0, 0, 0]}
-                                                    barSize={20}
-                                                />
-                                                <Bar
-                                                    dataKey="Shortlisted"
-                                                    fill={getBarColorByType("Shortlisted")}
-                                                    stackId="applications-shortlisted"
-                                                    radius={[8, 8, 0, 0]}
-                                                    barSize={20}
-                                                />
-                                            </>
-                                        )}
-
-                                        {selectedStatType === "Selected" && (
-                                            <>
-                                                <Bar
-                                                    dataKey="Not Selected"
-                                                    fill={getBarColorByType("Not Selected")}
-                                                    stackId="selected-notselected"
-                                                    radius={[0, 0, 0, 0]}
-                                                    barSize={20}
-                                                />
-                                                <Bar
-                                                    dataKey="Selected"
-                                                    fill={getBarColorByType("Selected")}
-                                                    stackId="selected-notselected"
-                                                    radius={[8, 8, 0, 0]}
-                                                    barSize={20}
-                                                />
-                                            </>
-                                        )}
-
-                                        {selectedStatType === "Not Selected" && (
-                                            <>
-                                                <Bar
-                                                    dataKey="Selected"
-                                                    fill={getBarColorByType("Selected")}
-                                                    stackId="selected-notselected"
-                                                    radius={[0, 0, 0, 0]}
-                                                    barSize={20}
-                                                />
-                                                <Bar
-                                                    dataKey="Not Selected"
-                                                    fill={getBarColorByType("Not Selected")}
-                                                    stackId="selected-notselected"
-                                                    radius={[8, 8, 0, 0]}
-                                                    barSize={20}
-                                                />
-                                            </>
-                                        )}
+                                        <Bar
+                                            dataKey="Ongoing"
+                                            fill={getBarColorByType("Ongoing")}
+                                            stackId="projects"
+                                            radius={[0, 0, 0, 0]}
+                                            barSize={20}
+                                        />
+                                        <Bar
+                                            dataKey="Completed"
+                                            fill={getBarColorByType("Completed")}
+                                            stackId="projects"
+                                            radius={[0, 0, 0, 0]}
+                                            barSize={20}
+                                        />
+                                        <Bar
+                                            dataKey="Upcoming"
+                                            fill={getBarColorByType("Upcoming")}
+                                            stackId="projects"
+                                            radius={[8, 8, 0, 0]}
+                                            barSize={20}
+                                        />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -859,7 +890,7 @@ const Dashboard = () => {
 
                         <div className="bg-white p-4 shadow rounded-xl w-full lg:w-1/2">
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-md font-semibold">{selectedStatType} by Department</h3>
+                                <h3 className="text-md font-semibold">{selectedStatType} Distribution</h3>
                                 <Popover className="relative ">
                                     {({ open, close }) => (
                                         <>
@@ -900,14 +931,14 @@ const Dashboard = () => {
                                         </Pie>
                                         <Tooltip />
                                     </PieChart>
-                                    <p className="font-bold text-xl">{Number(currentPieChartData.reduce((sum, item) => sum + item.value, 0) || 0).toLocaleString()}</p>
+                                    <p className="font-bold text-xl">{Number(currentPieChartData.reduce((sum, item) => item.value ? sum + item.value : sum, 0) || 0).toLocaleString()}</p>
                                     <p>Total {selectedStatType}</p>
                                 </div>
                                 <ul className="text-xs text-gray-700 mt-6">
                                     {currentPieChartData.map((item, idx) => (
-                                        <li key={idx} className="flex items-center gap-2">
+                                        <li key={idx} className="flex items-center gap-2 mb-1">
                                             <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
-                                            {item.name}: {item.value}
+                                            {item.name}: {item.value || 0}
                                         </li>
                                     ))}
                                 </ul>
@@ -918,7 +949,7 @@ const Dashboard = () => {
 
                 {/* Right Section */}
                 <div className={`${getPieColorClassByType(selectedStatType)} pt-3 shadow rounded-xl w-full space-y-4`}>
-                    <h3 className="text-md font-semibold text-center">Applicant Resources</h3>
+                    <h3 className="text-md font-semibold text-center">Services Distribution</h3>
                     <div className="flex justify-center items-center">
                         <PieChart width={250} height={250}>
                             <Pie
@@ -938,10 +969,10 @@ const Dashboard = () => {
                                     content={() => (
                                         <>
                                             <text x="50%" y="48%" textAnchor="middle" dominantBaseline="central" fontSize="16" fontWeight="bold" fill="#333">
-                                                {Number(currentResourceChartData.reduce((sum, item) => sum + item.value, 0) || 0).toLocaleString()}
+                                                {realCompanyData.services?.length || 0}
                                             </text>
                                             <text x="50%" y="55%" textAnchor="middle" dominantBaseline="central" fontSize="11" fill="#666">
-                                                Total Applicants
+                                                Services
                                             </text>
                                         </>
                                     )}
@@ -956,8 +987,8 @@ const Dashboard = () => {
                                 <li key={idx} className="flex gap-1 items-center">
                                     <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
                                     <div className="leading-tight">
-                                        <span className="font-medium text-gray-900">{item.value}</span>
-                                        <span className="text-[11px] text-gray-500 block">{item.name}</span>
+                                        <span className="font-medium text-gray-900">{item.name}</span>
+                                        <span className="text-[11px] text-gray-500 block">{item.value}%</span>
                                     </div>
                                 </li>
                             ))}
@@ -968,16 +999,16 @@ const Dashboard = () => {
 
             {/* Events, Tasks, Schedule */}
             <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
-                {/* Events - Using Real Jobs Data */}
+                {/* Active Projects */}
                 <div className="bg-white p-2 rounded-xl shadow w-full sm:w-1/2">
                     <div className="flex gap-5 justify-between items-center">
-                        <p className="text-medium font-semibold">Current Vacancies <span className="text-medium">({EnhancedJobs.length})</span></p>
+                        <p className="text-medium font-semibold">Active Projects <span className="text-medium">({EnhancedProjects.length})</span></p>
                         <div className="flex gap-2">
                             <div
-                                onClick={() => setFilterType("Popular")}
-                                className={`flex gap-1 text-xs cursor-pointer ${filterType === "Popular" ? "text-lime-600 font-bold text-lg" : "text-blue-400 hover:text-orange-600"}`}
+                                onClick={() => setFilterType("Active")}
+                                className={`flex gap-1 text-xs cursor-pointer ${filterType === "Active" ? "text-lime-600 font-bold text-lg" : "text-blue-400 hover:text-orange-600"}`}
                             >
-                                <p>Popular</p>
+                                <p>Active</p>
                             </div>
                             <p
                                 onClick={() => setFilterType("All")}
@@ -988,8 +1019,8 @@ const Dashboard = () => {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 h-[300px] overflow-y-auto">
-                        {EnhancedJobs.map((job, indx) => (
-                            <VacancyCard key={indx} index={indx} job={job} />
+                        {EnhancedProjects.map((project, indx) => (
+                            <ProjectCard key={indx} index={indx} project={project} />
                         ))}
                     </div>
                 </div>
@@ -1102,6 +1133,44 @@ const Dashboard = () => {
                                     );
                                 })
                             )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Company Info Summary */}
+            <div className="bg-white rounded-xl shadow p-6">
+                <h3 className="text-lg font-semibold mb-4">Company Overview</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Our Values</h4>
+                        <ul className="space-y-1 text-sm text-gray-600">
+                            {realCompanyData.values?.slice(0, 4).map((value, idx) => (
+                                <li key={idx} className="flex items-center gap-2">
+                                    <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                                    {value}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Leadership</h4>
+                        <ul className="space-y-2 text-sm text-gray-600">
+                            {realCompanyData.leadership?.slice(0, 3).map((leader, idx) => (
+                                <li key={idx}>
+                                    <span className="font-medium">{leader.name}</span>
+                                    <div className="text-xs text-gray-500">{leader.position}</div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Contact</h4>
+                        <div className="space-y-2 text-sm text-gray-600">
+                            <p><span className="font-medium">Email:</span> {realCompanyData.email}</p>
+                            <p><span className="font-medium">Phone:</span> {realCompanyData.mobile}</p>
+                            <p><span className="font-medium">Website:</span> {realCompanyData.website}</p>
+                            <p><span className="font-medium">Contact Person:</span> {realCompanyData.contactPerson}</p>
                         </div>
                     </div>
                 </div>
