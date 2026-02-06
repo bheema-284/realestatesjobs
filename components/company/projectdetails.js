@@ -656,7 +656,7 @@ export default function ProjectDetailsPage() {
                                     Loading...
                                 </div>
                             ) : (
-                                <>
+                                <div className="mt-20">
                                     {sec === "About" && renderAboutSection()}
                                     {sec === "Plans" && renderPlansSection()}
                                     {sec === "Amenities" && renderAmenitiesSection()}
@@ -664,7 +664,7 @@ export default function ProjectDetailsPage() {
                                     {sec === "Location" && renderLocationSection()}
                                     {sec === "Gallery" && renderGallerySection()}
                                     {sec === "Walkthrough Video" && renderWalkthroughVideoSection()}
-                                </>
+                                </div>
                             )}
                         </div>
                     ))}
