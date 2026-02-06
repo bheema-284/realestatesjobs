@@ -126,7 +126,43 @@ const Dashboard = () => {
 
     // Calculate real statistics from company data - NOW USING appliedJobs
     const calculateRealStats = () => {
-        const appliedJobs = realCompanyData.appliedJobs || [];
+        const convertToSlug = (category) => {
+            if (!category || typeof category !== 'string') return 'other';
+
+            // First, try to find exact match in categoryStructure
+            const exactMatch = categoryStructure.find(item =>
+                item.title.toLowerCase() === category.toLowerCase() ||
+                item.slug.toLowerCase() === category.toLowerCase()
+            );
+
+            if (exactMatch) {
+                return exactMatch.slug;
+            }
+
+            // If not found, try to find partial match
+            const partialMatch = categoryStructure.find(item =>
+                category.toLowerCase().includes(item.title.toLowerCase()) ||
+                item.title.toLowerCase().includes(category.toLowerCase())
+            );
+
+            if (partialMatch) {
+                return partialMatch.slug;
+            }
+
+            // If still not found, create a slug from the category
+            return category
+                .toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+                .replace(/\s+/g, '-')         // Replace spaces with hyphens
+                .replace(/-+/g, '-')          // Replace multiple hyphens with single hyphen
+                .trim();
+        };
+
+        // Usage in your code
+        const appliedJobs = (realCompanyData.appliedJobs || []).map(item => ({
+            ...item,
+            category: convertToSlug(item.category)
+        }));
 
         // Calculate total applications
         const totalApplications = appliedJobs.length;
